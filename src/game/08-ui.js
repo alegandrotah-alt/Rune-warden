@@ -35,9 +35,10 @@ function uiInfo(h){if(!DOM)return;const el=$('info');if(!h){el.hidden=true;retur
 function uiSellHint(v){if(!DOM)return;const el=$('sellHint');el.hidden=!v;if(v)el.textContent=`Sell for ${v} gold`}
 function fight(){if(!R||R.phase!=='plan')return;if(!R.board.length){toast('Drag a hero from your bench onto the field first');return}if(startWave()){uiRefresh()}}
 function cycleSpeed(){R.speed=R.speed>=3?1:R.speed+1;SET.speedPref=R.speed;saveSet();uiRefresh()}
+const RIC={stones:'ᚱ',tithe:'⛀',scholar:'✎',haste:'⚡',masons:'⛫',mire:'≈',eagle:'◉',arcana:'✧',runesmith:'⚒',baron:'⌾',richer:'⚖',recruit:'⚑',cheap:'↻',crit:'⚔',collector:'❖',egg:'◒',reaper:'☠',heart:'❤',kingmaker:'♛',treasury:'⛁',ascend:'★',riftlord:'✺',echo:'❂'};
 function showPick(){if(!DOM)return;const box=$('pickList');box.innerHTML='';const t=RELIC[R.picks[0]]?RELIC[R.picks[0]].t:1;$('pickSub').textContent=['','Silver relics','Gold relics','Prismatic relics'][t]+'. Relics last the whole run.';
   for(const id of R.picks){const r=RELIC[id],col=['','#cfd8e0','#ffcf6a','#e6a8ff'][r.t],b=document.createElement('button');b.type='button';b.className='relic';b.style.setProperty('--c',col);
-    b.innerHTML=`<span class="gem">${r.em?TRAITS[r.em].ic:r.n[0]}</span><b>${r.n}</b><span>${r.d}</span>`;b.addEventListener('click',()=>{$('ovPick').hidden=true;takeRelic(id)});box.appendChild(b)}
+    b.innerHTML=`<span class="gem">${r.em?TRAITS[r.em].ic:RIC[id]||r.n[0]}</span><b>${r.n}</b><span>${r.d}</span>`;b.addEventListener('click',()=>{$('ovPick').hidden=true;takeRelic(id)});box.appendChild(b)}
   $('ovPick').hidden=false}
 function showEnd(win){if(!DOM)return;$('endT').textContent=win?'Victory!':'The keep has fallen';
   $('endS').textContent=win?'The Ember Dragon is slain. The realm is safe, for now.':`You held out until wave ${R.wave}.`;
