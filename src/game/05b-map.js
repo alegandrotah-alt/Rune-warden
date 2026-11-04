@@ -25,8 +25,10 @@ function mapOptions(){const M=R.map;if(!M||!M.nodes||R.endless)return[];const f=
 // the map must be opened when there is a real choice, or the only road leads to a room without monsters
 function needMap(){if(!R||!R.map||R.phase!=='plan'||R.map.next)return false;const o=mapOptions();return o.length>1||o.length===1&&!isFight(o[0].t)}
 function autoNode(){if(!R.map){R.node='battle';return}const o=mapOptions();if(o.length===1&&isFight(o[0].t)&&!R.map.next)chooseNode(o[0].f,o[0].l,1)}
-function chooseNode(f,l,quiet){const M=R.map;if(!M)return;const t=M.nodes[f][l].t;
-  if(!isFight(t)){M.pos={f,l};M.next=null;R.node=t;M.seen.push(t);enterRoom(t);return}
+function chooseNode(f,l,quiet){const M=R.map;if(!M||R.phase!=='plan'&&!quiet)return false;
+  // only a room joined to where you stand, on the current floor, can be chosen
+  if(!mapOptions().some(o=>o.f===f&&o.l===l))return false;const t=M.nodes[f][l].t;
+  if(!isFight(t)){if(DOM)$('ovMap').hidden=true;M.pos={f,l};M.next=null;R.node=t;M.seen.push(t);enterRoom(t);return}
   M.next={f,l};R.node=t;R.nextQ=nodeQ(waveList(R.wave));if(!quiet)sfx('pick',.5);saveRun()}
 function mapEnter(){if(!R.map)return;if(!R.map.next){const o=mapOptions().filter(q=>isFight(q.t));if(o.length){const b=o.find(q=>q.t==='battle')||o[0];R.map.next={f:b.f,l:b.l};R.node=b.t;R.nextQ=nodeQ(R.nextQ&&R.nextQ.length?R.nextQ:waveList(R.wave))}}
   if(R.map.next){R.map.pos=R.map.next;R.map.seen.push(R.node);R.map.next=null}}
@@ -46,7 +48,7 @@ function showMap(){if(!DOM||!R.map||!R.map.nodes)return;const M=R.map,box=$('map
   for(let f=0;f<MAPF;f++)for(let l=0;l<MAPL;l++){const n=M.nodes[f][l];if(!n)continue;const N=NODES[n.t],can=pick&&opts.some(o=>o.f===f&&o.l===l),here=M.pos&&M.pos.f===f&&M.pos.l===l,nx=M.next&&M.next.f===f&&M.next.l===l;
     const b=document.createElement('button');b.type='button';b.className='mn'+(can?' can':'')+(here?' was':'')+(nx?' nx':'')+(f<cur&&!here?' past':'')+(n.t==='boss'?' boss':'');
     b.style.setProperty('--c',N.col);b.style.left=X(f)+'%';b.style.top=Y(l)+'%';b.innerHTML=`<i>${N.ic}</i><small>${N.n}</small>`;b.title=N.d;b.disabled=!can;
-    if(can)b.addEventListener('click',()=>{chooseNode(f,l);if(!R.room){$('ovMap').hidden=true;uiRefresh()}});box.appendChild(b)}
+    if(can)b.addEventListener('click',()=>{if(chooseNode(f,l)===false){showMap();return}$('ovMap').hidden=true;uiRefresh()});box.appendChild(b)}
   $('mapLeg').innerHTML=Object.keys(NODES).map(k=>`<span style="--c:${NODES[k].col}"><i>${NODES[k].ic}</i>${NODES[k].n}</span>`).join('');
   $('mapClose').hidden=needMap();$('ovMap').hidden=false}
 function bindMap(){if(!DOM)return;$('mapB').addEventListener('click',()=>{if(R&&R.map)showMap()});$('mapClose').addEventListener('click',()=>{$('ovMap').hidden=true})}

@@ -24,7 +24,7 @@ function leaveRoom(){const t=R.room&&R.room.t;R.room=null;if(DOM)$('ovRoom').hid
 function finishFloor(){const inc=income(null);gainXP(2+(has('scholar')?3:0)+rank('xp'));if(R.egg>0){R.egg--;if(R.egg===0){R.gold+=35;R.egg=-1;toast('The golden egg hatches: +35 gold')}}
   if(STONE_AT[R.wave])R.stones.push(2);R.wave++;rollShop(true);R.freeRoll=rank('reroll');R.node=null;R.nextQ=waveList(R.wave);
   floatText(FW/2,FH*.45,`+${inc.base+inc.int+inc.st+inc.ex} gold`,'#ffcf2e',1.2);autoNode();enterPlan()}
-function enterPlan(){R.phase='plan';R.queue=null;saveRun();uiRefresh();if(DOM&&needMap())showMap()}
+function enterPlan(){R.phase='plan';R.queue=null;saveRun();uiRefresh();if(DOM){if(needMap())showMap();else $('ovMap').hidden=true}}
 function roomView(){const o=R.room;if(!o)return null;const done=()=>leaveRoom(),V={ic:'?',t:'',d:'',opts:[]};
   if(o.t==='oracle'){Object.assign(V,{ic:'☉',t:'The Oracle at the Gate',d:'"Every warden walks the road alone. Take a gift for the journey."'});
     V.opts=o.opts.map(k=>({n:ORACLE[k].n,d:ORACLE[k].d,risk:ORACLE[k].risk,act:()=>{oracleGift(k);done()}}))}
@@ -113,7 +113,7 @@ function showRoom(){if(!DOM)return;const V=roomView();if(!V){$('ovRoom').hidden=
     const icon=q.item?`<span class="gem it">${ITEMS[q.item].ic}</span>`:q.pot?`<span class="gem pot" style="--p:${POTIONS[q.pot].col}">${POTIONS[q.pot].ic}</span>`:q.relic?`<span class="gem">${RELIC[q.relic].em?TRAITS[RELIC[q.relic].em].ic:RIC[q.relic]||RELIC[q.relic].n[0]}</span>`:'';
     b.innerHTML=`${icon}<b>${q.n}</b>${q.d?`<span>${q.d}</span>`:''}${q.cost?`<em class="price">${q.sold?'Sold':q.cost+' gold'}</em>`:''}`;
     if(q.hero){const p=smallPortrait('h_',q.hero,22);if(p)b.prepend(p)}
-    b.addEventListener('click',()=>roomAct(i));box.appendChild(b)});
+    b.addEventListener('click',()=>{if(box.dataset.busy)return;box.dataset.busy=1;roomAct(i);delete box.dataset.busy});box.appendChild(b)});
   $('ovRoom').hidden=false}
 function showSpoils(){if(!DOM||!R.spoils)return;const S=R.spoils,N=NODES[S.node]||NODES.battle;$('rwT').textContent=S.node==='boss'?'The boss falls!':S.node==='elite'?'Elite defeated':'Victory';
   $('rwL').innerHTML=S.lines.map(([k,t])=>`<li class="${k}">${t}</li>`).join('')||'';

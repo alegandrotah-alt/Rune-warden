@@ -60,14 +60,17 @@ function serve() {
     R.wave = 12; R.act = 1; G.genMap(); const opts = G.mapOptions().length; G.showMap(); const mapOk = opts > 0 && !document.getElementById('ovMap').hidden && document.querySelectorAll('#mapGrid .mn.can').length === opts;
     document.getElementById('ovMap').hidden = true; R.gold = 60; G.enterRoom('merchant'); const shown = !document.getElementById('ovRoom').hidden && document.querySelectorAll('#roomList button').length > 3;
     const g0 = R.gold; const buy = G.roomView().opts.findIndex((q) => q.cost && !q.sold && q.item); G.roomAct(buy); const bought = R.gold < g0;
-    G.roomAct(G.roomView().opts.findIndex((q) => q.leave)); return { item, mapOk, chosen: opts + ' rooms reachable', evOk: shown && bought && !R.room }; });
+    G.roomAct(G.roomView().opts.findIndex((q) => q.leave));
+    // after a room the map must not linger with old rooms still clickable, and an old room can't be chosen again
+    const noStale = document.getElementById('ovMap').hidden || G.needMap(); const w0 = R.wave; const replay = G.chooseNode(0, 2); const noReplay = replay === false && R.wave === w0 && !R.room;
+    return { item, mapOk, chosen: opts + ' rooms reachable', evOk: shown && bought && !R.room && noStale && noReplay }; });
   await page.screenshot({ path: path.join(OUT, '5-items-map.png') });
   await browser.close(); srv.close();
   const d = ft.slice(1).map((t, i) => t - ft[i]).sort((a, b) => a - b);
   const avg = d.reduce((a, b) => a + b, 0) / Math.max(1, d.length), p95 = d[Math.floor(d.length * .95)] || 0;
   let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
     `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles, ${busy.ko} heroes knocked out), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
-    `- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item and closed: ${extra.evOk ? 'yes' : '**no**'}\n` +
+    `- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item, closed, and left no stale map behind: ${extra.evOk ? 'yes' : '**no**'}\n` +
     `  (CI has no GPU, so real phones run far faster; compare this number between builds)\n- Screenshots are attached to the run as **browser-check-screens**.\n`;
   if (errors.length) md += '\n```\n' + errors.slice(0, 10).join('\n') + '\n```\n';
   console.log(md);
