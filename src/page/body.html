@@ -1,0 +1,41 @@
+<div id="app">
+<canvas id="cv"></canvas>
+<header id="top">
+  <div class="tl"><b id="waveT">Wave 1</b><small id="actT">Act I · Hollow Crypts</small></div>
+  <div class="tc"><span class="pill gold" id="goldT">0</span><span class="pill lvl"><b id="lvlT">Lv 2</b><i class="xpbar"><i id="xpF"></i></i><small id="xpT">0/2</small></span><span class="pill" id="fieldT">0/2 heroes</span><span class="pill" id="streakT" hidden></span></div>
+  <div class="tr"><span class="pill keep" id="hpT">♥ 100</span><button id="pauseB" type="button" aria-label="Pause">❚❚</button></div>
+</header>
+<aside id="traits"></aside>
+<aside id="info" hidden></aside>
+<footer id="shop">
+  <div class="sbtn"><button id="xpB" type="button"><b>Buy XP</b><small>4 gold</small></button><button id="rollB" type="button"><b>Reroll</b><small id="rollC">2 gold</small></button></div>
+  <div id="cards"></div>
+  <div class="sbtn"><button id="fightB" type="button" class="fight"><b>FIGHT!</b><small>Space</small></button></div>
+  <div id="sellHint" hidden>Drop to sell</div>
+</footer>
+<div id="toast" hidden></div>
+<section id="ovPick" class="overlay" hidden><div class="card wide"><h2>Choose a relic</h2><p class="sub" id="pickSub">Relics last the whole run.</p><div id="pickList" class="picks"></div></div></section>
+<section id="ovEnd" class="overlay" hidden><div class="card"><h2 id="endT">Defeat</h2><p class="sub" id="endS"></p><div id="endStats" class="stats"></div><div class="row"><button id="endlessB" type="button" class="primary" hidden>Endless mode</button><button id="againB" type="button" class="primary">New run</button><button id="menuB" type="button">Menu</button></div></div></section>
+<section id="ovPause" class="overlay" hidden><div class="card"><h2>Paused</h2><p class="sub" id="pauseS"></p><div id="pauseRelics" class="relicrow"></div><div class="row"><button id="resumeB" type="button" class="primary">Resume</button><button id="quitB" type="button">Abandon run</button></div></div></section>
+<section id="ovStart" class="overlay start"><div class="card wide">
+  <h1>RUNE <span>WARDEN</span></h1><p class="tag">Raise heroes. Twist the road. Hold the keep.</p>
+  <nav class="tabs"><button type="button" data-tab="tPlay" class="on">Play</button><button type="button" data-tab="tRes">Research</button><button type="button" data-tab="tRec">Records</button><button type="button" data-tab="tSet">Settings</button></nav>
+  <div id="tPlay" class="tab"><div class="row"><button id="contB" type="button" class="primary" hidden>Continue run</button><button id="playB" type="button" class="primary big">New run</button></div><p class="sub" id="bestT"></p>
+    <details><summary>How to play</summary><dl class="how">
+      <dt>The road</dt><dd>Monsters come out of the portal on the left and walk to your keep on the right. Every hero you place blocks a tile, so the heroes are the maze. Twist the road to make monsters walk past your heroes for longer. You can never block it completely.</dd>
+      <dt>The shop</dt><dd>Tap a hero card to buy it to your bench, then drag it onto the field between waves. Drag a hero onto the shop to sell it. Gold earns interest: 1 gold for every 10 you hold, up to 5. Win and loss streaks pay extra.</dd>
+      <dt>Stars</dt><dd>Three copies of the same hero merge into a ★2, and three ★2 into a ★3. Each star is much stronger.</dd>
+      <dt>Levels</dt><dd>Your level is how many heroes you can field. Buy XP to level faster; higher levels find rarer heroes in the shop.</dd>
+      <dt>Traits</dt><dd>Every hero has an origin (Kingdom, Wildwood, Shadow) and a class (Guardian, Marksman, Sorcerer, Assassin). Field different heroes that share a trait to switch on its bonus, shown on the left.</dd>
+      <dt>× Runes</dt><dd>Arrows and spells that fly over a blue × rune are multiplied, once per rune. Place ranged heroes so their shots cross runes. Rune stones you earn can be dropped on any empty tile.</dd>
+      <dt>× Portals</dt><dd>A monster that walks through a purple × portal splits into that many copies, and every copy drops gold when it dies. Route monsters through portals for profit, or around them to stay safe.</dd>
+      <dt>Spells</dt><dd>Heroes fill their blue mana bar by attacking. When it is full they cast their special ability.</dd>
+      <dt>Relics</dt><dd>After some waves and every boss you choose a relic that lasts the whole run. Three acts, three bosses. Win, then try endless mode.</dd>
+      <dt>Keys</dt><dd>Space: fight or change speed. D: reroll. F: buy XP. P: pause.</dd>
+      <dt>Credits</dt><dd>Heroes, skeletons, keep and nature from KayKit by Kay Lousberg (kaylousberg.com), monsters from Quaternius Ultimate Monsters, particles and sounds by Kenney (kenney.nl), all CC0, re-rendered for this game. Music: Pirate Nation by Proof of Play (MIT) and "The Arrival" by Estúdio Vaca Roxa (CC0).</dd>
+    </dl></details></div>
+  <div id="tRes" class="tab" hidden><p class="sub"><b id="gemsT">0</b> gems. Earn gems by playing runs and from achievements.</p><div id="resList" class="grid"></div></div>
+  <div id="tRec" class="tab" hidden><div id="recStats" class="stats"></div><h3>Achievements</h3><div id="achList" class="grid"></div></div>
+  <div id="tSet" class="tab" hidden><div id="setList"></div></div>
+</div></section>
+</div>

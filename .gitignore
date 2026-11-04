@@ -1,0 +1,9 @@
+node_modules/
+android/
+*.apk
+*.aab
+.DS_Store
+www/index.html
+dist/
+check-output/
+sim-results.json

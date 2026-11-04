@@ -1,0 +1,20 @@
+{
+  "name": "rune-warden",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rune Warden packaged as an Android app with Capacitor",
+  "scripts": {
+    "build": "node tools/build.js",
+    "sim": "node tools/sim.js",
+    "check": "node tools/build.js && node tools/sim.js --runs 2 && node tools/browser-check.js",
+    "setup:android": "node tools/build.js && npx cap add android && npx cap sync android && python3 tools/android_setup.py",
+    "sync": "node tools/build.js && npx cap sync android && python3 tools/android_setup.py"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}
