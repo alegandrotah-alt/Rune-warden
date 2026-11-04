@@ -12,6 +12,9 @@ function pdown(e){if(!R||R.phase==='over'||R.phase==='pick')return;ensureAudio()
   const h=heroUnder(px,py);if(h){DRAG={h,from:'board',x:px,y:py,sx:px,sy:py,locked:R.phase!=='plan'};startValid();return}
   {const K=keepPos();if(Math.abs(px-sx(K.x))<ss(T*.9)&&py<sy(K.y)+ss(T*.6)&&py>sy(K.y)-ss(T*2.4)){SEL=null;uiKeep();return}}
   if(R.b){const w=toWorld(px,py+ss(T*.3));let best=null,bd=T*.7;for(const m of R.b.mons){if(m.hp<=0)continue;const d=Math.hypot(m.x-w.x,(m.y-w.y))-(m.boss?T*.4:0);if(d<bd){bd=d;best=m}}if(best){SEL=null;uiMon(best);return}}
+  {const cl=cellAt(px,py);if(cl){const t=terAt(cl.c,cl.r),g=(R.field.gates||[]).find(q=>q.k!=='west'&&q.c===cl.c&&q.r===cl.r);
+    if(g)toast((g.k==='breach'?'A breach in the field':'The '+g.k+' gate')+': monsters come through here when it glows. It always keeps a road to the keep.');
+    else if(t)toast(TERN[t]+': '+['','shooters here get +1 range, melee heroes +20% damage.','monsters here are 35% slower.','monsters here bleed 1.4% of their health a second.','nothing can stand or walk here; shots fly over it.'][t])}}
   SEL=null;uiInfo(null);const now=performance.now();if(now-(pdown.lastTap||0)<320&&ZM.z>1){ZM.z=1;applyZoom();uiZoom()}pdown.lastTap=now;if(ZM.z>1)PAN={x:px,y:py}}
 function startValid(){VALID=null;if(R.phase!=='plan')return;VALID=new Uint8Array(COLS*ROWS);const was=DRAG.from==='board'?DRAG.h:null;if(was){R.board.splice(R.board.indexOf(was),1);rebuildBlk()}
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)VALID[r*COLS+c]=canPlace(c,r)?1:0;if(was){R.board.push(was);rebuildBlk()}}

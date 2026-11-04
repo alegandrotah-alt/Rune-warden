@@ -39,7 +39,7 @@ function nodeQ(q){q=q.slice();const add=(R.node==='elite'?2:0)+(R.hoard?2:0);
 // ---------- the map screen: nodes on a parchment, roads drawn between them ----------
 function showMap(){if(!DOM||!R.map||!R.map.nodes)return;const M=R.map,box=$('mapGrid');box.innerHTML='';const opts=R.phase==='plan'?mapOptions():[],cur=mapFloor();
   const pick=opts.length>0&&R.phase==='plan';
-  $('mapT').textContent=`Act ${['I','II','III'][R.act]} · ${ACTS[R.act].n}`;
+  $('mapT').textContent=`Act ${['I','II','III'][R.act]} · ${actD(R.act).n}`;
   $('mapS').textContent=pick?(M.next?`Next: ${NODES[R.node].n}. ${NODES[R.node].d} Tap another room to change your mind.`:'Choose your next room. Only rooms joined to where you stand can be reached.'):'Your road through this act.';
   const X=f=>(f+.5)/MAPF*100,Y=l=>(l+.5)/MAPL*100;let svg=`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">`;
   for(let f=0;f<MAPF-1;f++)for(let l=0;l<MAPL;l++){const n=M.nodes[f][l];if(!n)continue;for(const b of n.nx){const dest=f===MAPF-2?2:b,live=M.pos&&M.pos.f===f&&M.pos.l===l||(!M.pos&&f===0&&cur===0);

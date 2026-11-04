@@ -5,13 +5,13 @@ function toast(t){if(!DOM)return;const el=$('toast');el.textContent=t;el.hidden=
 function portrait(k,size){const c=mk(size*2,size*2);if(!c)return c;const g=c.getContext('2d');const f=frame('h_'+k,160,0,size*2);if(f&&g&&g.drawImage)g.drawImage(f,-size*.15,-size*.1,size*2.3,size*2.3);return c}
 function onSheet(name){if(DOM&&name.startsWith('h_')){renderShop();if(!$('ovStart').hidden){clearTimeout(onSheet.t);onSheet.t=setTimeout(renderCol,200)}}if(/^props|^keep/.test(name))bgDirty=1}
 function uiRefresh(){if(!DOM||!R)return;calcTraits();
-  $('waveT').textContent=R.final?'The Rift · Final':R.endless?`Wave ${R.wave} · Endless`:`Floor ${R.wave} / 30`;uiPots();$('actT').textContent=`Act ${['I','II','III'][R.act]} · ${ACTS[R.act].n}`;
+  $('waveT').textContent=R.final?'The Rift · Final':R.endless?`Wave ${R.wave} · Endless`:`Floor ${R.wave} / 30`;uiPots();$('actT').textContent=`Act ${['I','II','III'][R.act]} · ${actD(R.act).n}`;
   $('goldT').textContent=R.gold;$('lvlT').textContent='Lv '+R.lvl;const need=XPNEED[R.lvl]||0;$('xpF').style.width=(R.lvl>=10?100:100*R.xp/need)+'%';$('xpT').textContent=R.lvl>=10?'max':`${R.xp}/${need}`;
   $('fieldT').textContent=`${R.board.length}/${boardMax()} heroes`;$('fieldT').style.color=R.board.length<boardMax()&&R.bench.some(Boolean)?'#ffd76a':'';
   $('hpT').textContent='♥ '+Math.ceil(R.hp);
   const st=$('streakT');st.hidden=Math.abs(R.streak)<2;st.textContent=R.streak>0?`🔥 ${R.streak} win streak`:`❄ ${-R.streak} loss streak`;
   $('xpB').disabled=R.gold<4||R.lvl>=10;$('rollB').disabled=R.gold<rerollCost();$('rollC').textContent=rerollCost()?rerollCost()+' gold':'free';
-  const fb=$('fightB');if(R.phase==='wave'){fb.classList.add('speed');fb.innerHTML=`<b>×${R.speed}</b><small>speed</small>`}else{fb.classList.remove('speed');fb.innerHTML=needMap()?`<b>MAP</b><small>choose a room</small>`:`<b>FIGHT!</b><small>${R.wave%10===0&&R.wave<=30?'Boss':R.node&&R.node!=='battle'?NODES[R.node].n:'Space'}</small>`}
+  const fb=$('fightB');if(R.phase==='wave'){fb.classList.add('speed');fb.innerHTML=`<b>×${R.speed}</b><small>speed</small>`}else{fb.classList.remove('speed');fb.innerHTML=needMap()?`<b>MAP</b><small>choose a room</small>`:`<b>FIGHT!</b><small>${R.wave%10===0&&R.wave<=30?'Boss':R.final?'The Rift':R.node&&NODES[R.node]&&R.node!=='battle'?NODES[R.node].n:'Space'}</small>`}
   $('relN').textContent=R.relics.length;if($('relN2'))$('relN2').textContent=R.relics.length||'';const mb=$('mapB');mb.hidden=!R.map;mb.classList.toggle('on',needMap());
   renderShop();renderTraits();uiDmg();uiWave();uiZoom()}
 let SHOPSIG='';
@@ -56,7 +56,7 @@ function showPick(){if(!DOM)return;const box=$('pickList');box.innerHTML='';cons
     b.innerHTML=`<span class="gem">${r.em?TRAITS[r.em].ic:RIC[id]||r.n[0]}</span><b>${r.n}</b><span>${r.d}</span>`;b.addEventListener('click',()=>{$('ovPick').hidden=true;takeRelic(id)});box.appendChild(b)}
   $('ovPick').hidden=false}
 function showEnd(win){if(!DOM)return;$('endT').textContent=R.trueWin?'True Victory!':win?'Victory!':'The keep has fallen';
-  $('endS').textContent=(R.trueWin?'The Rune Devourer is unmade. Bards will sing of this for a thousand years.':R.final?'The Devourer could not be stopped, but the realm was already saved.':win?'The Ember Dragon is slain. The realm is safe, for now.':`You held out until wave ${R.wave}.`)+(R.ascUp?` Ascension ${META.asc} unlocked!`:'')+(R.daily?` Daily best: wave ${META.daily.best}${R.dailyNew?' (new best!)':''}.`:'');
+  $('endS').textContent=(R.trueWin?'The Rune Devourer is unmade. Bards will sing of this for a thousand years.':R.final?'The Devourer could not be stopped, but the realm was already saved.':win?`${MON[actD(2).boss].n} is slain. The realm is safe, for now.`:`You held out until wave ${R.wave}.`)+(R.ascUp?` Ascension ${META.asc} unlocked!`:'')+(R.daily?` Daily best: wave ${META.daily.best}${R.dailyNew?' (new best!)':''}.`:'');
   $('endStats').innerHTML=[['Waves',R.wave-1],['Monsters slain',fmt(R.stats.kills)],['Damage dealt',fmt(R.stats.dmg)],['Longest road',R.stats.maxMaze+' tiles'],['Portal gold',Math.floor(R.portalGold)],['Gems earned','+'+R.endGems]].map(([a,b])=>`<div><b>${b}</b><small>${a}</small></div>`).join('');
   $('endlessB').hidden=!win;$('ovEnd').hidden=false;sfx(win?'level':'lose',.7)}
 function hideEnd(){if(DOM)$('ovEnd').hidden=true}

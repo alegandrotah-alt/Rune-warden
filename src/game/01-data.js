@@ -8,9 +8,11 @@ const TRAITS={
   marksman:{n:'Marksman',ic:'➶',col:'#ff9a5a',bp:[2,4],d:t=>`Marksmen gain +${t+1} range and ${[15,35][t]}% attack speed.`},
   sorcerer:{n:'Sorcerer',ic:'✦',col:'#5fe1ff',bp:[2,4,6],d:t=>`All heroes gain ${[2,5,10][t]} mana per second. Sorcerer spells hit ${[30,70,140][t]}% harder.`},
   assassin:{n:'Assassin',ic:'✕',col:'#ff6a8a',bp:[2,4],d:t=>`Assassins crit ${[20,40][t]}% of the time for ${[2,2.5][t]}× damage.`},
+  beast:{n:'Beast',ic:'ᛒ',col:'#e0a050',bp:[2,4],d:t=>`Beasts deal +${[10,20][t]}% damage, plus +${[15,30][t]}% for every Beast on a touching hex.${t>=1?' Beast hits heal them 2% health.':''}`},
+  bruiser:{n:'Bruiser',ic:'ᚢ',col:'#ff8a5a',bp:[2,3],d:t=>`Bruiser hits knock monsters back ${['a quarter','half'][t]} a hex (bosses a third as far), and Bruisers have +${[25,50][t]}% health.`},
   plague:{n:'Plaguebringer',ic:'☣',col:'#a6e04a',bp:[2,3,4],d:t=>['Plaguebringer hits add a poison stack. Each stack eats 12% of the hero\'s damage every second for 4s (up to 12 stacks).','Poison stacks deal double damage.','Poison stacks deal double damage, and when a poisoned monster dies its stacks jump to monsters nearby.'][t]},
 };
-const TRAIT_ORDER=['kingdom','wildwood','shadow','plague','guardian','marksman','sorcerer','assassin'];
+const TRAIT_ORDER=['kingdom','wildwood','shadow','plague','beast','guardian','marksman','sorcerer','assassin','bruiser'];
 // range in tiles, as = attacks per second, mana = cast threshold. Projectile kinds: melee, arrow, bolt, orb, fire, holy, claw.
 const HEROES={
   squire:{n:'Squire',c:1,fl:{k:'rally',n:'Rally',d:'Neighbouring heroes attack 15% faster.'},tr:['kingdom','guardian'],dmg:14,as:.9,rng:1.25,mana:60,dt:'p',proj:'melee',ab:{snd:'sp_slash',k:'nova',n:'Shield Bash',r:.9,m:2,stun:1},d:'Bashes everything around his target, stunning them for 1s.'},
@@ -38,6 +40,12 @@ const HEROES={
   frostmage:{n:'Frost Mage',c:3,tr:['kingdom','sorcerer'],dmg:20,as:.75,rng:3,mana:80,dt:'m',proj:'ice',ab:{snd:'sp_ice',k:'nova',n:'Blizzard',r:1.5,m:1.8,stun:.9,slow:.4,ice:1},d:'Freezes every monster in a wide circle for 0.9s, then slows them by 40%.'},
   warlord:{n:'Warlord',c:4,sz:1.1,fl:{k:'bulwark',n:'Bulwark',d:'Neighbouring heroes have 30% more health. Hits stun for 0.5s.'},tr:['wildwood','guardian'],dmg:48,as:.7,rng:1.35,mana:80,dt:'p',proj:'melee',ab:{snd:'m_slam',k:'nova',n:'Earthshatter',r:1.6,m:2.8,stun:1.2,self:1,taunt:4},d:'Slams the ground, stunning everything around him for 1.2s. Monsters attack him first for 4s.'},
   necromancer:{n:'Necromancer',c:4,tr:['plague','sorcerer'],dmg:30,as:.8,rng:3.25,mana:80,dt:'m',proj:'orb',ab:{snd:'sp_hex',k:'pest',n:'Pestilence',r:2,psn:4},d:'Every monster within 2 tiles of the target takes its poison as a burst, then gains 4 more stacks.'},
+  wolf:{sz:.88,n:'Grey Wolf',c:1,tr:['beast','assassin'],dmg:13,as:1.15,rng:1.25,mana:60,dt:'p',proj:'claw',ab:{snd:'sp_slash',k:'execute',n:'Pounce',m:2.8},d:'Pounces on the weakest monster in reach for 2.8× damage.'},
+  fox:{sz:.88,n:'Ember Fox',c:2,tr:['beast','sorcerer'],dmg:13,as:.85,rng:2.75,mana:60,dt:'m',proj:'fire',ab:{snd:'sp_fire',k:'chain',n:'Foxfire',n2:5,m:1.3},d:'Spits a wisp of foxfire that leaps between 5 monsters.'},
+  husky:{sz:.88,n:'Snow Husky',c:2,fl:{k:'coat',n:'Thick Coat',d:'Neighbouring heroes take 12% less damage.'},tr:['beast','bruiser'],dmg:18,as:.85,rng:1.25,mana:60,dt:'p',proj:'claw',ab:{snd:'sp_ice',k:'nova',n:'Snow Plough',r:1.2,m:1.8,kb:1,self:1},d:'Ploughs through everything around it, knocking them back a whole hex.'},
+  stag:{n:'Elder Stag',c:3,fl:{k:'antler',n:'Antler Guard',d:'Neighbouring heroes have 20% more health.'},tr:['beast','guardian'],dmg:28,as:.8,rng:1.35,mana:70,dt:'p',proj:'melee',ab:{snd:'m_slam',k:'nova',n:'Stampede',r:1.4,m:2,stun:.8,kb:.8,self:1},d:'Stamps the ground: monsters around it are stunned for 0.8s and thrown back.'},
+  orcraider:{n:'Orc Raider',c:3,fl:{k:'bloodrage',n:'Bloodrage',d:'Attacks 6% faster for every monster within 1.5 hexes (up to +48%).'},tr:['shadow','bruiser'],dmg:32,as:.85,rng:1.3,mana:70,dt:'p',proj:'melee',ab:{snd:'sp_slash',k:'nova',n:'Cleave',r:1.3,m:2.6,kb:.6,self:1},d:'Cleaves everything around him and shoves it back down the road.'},
+  bull:{n:'War Bull',c:4,sz:.95,fl:{k:'gore',n:'Gore',d:'Every hit knocks its target back half a hex.'},tr:['beast','bruiser'],dmg:52,as:.7,rng:1.35,mana:80,dt:'p',proj:'melee',ab:{snd:'m_slam',k:'execute',n:'Trample',m:4,strong:1,kb:2,stun:1},d:'Tramples the strongest monster in reach for 4× damage, stunning it and hurling it two hexes back.'},
 };
 const HKEYS=Object.keys(HEROES);
 // shop odds per level (tiers 1-5) and copies in the pool
@@ -46,7 +54,7 @@ const POOL=[0,22,20,17,10,9];
 const XPNEED=[0,0,2,2,6,10,20,36,48,72,84];// xp to go from level i to i+1
 const STARM=[0,1,1.8,3.24];
 // monsters: hp in units of the wave base, sp in tiles/s, ar = physical armour, mr = magic resist, w = keep damage on leak
-const EPITHET={necro:'Lord of the Hollow Crypts',mushking:'The Rot-Crowned Sovereign',dragon:'Scourge of the Ember Wastes',devourer:'The Hunger Beneath the World'};
+const EPITHET={sporemother:'Queen of the Sunken Bog',colossus:'Warden of Frostpeak Pass',skyking:'Tyrant of the Sunscorch Dunes',necro:'Lord of the Hollow Crypts',mushking:'The Rot-Crowned Sovereign',dragon:'Scourge of the Ember Wastes',devourer:'The Hunger Beneath the World'};
 const MON={
   minion:{n:'Skeleton Minion',hp:.7,sp:1.25,ar:0,mr:0,w:1,sz:.85,atk:{k:'melee',r:1.45,cd:1.4,m:.4}},
   warrior:{n:'Skeleton Warrior',hp:1.3,sp:.9,ar:.3,mr:0,w:2,sz:.95,atk:{k:'melee',r:1.45,cd:1.3,m:1}},
@@ -65,15 +73,41 @@ const MON={
   ghost:{n:'Skull Wraith',beh:'phase',hp:.8,sp:1.1,ar:0,mr:.3,w:2,sz:.85,fly:1,atk:{k:'bolt',r:2,cd:2,m:.7}},
   armabee:{n:'Armabee',beh:'rush',hp:.85,sp:1.35,ar:.35,mr:0,w:2,sz:.8,fly:1},
   goleling:{n:'Goleling',hp:4.5,sp:.65,ar:.5,mr:.2,w:5,sz:1.2,fly:1,big:1,atk:{k:'slam',r:1.4,cd:3,m:2}},
-  devourer:{n:'The Rune Devourer',hp:70,sp:.2,ar:.35,mr:.35,w:999,sz:2.7,boss:1,final:1,atk:{k:'slam',r:2.3,cd:5,m:1}},
+  devourer:{n:'The Rune Devourer',hp:150,sp:.17,ar:.35,mr:.35,w:999,sz:2.7,boss:1,final:1,atk:{k:'slam',r:2.3,cd:5,m:1}},
   dragon:{n:'The Ember Dragon',hp:36,sp:.5,ar:.3,mr:.4,w:25,sz:2,boss:1,fly:1,summon:'ghost',atk:{k:'breath',r:2.6,cd:3.5,m:1.6}},
+  pinkblob:{n:'Pink Jelly',hp:.8,sp:1.2,ar:0,mr:.1,w:1,sz:.8,split:2},
+  mushnub:{n:'Mushnub',hp:1,sp:.8,ar:.1,mr:.2,w:2,sz:.85,heal:1},
+  frog:{n:'Bog Lurker',beh:'hunt',hp:1.3,sp:1,ar:.15,mr:.1,w:2,sz:.95,atk:{k:'melee',r:1.45,cd:1.2,m:1.1}},
+  glub:{n:'Glub',beh:'rush',hp:.7,sp:1.3,ar:0,mr:.2,w:2,sz:.8,fly:1},
+  spiky:{n:'Thornback',beh:'hunt',hp:5,sp:.55,ar:.55,mr:.1,w:5,sz:1.3,big:1,atk:{k:'slam',r:1.4,cd:2.6,m:1.8}},
+  sporemother:{n:'The Spore Mother',hp:34,sp:.45,ar:.25,mr:.35,w:20,sz:1.8,boss:1,summon:'mushnub',atk:{k:'bolt',r:2.6,cd:1.8,m:1.1}},
+  frostorc:{n:'Frost Raider',beh:'rush',hp:1.1,sp:1.45,ar:.15,mr:0,w:2,sz:.95},
+  hywirl:{n:'Hywirl',beh:'phase',hp:1,sp:1,ar:0,mr:.35,w:2,sz:.9,fly:1,atk:{k:'bolt',r:2,cd:2.2,m:.8,chill:1}},
+  alpaking:{n:'Alpaking',hp:1.1,sp:1.1,ar:.2,mr:.1,w:2,sz:.85,fly:1},
+  iceblob:{n:'Rime Jelly',hp:1.4,sp:.8,ar:.1,mr:.3,w:2,sz:.85,split:2},
+  colossus:{n:'The Frost Colossus',beh:'hunt',hp:32,sp:.42,ar:.4,mr:.25,w:20,sz:1.9,boss:1,summon:'iceblob',atk:{k:'slam',r:1.9,cd:3,m:1.6,chill:1}},
+  cactoro:{n:'Cactoro',beh:'hunt',hp:1.5,sp:.85,ar:.35,mr:.1,w:3,sz:1,atk:{k:'melee',r:1.45,cd:1.3,m:1.2}},
+  dino:{n:'Dune Raptor',beh:'rush',hp:1,sp:1.75,ar:.1,mr:0,w:2,sz:.95},
+  birb:{n:'Scorch Birb',hp:1.2,sp:1.15,ar:.1,mr:.25,w:2,sz:.9,atk:{k:'bolt',r:2.2,cd:2,m:.9}},
+  squidle:{n:'Squidle',beh:'phase',hp:.9,sp:1.15,ar:0,mr:.3,w:2,sz:.85,fly:1},
+  brute:{n:'Sand Brute',beh:'hunt',hp:5,sp:.6,ar:.3,mr:.3,w:5,sz:1.35,big:1,atk:{k:'slam',r:1.4,cd:2.6,m:2.1}},
+  skyking:{n:'The Sky Tyrant',hp:36,sp:.5,ar:.3,mr:.35,w:25,sz:2,boss:1,fly:1,summon:'squidle',atk:{k:'bolt',r:2.8,cd:1.4,m:1.3}},
 };
 // three acts of ten waves; wave 10 of each act is its boss
 const ACTS=[
-  {n:'Hollow Crypts',roster:['minion','warrior','srogue','smage'],big:'golem',boss:'necro',ground:['#4c5a44','#55634a','#48543f'],edge:'#2a3326',fog:'rgba(120,140,170,.10)',sky:['#1b2333','#3b4a5a']},
-  {n:'Wildwood Marches',roster:['orc','orcskull','tribal','blob'],big:'yeti',boss:'mushking',ground:['#4f7a3a','#5a8a42','#4a7036'],edge:'#2c4a22',fog:'rgba(200,230,150,.06)',sky:['#2a4a3a','#7aa86a']},
-  {n:'Ember Wastes',roster:['demon','bluedemon','ghost','armabee'],big:'goleling',boss:'dragon',ground:['#6a4a38','#7a5440','#5e4232'],edge:'#3a2418',fog:'rgba(255,120,60,.08)',sky:['#3a1a14','#a84a2a']},
+  {n:'Hollow Crypts',roster:['minion','warrior','srogue','smage'],big:'golem',boss:'necro',ter:{water:1,hill:3,mud:2,thorn:2},ground:['#4c5a44','#55634a','#48543f'],edge:'#2a3326',fog:'rgba(120,140,170,.10)',sky:['#1b2333','#3b4a5a']},
+  {n:'Wildwood Marches',roster:['orc','orcskull','tribal','blob'],big:'yeti',boss:'mushking',ter:{water:3,hill:3,mud:2,thorn:2},ground:['#4f7a3a','#5a8a42','#4a7036'],edge:'#2c4a22',fog:'rgba(200,230,150,.06)',sky:['#2a4a3a','#7aa86a']},
+  {n:'Ember Wastes',roster:['demon','bluedemon','ghost','armabee'],big:'goleling',boss:'dragon',ter:{water:0,hill:4,mud:1,thorn:3},ground:['#6a4a38','#7a5440','#5e4232'],edge:'#3a2418',fog:'rgba(255,120,60,.08)',sky:['#3a1a14','#a84a2a']},
 ];
+// every act has a second biome a run can roll instead: its own field, terrain, monsters and boss
+const BIOMES={
+  bog:{a:0,n:'Sunken Bog',obs:3,roster:['pinkblob','mushnub','frog','glub'],big:'spiky',boss:'sporemother',ter:{water:4,hill:2,mud:4,thorn:1},ground:['#3e5236','#46603c','#3a4c32'],edge:'#20301e',fog:'rgba(110,170,140,.10)',sky:['#16241f','#3e5c4a']},
+  frost:{a:1,n:'Frostpeak Pass',obs:4,roster:['frostorc','hywirl','alpaking','iceblob'],big:'yeti',boss:'colossus',ter:{water:2,hill:4,mud:1,thorn:0},ground:['#aabbcc','#b6c6d6','#a0b2c4'],edge:'#4a5a72',fog:'rgba(220,235,255,.12)',sky:['#25344e','#8aa2c0']},
+  dunes:{a:2,n:'Sunscorch Dunes',obs:5,roster:['cactoro','dino','birb','squidle'],big:'brute',boss:'skyking',ter:{water:1,hill:4,mud:0,thorn:3},ground:['#c09a62','#cba46c','#b6925a'],edge:'#6e5028',fog:'rgba(255,215,150,.08)',sky:['#4e3218','#e0a868']},
+};
+const BIOALT=['bog','frost','dunes'];
+// the alternate bosses count as their act's boss for unlocks
+const BOSSEQ={sporemother:'necro',colossus:'mushking',skyking:'dragon'};
 // relics: picked like augments, three choices at a time. tier 1 silver, 2 gold, 3 prismatic
 const RELICS=[
   {id:'em_kingdom',t:1,n:'Kingdom Crest',d:'Counts as one more Kingdom hero.',em:'kingdom'},
@@ -156,7 +190,7 @@ const ACH=[
   {id:'w5',n:'Holding the Line',d:'Survive 5 waves',g:15},
   {id:'act1',n:'Crypt Breaker',d:'Defeat the Necromancer',g:40},
   {id:'act2',n:'Kingslayer',d:'Defeat the Mushroom King',g:60},
-  {id:'win',n:'Rune Warden',d:'Defeat the Ember Dragon and win a run',g:150},
+  {id:'win',n:'Rune Warden',d:'Defeat the final boss of Act III and win a run',g:150},
   {id:'star3',n:'Legendary',d:'Get a ★3 hero',g:30},
   {id:'trait6',n:'Full Banner',d:'Activate a trait at its top breakpoint',g:40},
   {id:'lvl9',n:'Warlord',d:'Reach level 9',g:40},
@@ -279,7 +313,11 @@ const OBS_SETS=[
   [['props',0,1.25],['props',1,1.2],['props2',10,.85],['props2',7,1.15],['props',3,.75],['props2',8,.95]],
   [['props2',12,1.05],['props2',13,.95],['props2',11,.85],['props',4,.85],['props2',14,.8],['props',2,.95]],
 ];
+OBS_SETS.push([['props3',0,1.05],['props3',1,1.1],['props3',2,.95],['props3',3,1],['props3',4,.95],['props3',5,1.2]],
+  [['props3',6,1.3],['props3',7,1],['props3',8,1.05],['props3',9,1],['props3',10,1.05],['props3',11,1.05]],
+  [['props3',12,1.1],['props3',13,.95],['props3',14,1.3],['props3',15,1],['props3',16,1.05],['props3',17,.95]]);
 const EDGE_SETS=[[['props2',4,.8],['props2',5,.55],['props2',6,.6],['props2',0,.7],['props2',1,.75],['props2',7,.9]],[['props2',9,.6],['props2',10,.7],['props',5,.7],['props2',8,.7],['props2',7,.9]],[['props2',11,.7],['props2',12,.8],['props2',13,.8],['props2',14,.65]]];
+EDGE_SETS.push([['props3',21,.7],['props3',22,.7],['props3',23,.7],['props3',5,.9],['props3',2,.7]],[['props3',6,.95],['props3',8,.85],['props3',10,.8],['props3',7,.7]],[['props3',18,.9],['props3',19,.8],['props3',20,.6],['props3',13,.7],['props3',14,.95]]);
 // ---------- keep guardians: they man the keep, unlock through deeds, and level up with gems ----------
 // cd = seconds between actions at level 1; p(l) = power multiplier per level
 const GUARDS={
@@ -290,7 +328,7 @@ const GUARDS={
   sentinel:{n:'Stone Sentinel',ic:'⛨',col:'#b8c2cc',tr:['guardian'],cd:1.2,un:{ach:'perfect',d:'Clear an act without a leak'},d:l=>`Stands at the gate. Monsters that reach the keep must smash it first, and it hits back. Rebuilt every wave. Counts as one more Guardian.`},
   oracle:{n:'Rune Oracle',ic:'ᚱ',col:'#9cc4ff',tr:[],cd:0,un:{ach:'rune9',d:'Hit a ×9 rune shot'},d:l=>`Every rune multiplies by 1 more${l>=3?', and you get a ×2 rune stone at the start of every act':''}.`},
   reaper:{n:'Pale Reaper',ic:'☠',col:'#c9a8ff',tr:['shadow'],cd:3,un:{kills:2500,d:'Slay 2500 monsters'},d:l=>`Strikes the most wounded monster anywhere on the field, and reaps non-bosses below ${10+2*l}% health. Counts as one more Shadow hero.`},
-  dragon:{n:'Keep Dragon',ic:'♨',col:'#ff7a3a',tr:['wildwood'],cd:9,un:{boss:['dragon',2],d:'Defeat the Ember Dragon twice'},d:l=>`Breathes fire down the entire row of the monster closest to the keep. Counts as one more Wildwood hero.`},
+  dragon:{n:'Keep Dragon',ic:'♨',col:'#ff7a3a',tr:['wildwood'],cd:9,un:{boss:['dragon',2],d:'Defeat an Act III boss twice'},d:l=>`Breathes fire down the entire row of the monster closest to the keep. Counts as one more Wildwood hero.`},
   chrono:{n:'Chronomancer',ic:'⧗',col:'#5fe1ff',tr:[],cd:26,un:{elites:60,d:'Slay 60 elite champions'},d:l=>`Stops time for ${(2+.3*l).toFixed(1)}s: monsters freeze while your heroes keep fighting.`},
 };
 const GKEYS=Object.keys(GUARDS);

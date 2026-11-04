@@ -47,7 +47,8 @@ const SPR={img:{},st:{},cache:{}};
 function sheet(name){const s=SPR.st[name];if(s===1)return SPR.img[name];if(s!==undefined)return null;if(typeof Image==='undefined'||!document.createElement){SPR.st[name]=-1;return null}
   SPR.st[name]=0;const im=new Image();im.onload=()=>{SPR.st[name]=1;if(typeof onSheet==='function')onSheet(name)};im.onerror=()=>{SPR.st[name]=-1};im.src='gfx/'+name+'.png';SPR.img[name]=im;return null}
 // a frame, downscaled once to the size it is drawn at (cached per 8px bucket)
-function frame(name,cell,i,want){const im=sheet(name);if(!im)return null;const b=Math.max(16,Math.min(cell,Math.ceil(want/8)*8)),key=name+'|'+i+'|'+b;let c=SPR.cache[key];if(c)return c;
+// character sheets are square cells in one row, so the cell size is the sheet's height (older 160px sheets still work)
+function frame(name,cell,i,want){const im=sheet(name);if(!im)return null;if(im.naturalHeight&&(name[1]==='_'||name==='props3'))cell=im.naturalHeight;const b=Math.max(16,Math.min(cell,Math.ceil(want/8)*8)),key=name+'|'+i+'|'+b;let c=SPR.cache[key];if(c)return c;
   c=mk(b,b);if(!c)return null;const g=c.getContext('2d');if(!g||!g.drawImage)return null;g.imageSmoothingQuality='high';
   let src=im,sx0=i*cell,sw=cell;while(sw/2>=b*1.3){const h=Math.round(sw/2),t=mk(h,h),tg=t.getContext('2d');tg.imageSmoothingQuality='high';tg.drawImage(src,sx0,0,sw,sw,0,0,h,h);src=t;sx0=0;sw=h}
   g.drawImage(src,sx0,0,sw,sw,0,0,b,b);if(Object.keys(SPR.cache).length>900)SPR.cache={};return SPR.cache[key]=c}

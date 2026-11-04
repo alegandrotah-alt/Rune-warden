@@ -17,8 +17,8 @@ function endWave(){
   // act boss down
   if(boss){const a=w/10;if(R.leakAct===0)award('perfect');R.leakAct=0;R.calm=0;
     if(a===1){award('act1');if(R.rerolls===0)award('h_miser')}if(a===2)award('act2');
-    if(a===3){award('win');META.wins=(META.wins||0)+1;R.won=1;saveMeta();banner('THE EMBER DRAGON FALLS','#ffd76a')}
-    else{R.act=a;const fix=Math.ceil((R.hpMax-R.hp)*.5);R.hp+=fix;if(fix>0)floatText(FW+T*.2,FH/2-T*1.2,'+'+fix,'#7dff9a',1.3);genField();if(guardLv('oracle')>=3)R.stones.push(2);banner(`ACT ${['I','II','III'][a]}: ${ACTS[a].n.toUpperCase()}`,'#ffd76a');bgDirty=1}}
+    if(a===3){award('win');META.wins=(META.wins||0)+1;R.won=1;saveMeta();banner(MON[actD(2).boss].n.toUpperCase()+' FALLS','#ffd76a')}
+    else{R.act=a;const fix=Math.ceil((R.hpMax-R.hp)*.5);R.hp+=fix;if(fix>0)floatText(FW+T*.2,FH/2-T*1.2,'+'+fix,'#7dff9a',1.3);genField();if(guardLv('oracle')>=3)R.stones.push(2);banner(`ACT ${["I","II","III"][a]}: ${actD(a).n.toUpperCase()}`,'#ffd76a');bgDirty=1}}
   R.wave++;if(R.endless&&R.wave>=40)award('endless40');
   rollShop(true);R.node=null;if(boss)genMap();if(R.won&&!R.endless)R.map=null;R.nextQ=waveList(R.wave);autoNode();
   R.queue=[];
@@ -60,8 +60,8 @@ function runOver(win){
 function goEndless(){R.endless=true;R.final=0;R.won=0;R.phase='plan';R.act=2;R.map=null;R.node='battle';R.room=null;R.queue=null;genField();rollShop(true);R.nextQ=waveList(R.wave);hideEnd();saveRun();uiRefresh()}
 // ---------- saving a run in progress (between waves) ----------
 // only a run the player actually started is saved: the placeholder run behind the menu must never overwrite it
-function saveRun(){if(!R||!R.live||R.phase==='over')return;try{const o=Object.assign({},R,{b:null,field:{obs:R.field.obs,runes:R.field.runes,portals:R.field.portals,blk:Array.from(R.field.blk).map(v=>v===2?2:0)}});localStorage.setItem('runewarden-run',JSON.stringify(o))}catch(e){}}
-function loadRun(){try{const o=JSON.parse(localStorage.getItem('runewarden-run')||'null');if(!o||!o.field)return false;R=o;R.field.blk=Uint8Array.from(o.field.blk);R.b=null;if(R.phase==='wave')R.phase='plan';
+function saveRun(){if(!R||!R.live||R.phase==='over')return;try{const o=Object.assign({},R,{b:null,field:{obs:R.field.obs,runes:R.field.runes,portals:R.field.portals,gates:R.field.gates,ter:Array.from(R.field.ter||[]),blk:Array.from(R.field.blk).map(v=>v===2?2:0)}});localStorage.setItem('runewarden-run',JSON.stringify(o))}catch(e){}}
+function loadRun(){try{const o=JSON.parse(localStorage.getItem('runewarden-run')||'null');if(!o||!o.field)return false;R=o;R.field.blk=Uint8Array.from(o.field.blk);R.field.ter=o.field.ter&&o.field.ter.length?Uint8Array.from(o.field.ter):new Uint8Array(COLS*ROWS);R.field.gates=o.field.gates||[{k:'west',c:0,r:3,id:0}];R.b=null;if(R.phase==='wave')R.phase='plan';
   UID=1+Math.max(0,...allHeroes().map(h=>h.uid||0));R.items=R.items||[];for(const h of allHeroes()){h.it=h.it||[];h.ko=0}for(const k of HKEYS)if(R.pool[k]==null)R.pool[k]=unlocked(k)?POOL[HEROES[k].c]:0;
   R.asc=R.asc||0;R.stats.elites=R.stats.elites||0;R.potions=R.potions||[];
   // runs saved before the branching map get a fresh map for the current act

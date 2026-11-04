@@ -85,6 +85,7 @@ input[type=range]{accent-color:#e8a63a;width:160px}
 @keyframes ring{to{border-color:#fff3c0}}
 @media (max-height:430px){#dmgP,#waveP{top:40px}#traitP{top:40px}#coach{font-size:13px;padding:8px 10px}#waveP .mc canvas{width:22px;height:22px}}
 #waveP .tg.road{background:rgba(255,240,200,.14);color:#fff0c8}
+#waveP .tg.gate{background:rgba(170,90,255,.22);color:#e6c8ff;border-color:rgba(200,150,255,.5)}
 /* ---------- phase 2-4: map, events, items, collection, ascension ---------- */
 .tbtn.on{animation:pulse 1.2s infinite}
 #mapGrid{position:relative;height:min(46vh,300px);margin:6px 4px 2px;border-radius:12px;background:radial-gradient(ellipse at 50% 40%,rgba(255,230,180,.08),rgba(0,0,0,.25)),repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0 2px,transparent 2px 40px)}

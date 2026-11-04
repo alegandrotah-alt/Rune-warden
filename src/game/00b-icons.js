@@ -34,6 +34,8 @@ const ICON={
   coin:['F:M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z','K:M10.5 7h3v10h-3z'],
   dice:['M4 4h16v16H4z','F:M8 7a1.5 1.5 0 1 0 0 3a1.5 1.5 0 1 0 0-3zM16 14a1.5 1.5 0 1 0 0 3a1.5 1.5 0 1 0 0-3zM12 10.5a1.5 1.5 0 1 0 0 3a1.5 1.5 0 1 0 0-3z'],
   note:['M9 18V5l11-2v13','F:M6 15.5a3 3 0 1 0 0 6a3 3 0 1 0 0-6zM17 13.5a3 3 0 1 0 0 6a3 3 0 1 0 0-6z'],
+  paw:['F:M12 12.5c-3 0-6 3.5-6 6.2 0 1.6 1.2 2.6 2.8 2.6 1.3 0 2.1-.8 3.2-.8s1.9.8 3.2.8c1.6 0 2.8-1 2.8-2.6 0-2.7-3-6.2-6-6.2z','F:M5 7.5a2 2.5 0 1 0 4 0a2 2.5 0 1 0-4 0zM10 4.5a2 2.5 0 1 0 4 0a2 2.5 0 1 0-4 0zM15 7.5a2 2.5 0 1 0 4 0a2 2.5 0 1 0-4 0zM2 12a1.8 2.2 0 1 0 3.6 0a1.8 2.2 0 1 0-3.6 0zM18.4 12a1.8 2.2 0 1 0 3.6 0a1.8 2.2 0 1 0-3.6 0z'],
+  fist:['F:M6 9.5c0-1.4 1-2.5 2.3-2.5h8.4c1.8 0 3.3 1.5 3.3 3.3v4.2c0 3.3-2.7 6-6 6h-2C8.7 20.5 6 17.8 6 14.5z','K:M9.5 7h.9v4.5h-.9zM12.6 7h.9v4.5h-.9zM15.7 7h.9v4.5h-.9z','F:M3.5 11.5h3v4h-3z'],
   hammer:['M4 20l9-9','F:M11 4l6-1 4 4-1 6-3-3-3 3-4-4 3-3z'],
 };
 function icon(name,cls){const P=ICON[name];if(!P)return'';let s=`<svg class="icn${cls?' '+cls:''}" viewBox="0 0 24 24" aria-hidden="true">`;
@@ -45,7 +47,7 @@ function drawIcon(name,x,y,size,col){const P=ICON[name];if(!P||typeof Path2D==='
   ctx.restore();return true}
 // data entries keep their old glyph in .glyph and get an SVG in .ic and an icon name in .icn
 function applyIcons(){const set=(o,n)=>{if(!o)return;o.glyph=o.glyph||o.ic;o.icn=n;o.ic=icon(n)};
-  const TR={kingdom:'crown',wildwood:'leaf',shadow:'moon',plague:'bio',guardian:'shield',marksman:'arrow',sorcerer:'star',assassin:'daggers'};for(const k in TR)set(TRAITS[k],TR[k]);
+  const TR={kingdom:'crown',wildwood:'leaf',shadow:'moon',plague:'bio',guardian:'shield',marksman:'arrow',sorcerer:'star',assassin:'daggers',beast:'paw',bruiser:'fist'};for(const k in TR)set(TRAITS[k],TR[k]);
   const IT={sword:'sword',bow:'bow',rod:'rod',tear:'drop',cloak:'moon',belt:'heart'};for(const k in IT)set(ITEMS[k],IT[k]);
   for(const k in ITEMS){const I=ITEMS[k];if(I.c){I.glyph=ITEMS[I.c[0]].glyph+ITEMS[I.c[1]].glyph;I.ic=ITEMS[I.c[0]].ic+ITEMS[I.c[1]].ic}}
   const ND={battle:'swords',elite:'skull',event:'question',rest:'fire',merchant:'scales',treasure:'chest',boss:'crown'};for(const k in ND)set(NODES[k],ND[k]);

@@ -16,6 +16,8 @@ const TIPS={
   hunt:{icn:'swords',t:'Hunters',d:'Some monsters stop to fight any hero in reach. Frontline heroes with lots of health hold them; they also hit back hard.'},
   rush:{icn:'arrow',t:'Runners',d:'Runners ignore your heroes and dash for the keep, dealing double damage if they arrive. Slow them, or kill them before they reach the gate.'},
   boss:{icn:'crown',t:'Act bosses',d:'The last floor of each act is a boss. Beat it for a boss relic, and the keep repairs half of its missing health before the next act.'},
+  gates:{icn:'eye',t:'More than one gate',d:'Monsters now come through several gates. Each glowing gate shows how many monsters it will send, and a dashed road shows where they walk. Every gate must keep a road to the keep, so you cannot wall one off.'},
+  terrain:{icn:'leaf',t:'Terrain',d:'High ground gives shooters +1 range and melee heroes +20% damage. Monsters wade slowly through mud and bleed in thorns. Nothing can cross water, but arrows fly over it. Tap a hex to see what it is.'},
   act:{icn:'flag',t:'A new act',d:'New monsters, a new map and a new field. Rune stones you placed come with you; heroes on tiles that are now blocked go back to the bench.'},
 };
 let TIPQ=[];
@@ -29,4 +31,4 @@ function bindTips(){if(!DOM)return;$('tipOk').addEventListener('click',()=>{$('o
 function tipWatch(){if(!DOM||!R)return;
   if(R.phase==='reward')tip('recruit');if(R.phase==='pick')tip(R.pickSrc==='boss'?'boss':'relic');if(R.room&&TIPS[R.room.t])tip(R.room.t);
   if(R.potions.length)tip('potion');if(R.guards&&R.guards.length&&R.wave>1)tip('guards');if(R.act>0)tip('act');
-  if(R.phase==='plan'&&R.nextQ){if(R.node==='elite'||R.nextQ.some(e=>e.elite))tip('elite');if(R.nextQ.some(e=>MON[e.k].beh==='hunt'))tip('hunt');if(R.nextQ.some(e=>MON[e.k].beh==='rush'))tip('rush');if(R.wave%10===0&&R.wave<=30)tip('boss')}}
+  if(R.phase==='plan'&&R.nextQ){if(R.node==='elite'||R.nextQ.some(e=>e.elite))tip('elite');if(R.nextQ.some(e=>MON[e.k].beh==='hunt'))tip('hunt');if(R.nextQ.some(e=>MON[e.k].beh==='rush'))tip('rush');if(R.wave%10===0&&R.wave<=30)tip('boss');if(R.nextQ.some(e=>e.g))tip('gates');if(R.field.ter&&R.field.ter.some(t=>t))tip('terrain')}}
