@@ -5,7 +5,7 @@ const isFight=t=>!!(NODES[t]&&NODES[t].fight);
 const MAP_W=[['battle',44],['event',20],['elite',15],['rest',10],['merchant',8],['treasure',3]];
 function pickType(f,parents){
   if(f===0)return 'battle';if(f===MAPF-2)return 'rest';if(f===5)return 'treasure';
-  const opts=MAP_W.filter(([k])=>!(k==='elite'&&f<3)&&!(k==='rest'&&f<4)&&!(k==='merchant'&&f<2)&&!(k==='treasure'&&f<3)&&!(['elite','rest','merchant','treasure'].includes(k)&&parents.includes(k)));
+  const opts=MAP_W.filter(([k])=>!(stage()<1&&(k==='event'||k==='merchant'))&&!(k==='elite'&&f<3)&&!(k==='rest'&&f<4)&&!(k==='merchant'&&f<2)&&!(k==='treasure'&&f<3)&&!(['elite','rest','merchant','treasure'].includes(k)&&parents.includes(k)));
   let tot=0;for(const o of opts)tot+=o[1];let x=rng()*tot;for(const [k,w] of opts){x-=w;if(x<0)return k}return 'battle'}
 function genMap(){if(R.endless||R.wave>30){R.map=null;R.node='battle';return}
   const N=[];for(let f=0;f<MAPF;f++)N.push(new Array(MAPL).fill(null));

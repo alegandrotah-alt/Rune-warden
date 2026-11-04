@@ -18,7 +18,8 @@ A fantasy roguelite tower defense played in landscape. Monsters pour out of a po
 ## Building
 ```
 node tools/build.js            # assemble www/index.html from src/
-node tools/sim.js --runs 6     # headless balance bot (mazes, picks map stops, equips items); --asc N for ascension
+node tools/sim.js --runs 6     # headless balance bot (traits, interest, mazing, rune stones, map rooms, items, potions)
+                               # --asc N ascension, --bot simple|pacifist, --fuzz random relic piles
 node tools/browser-check.js    # headless Chromium: errors and frame times (needs playwright)
 ```
 Every push to `main` runs the checks, builds a signed APK (with the `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` secrets) and deploys the web version.

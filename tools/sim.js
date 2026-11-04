@@ -11,19 +11,21 @@ const RUNS = +arg('runs', 6);
 
 const frag = buildFragment();
 let src = frag.slice(frag.indexOf('<script>') + 8, frag.lastIndexOf('</script>'));
-src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,SPAWN_ROWS,runeAt,portalAt,nbrs,hx,hy};})();`);
+src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,SPAWN_ROWS,runeAt,portalAt,nbrs,hx,hy};})();`);
 const script = new vm.Script(src, { filename: 'game.js' });
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 function runOnce(seed, opt) {
   const rand = mulberry(seed), math = Object.create(Math); math.random = rand;
-  const store = {};
+  const store = { 'runewarden-settings': JSON.stringify({ allSys: opt && opt.stage0 ? false : true }) };
   const ctx = { Math: math, console, JSON, Object, Array, Number, String, Date, Map, Set, Promise, Uint8Array, Int16Array, Float32Array, isFinite, parseInt, parseFloat, Error,
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     setTimeout: () => 0, clearTimeout: () => 0, performance: { now: () => 0 } };
   ctx.globalThis = ctx; vm.createContext(ctx); script.runInContext(ctx);
   WALL = null; RAND = rand; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true }); const R = () => G.R;
   const nodes = {}, rooms = {}; let kos = 0;
+  // fuzzing: start holding a random pile of relics, boss relics included, plus potions
+  if (opt && opt.fuzz) { const R0 = G.R, pool = G.RELICS.map((r) => r.id); for (let i = 0; i < 12; i++) { const id = pool[(rand() * pool.length) | 0]; if (!R0.relics.includes(id)) { R0.relics.push(id); G.applyRelic(id); } } for (const p of G.POTKEYS) G.gainPotion(p); }
   let err = null, waves = 0;
   try {
     for (let guard = 0; guard < 400 && R().phase !== 'over'; guard++) {
@@ -38,6 +40,7 @@ function runOnce(seed, opt) {
 
       if (R().phase === 'wave') { err = 'wave ' + R().wave + ' never ended'; break; }
       waves = R().wave - 1;
+      { const r = R(); if (!Number.isFinite(r.gold) || !Number.isFinite(r.hp) || r.board.some((h) => { const st = G.heroStats(h); return !Number.isFinite(st.dmg) || !Number.isFinite(st.as) || !Number.isFinite(st.rng); })) { err = 'non-finite state after floor ' + waves + ' (gold ' + r.gold + ', hp ' + r.hp + ')'; break; } }
       if (R().endless === false && R().phase === 'over') break;
     }
   } catch (e) { err = e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : String(e); }
@@ -47,33 +50,49 @@ function runOnce(seed, opt) {
   return { rooms: Object.keys(rooms).length, pots: r.stats.pots || 0, kos, seed, waves: r.phase === 'over' ? r.wave - 1 : waves, win: !!r.win, hp: Math.round(r.hp), lvl: r.lvl, relics: r.relics.length, maze: r.stats.maxMaze, items, elites: r.stats.elites || 0, nodes, stars: G.allHeroes().map((h) => h.k + h.star + ((h.it || []).length ? '[' + h.it.join(',') + ']' : '')).join(' '), err };
 }
 // ---------- the bot ----------
+// traits the bot builds towards: the two it already has the most different heroes in
+function focus(G) { const cnt = {}; const seen = new Set(); for (const h of G.allHeroes()) { if (seen.has(h.k)) continue; seen.add(h.k); for (const t of G.HEROES[h.k].tr) cnt[t] = (cnt[t] || 0) + 1 + G.HEROES[h.k].c * .2; }
+  return Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 2); }
+function heroScore(G, h, F) { const H = G.HEROES, D = H[h.k]; return D.c * Math.pow(3, h.star - 1) * (1 + .25 * (h.vet || 0)) * (1 + .35 * D.tr.filter((t) => F.includes(t)).length) * (1 + .3 * (h.it || []).length); }
 function plan(G, rand, opt) {
-  const R = G.R, H = G.HEROES, w = R.wave;
+  const R = G.R, H = G.HEROES, w = R.wave, F = focus(G), STRONG = !opt || opt.bot !== 'simple';
   const owned = (k, s) => G.allHeroes().filter((h) => h.k === k && h.star === s).length;
-  const reserve = w < 4 ? 0 : Math.min(30, w * 3);
-  const wantLvl = Math.min(9, 3 + Math.floor(w / 3.2));
-  for (let pass = 0; pass < 6; pass++) {
+  // TFT-style gold: build to 50 for full interest once the early floors are over, level on a schedule
+  const reserve = !STRONG ? (w < 4 ? 0 : Math.min(30, w * 3)) : w < 5 ? 0 : w < 9 ? 20 : 50;
+  const sched = [0, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10];
+  const wantLvl = STRONG ? sched[Math.min(w, sched.length - 1)] : Math.min(9, 3 + Math.floor(w / 3.2));
+  const wants = (k) => owned(k, 1) >= 1 || owned(k, 2) >= 1 && owned(k, 1) >= 0 && H[k].c <= 3 || H[k].tr.some((t) => F.includes(t));
+  for (let pass = 0; pass < 8; pass++) {
     while (R.lvl < wantLvl && R.gold >= 4 + Math.min(reserve, 10)) G.buyXP();
-    // pairs first, then anything that fits on the field
     R.shop.forEach((k, i) => { if (!k) return; const c = H[k].c; if (owned(k, 1) >= 1 && R.gold >= c) G.buy(i); });
-    R.shop.forEach((k, i) => { if (!k) return; const c = H[k].c, n = G.allHeroes().length; if (R.gold - c >= reserve && n < G.boardMax() + 3) G.buy(i); });
-    if (R.gold > reserve + 12 && w > 6) G.reroll(); else break;
+    R.shop.forEach((k, i) => { if (!k) return; const c = H[k].c, n = G.allHeroes().length; if (R.gold - c >= reserve && n < G.boardMax() + 3 && (!STRONG || wants(k) || n < G.boardMax())) G.buy(i); });
+    // roll down for upgrades once levelled, keeping the interest reserve
+    if (R.gold > reserve + (STRONG ? 4 : 12) && w > (STRONG ? 4 : 6) && (!STRONG || R.lvl >= wantLvl)) G.reroll(); else break;
   }
-  // bench full: sell the cheapest single
-  while (R.bench.every(Boolean)) { const s = R.bench.slice().sort((a, b) => H[a.k].c * a.star - H[b.k].c * b.star)[0]; G.sellHero(s); }
-  const val = (h) => H[h.k].c * Math.pow(3, h.star - 1);
-  // swap weakest board hero for a stronger bench hero
-  for (const b of R.bench.filter(Boolean).sort((a, c) => val(c) - val(a))) {
+  // bench full: sell the least useful single copy
+  while (R.bench.every(Boolean)) { const s = R.bench.slice().sort((a, b) => heroScore(G, a, F) - heroScore(G, b, F))[0]; G.sellHero(s); }
+  // field the best heroes: value, stars, focus traits and items
+  for (const b of R.bench.filter(Boolean).sort((a, c) => heroScore(G, c, F) - heroScore(G, a, F))) {
     if (R.board.length < G.boardMax()) { place(G, b); continue; }
-    const weak = R.board.slice().sort((a, c) => val(a) - val(c))[0];
-    if (weak && val(b) > val(weak)) { const c = weak.c, r = weak.r; R.board.splice(R.board.indexOf(weak), 1); const j = R.bench.indexOf(b); R.bench[j] = weak; weak.c = weak.r = -1; if (!G.placeHero(b, c, r)) place(G, b); }
+    const weak = R.board.slice().sort((a, c) => heroScore(G, a, F) - heroScore(G, c, F))[0];
+    if (weak && heroScore(G, b, F) > heroScore(G, weak, F) * 1.1) { const c = weak.c, r = weak.r; R.board.splice(R.board.indexOf(weak), 1); const j = R.bench.indexOf(b); R.bench[j] = weak; weak.c = weak.r = -1; if (!G.placeHero(b, c, r)) place(G, b); }
   }
   R.potions.forEach((id, i) => { if (G.POTIONS[id].plan) G.usePotion(i); });
   if (!WALL || R.act !== WALL.act) { planWalls(G); if (WALL) WALL.act = R.act; }
   if (w % 3 === 1 || w % 10 === 1) remaze(G);
   botItems(G);
-  while (R.stones.length) { const route = R.field.route; const [c, r] = route[(route.length / 2 + (rand() - .5) * 6) | 0] || [5, 3]; let ok = false; for (const [dc, dr] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1]]) { if (G.placeStone(0, c + dc, r + dr)) { ok = true; break; } } if (!ok) R.stones.shift(); }
+  while (R.stones.length) { const at = STRONG ? bestStone(G) : null; let ok = false;
+    if (at) ok = G.placeStone(0, at[0], at[1]);
+    if (!ok) { const route = R.field.route; const [c, r] = route[(route.length / 2 + (rand() - .5) * 6) | 0] || [5, 3]; for (const [dc, dr] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1]]) { if (G.placeStone(0, c + dc, r + dr)) { ok = true; break; } } }
+    if (!ok) R.stones.shift(); }
 }
+// a rune stone is best where the most backline shots cross it on their way to the road
+function bestStone(G) { const R = G.R, T = G.T, route = R.field.route || [], shooters = R.board.filter((h) => !G.isFront(h.k)); let best = null, bs = 0;
+  for (let r = 0; r < G.ROWS; r++) for (let c = 0; c < G.COLS; c++) { if (R.field.blk[r * G.COLS + c] || G.runeAt(c, r) || G.portalAt(c, r)) continue; const px = G.hx(c, r), py = G.hy(r); let sc = 0;
+    for (const h of shooters) { const hx = G.hx(h.c, h.r), hy = G.hy(h.r), rng = G.heroStats(h).rng * T;
+      for (const [rc, rr] of route) { const tx = G.hx(rc, rr), ty = G.hy(rr), L = Math.hypot(tx - hx, ty - hy); if (L > rng || L < T) continue; const u = ((px - hx) * (tx - hx) + (py - hy) * (ty - hy)) / (L * L); if (u <= 0 || u >= 1) continue; const d = Math.hypot(hx + (tx - hx) * u - px, hy + (ty - hy) * u - py); if (d < T * .45) sc += G.HEROES[h.k].c; } }
+    if (sc > bs) { bs = sc; best = [c, r]; } }
+  return best; }
 // the road monsters would walk if this tile were blocked too (null if that closes it)
 function routeWith(G, blk) {
   const d = G.flow(blk); if (!d) return null; const C = G.COLS;
@@ -96,24 +115,26 @@ function place(G, h) {
     let rune = 0; if (!melee) for (const q of R.field.runes) if (dist(q.c, q.r, c, r) <= s.rng) rune += .8;
     // a planned serpentine: two walls with the gap at opposite ends; single tiles barely lengthen a shortest path, walls do
     const wall = WALL && WALL.has(c + ',' + r) ? WALL.get(c + ',' + r) : 0;
-    const score = cov * (melee ? 1.3 : 1) + route.length * .45 + rune + wall + RAND() * .3;
+    // portals multiply the wave: worth it early for gold, dangerous later
+    let por = 0; for (const [rc, rr] of route) { const p = G.portalAt(rc, rr); if (p) por += (p.v - 1) * (R.act >= 1 ? 3 : -1); }
+    const score = cov * (melee ? 1.3 : 1) + route.length * .45 + rune + wall - por + RAND() * .3;
     if (score > bs) { bs = score; best = [c, r]; }
   }
   if (best) G.placeHero(h, best[0], best[1]);
 }
 // pick columns where a wall (with one gap at the top or bottom) can actually be built around runes and portals
-let WALL = null, RAND = Math.random;
+let WALL = null, RAND = Math.random, BOTKIND = 'strong';
 function planWalls(G) { const R = G.R, C = G.COLS, RR = G.ROWS, opts = [];
   for (let c = 3; c <= 10; c++) for (const gap of [0, RR - 1]) { let need = 0, ok = true; for (let r = 0; r < RR; r++) { if (r === gap) continue; const b = R.field.blk[r * C + c]; if (b === 2) continue; if (G.runeAt(c, r) || G.portalAt(c, r)) { ok = false; break; } need++; } if (ok) opts.push({ c, gap, need }); }
   opts.sort((a, b) => a.need - b.need); WALL = new Map(); const first = opts[0]; if (!first) return; const add = (o, v) => { for (let r = 0; r < RR; r++) if (r !== o.gap) WALL.set(o.c + ',' + r, v); };
   add(first, 8); const second = opts.find((o) => Math.abs(o.c - first.c) >= 3 && o.gap !== first.gap); if (second) add(second, 4); }
 // every few waves, lift each hero and put it back where the maze is best now
 function remaze(G) { const R = G.R; for (const h of R.board.slice()) { const c = h.c, r = h.r; R.board.splice(R.board.indexOf(h), 1); h.c = h.r = -1; G.rebuildBlk(); const j = R.bench.indexOf(null); if (j < 0) { h.c = c; h.r = r; R.board.push(h); G.rebuildBlk(); continue; } R.bench[j] = h; place(G, h); if (!R.board.includes(h)) { R.bench[j] = null; h.c = c; h.r = r; R.board.push(h); G.rebuildBlk(); } } }
-function botMap(G) { const R = G.R, o = G.mapOptions(), weak = R.hp < R.hpMax * .5, pref = weak ? ['rest', 'treasure', 'merchant', 'event', 'battle', 'elite', 'boss'] : ['treasure', 'elite', 'rest', 'merchant', 'battle', 'event', 'boss'];
+function botMap(G) { const R = G.R, o = G.mapOptions(), weak = R.hp < R.hpMax * .5, early = R.wave % 10 < 4, pref = BOTKIND === 'pacifist' ? ['treasure', 'rest', 'merchant', 'event', 'battle', 'elite', 'boss'] : weak ? ['rest', 'treasure', 'merchant', 'event', 'battle', 'elite', 'boss'] : early ? ['battle', 'treasure', 'event', 'elite', 'merchant', 'rest', 'boss'] : ['elite', 'treasure', 'battle', 'rest', 'merchant', 'event', 'boss'];
   const pick = o.slice().sort((a, b) => pref.indexOf(a.t) - pref.indexOf(b.t))[0]; G.chooseNode(pick.f, pick.l); }
 // rooms: take the first thing that is allowed and affordable; at the merchant buy what helps, then leave
 function botRoom(G, rand) { const R = G.R, V = G.roomView(); if (!V) return; const ok = V.opts.map((q, i) => ({ q, i })).filter(({ q }) => !q.dis && !q.sold && !(q.cost > R.gold) && !(q.ok && !q.ok()));
-  if (R.room.t === 'rest' && !R.room.step) { const i = R.hp < R.hpMax * .7 ? 0 : 1; if (G.roomAct(i)) return; }
+  if (R.room.t === 'rest' && !R.room.step) { const i = R.hp < R.hpMax * .7 ? 0 : 1; if (G.roomAct(i)) return; const mv = V.opts.findIndex((q) => q.leave); if (mv >= 0 && G.roomAct(mv)) return; }
   if (V.shop) { const buy = ok.find(({ q }) => q.cost && (q.item || q.pot || q.relic) && R.gold - q.cost >= 10); if (buy) { G.roomAct(buy.i); return; } const leave = V.opts.findIndex((q) => q.leave); G.roomAct(leave); return; }
   const risky = (q) => /Lose|health/.test(q.d || '') && R.hp < 40; const pick = ok.find(({ q }) => !risky(q)) || ok[ok.length - 1]; if (!pick || !G.roomAct(pick.i)) G.roomAct(V.opts.length - 1); }
 function botRecruit(G) { const R = G.R, S = R.spoils, H = G.HEROES; const own = (k) => G.allHeroes().some((h) => h.k === k);
@@ -125,12 +146,16 @@ function botItems(G) { const R = G.R, H = G.HEROES, val = (h) => H[h.k].c * Math
   for (let guard = 0; guard < 20 && R.items.length; guard++) { const id = R.items[0], h = carry.find((x) => G.canTake(x, id)); if (!h) break; G.equipFrom(0, h); } }
 const results = []; const t0 = Date.now();
 const ASCN = +arg('asc', 0);
-for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN }));
+const BOT = arg('bot', 'strong'); BOTKIND = BOT;
+const FUZZ = process.argv.includes('--fuzz');
+for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN, bot: BOT, fuzz: FUZZ }));
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
 const errs = results.filter((r) => r.err), ws = results.map((r) => r.waves).sort((a, b) => a - b);
 const avg = ws.reduce((a, b) => a + b, 0) / ws.length, past5 = results.filter((r) => r.waves >= 5).length / results.length;
-let md = `### Balance simulation\n${results.length} seeded bot runs in ${secs}s (the bot shops, levels and places heroes next to the road; it plays worse than a person).\n\n| Seed | Waves survived | Won | Keep HP | Level | Relics | Longest road | Items | Heroes |\n|---|---|---|---|---|---|---|---|---|\n`;
+let md = `### Balance simulation\n${results.length} seeded bot runs in ${secs}s (the bot builds around traits, saves gold for interest, mazes, places rune stones in its shooters' lines, picks map rooms and uses items and potions; it still plays worse than a good player).\n\n| Seed | Waves survived | Won | Keep HP | Level | Relics | Longest road | Items | Heroes |\n|---|---|---|---|---|---|---|---|---|\n`;
 for (const r of results) md += `| ${r.seed} | ${r.waves} | ${r.win ? 'yes' : ''} | ${r.hp} | ${r.lvl} | ${r.relics} | ${r.maze} | ${r.items} | ${r.stars} |\n`;
+const reach = (f) => Math.round(100 * results.filter((r) => r.waves >= f || r.win).length / results.length);
+md += `\nReached act II: ${reach(10)}%, act III: ${reach(20)}%, won: ${reach(31)}%.`;
 md += `\nAverage ${avg.toFixed(1)} waves, median ${ws[ws.length >> 1]}, best ${ws[ws.length - 1]}. Wins: ${results.filter((r) => r.win).length}/${results.length}. Average road ${(results.reduce((a, r) => a + r.maze, 0) / results.length).toFixed(0)} tiles, knockouts per run ${(results.reduce((a, r) => a + r.kos, 0) / results.length).toFixed(0)}, potions drunk ${(results.reduce((a, r) => a + r.pots, 0) / results.length).toFixed(1)}, items held ${(results.reduce((a, r) => a + r.items, 0) / results.length).toFixed(1)}, elite stops cleared ${(results.reduce((a, r) => a + r.elites, 0) / results.length).toFixed(1)}.\n`;
 const fails = [];
 if (errs.length) fails.push(`${errs.length} run(s) crashed: seed ${errs[0].seed}: ${errs[0].err}`);

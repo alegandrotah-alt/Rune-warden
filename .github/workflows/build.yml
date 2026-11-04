@@ -27,6 +27,8 @@ jobs:
 
       - name: Balance simulation (seeded bot runs)
         run: node tools/sim.js --runs 8
+      - name: Relic fuzzing (random relic piles, boss relics, potions)
+        run: node tools/sim.js --runs 8 --fuzz
 
       - name: Install a headless browser
         run: |

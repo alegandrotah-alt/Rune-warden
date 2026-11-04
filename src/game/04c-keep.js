@@ -30,12 +30,17 @@ function keepTick(dt){const B=R.b,K=keepPos(),sp=1+.1*rank('drill');
 // the priestess gets a fallen hero back up, once per wave
 function priestessSave(h){if(!hasGuard('priestess')||R.b.revived)return false;R.b.revived=1;h.ko=0;h.hp=h.hpMax*.4;const p=heroPos(h);fx({k:'star',x:p.x,y:p.y,dur:.8,col:'#7ddc6a'});floatText(p.x,p.y-T*.6,'Saved!','#7ddc6a',1);return true}
 // ---------- drawing: guardian badges on the battlements, the sentinel at the gate, frozen time ----------
+const GFIG={archers:'archer',banner:'squire',priestess:'druid',trebuchet:'tinker',sentinel:'warlord',oracle:'apprentice',reaper:'nightblade',dragon:'wyrm',chrono:'frostmage'};
 function drawGuards(kx,ky,ks){if(!R.guards)return;const n=R.guards.length,B=R.b;
+  // the guardians themselves stand on the wall in front of the keep, facing the field
+  R.guards.forEach((g,i)=>{if(g.k==='sentinel')return;const fs=ks*.38,fx=kx-ks*.24+i*ks*.17,fy=ky-ks*.26,busy=g.fire>0,fi=busy?4+Math.min(5,((1-g.fire/.5)*6)|0):((TIME*4+i*2)|0)%4,fr=frame('h_'+GFIG[g.k],160,fi,fs*DPR);
+    if(fr){ctx.save();ctx.translate(fx,fy);ctx.scale(-1,1);ctx.drawImage(fr,-fs/2,-fs*.86,fs,fs);ctx.restore()}
+    if(g.k==='banner'){ctx.strokeStyle='#d8c8a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(fx+fs*.25,fy);ctx.lineTo(fx+fs*.25,fy-fs*1.1);ctx.stroke();ctx.fillStyle='#4a8ae8';ctx.beginPath();ctx.moveTo(fx+fs*.25,fy-fs*1.1);ctx.lineTo(fx+fs*.25+fs*.4,fy-fs*.95+Math.sin(TIME*4)*fs*.05);ctx.lineTo(fx+fs*.25,fy-fs*.8);ctx.fill()}});
   R.guards.forEach((g,i)=>{const G=GUARDS[g.k],r=Math.max(9,ks*.1),x=kx+ks*.33,y=ky-ks*.62+i*r*2.7;if(g.fire>0)g.fire-=FRAME_DT;
     ctx.save();if(g.fire>0){ctx.globalCompositeOperation='lighter';const gl=glow('255,230,150');if(gl)ctx.drawImage(gl,x-r*2.2,y-r*2.2,r*4.4,r*4.4);ctx.globalCompositeOperation='source-over'}
     ctx.fillStyle='#1c140e';ctx.strokeStyle=G.col;ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();ctx.stroke();
     if(G.cd&&B){const p=1-clamp(g.t/(G.cd*(1-.05*(g.l-1))),0,1);ctx.strokeStyle=hexA(G.col,.9);ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r+3,-1.571,-1.571+p*6.283);ctx.stroke()}
-    ctx.fillStyle=G.col;ctx.font=`900 ${r*1.15}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(G.ic,x,y+1);
+    drawIcon(G.icn,x,y,r*1.35,G.col);ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillStyle='#fff';ctx.font=`800 ${Math.max(8,r*.7)}px "Barlow Condensed",sans-serif`;ctx.fillText(g.l,x+r*.85,y+r*.8);ctx.restore()});
   if(B&&B.sent&&B.sent.hp>0){const f=frame('m_golem',160,0,ss(T*1.2)*DPR),x=sx(FW-T*.05),y=sy(keepPos().y)+ss(T*.35),s=ss(T*1.2);if(f){ctx.save();ctx.translate(x,y);ctx.scale(-1,1);ctx.drawImage(f,-s/2,-s*.86,s,s);ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.25;ctx.drawImage(f,-s/2,-s*.86,s,s);ctx.restore()}
     const bw=ss(T*.8),p=B.sent.hp/B.sent.max;ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(x-bw/2,y-s*.95,bw,ss(5));ctx.fillStyle='#b8c2cc';ctx.fillRect(x-bw/2,y-s*.95,bw*p,ss(5))}}

@@ -65,15 +65,26 @@ function serve() {
     const noStale = document.getElementById('ovMap').hidden || G.needMap(); const w0 = R.wave; const replay = G.chooseNode(0, 2); const noReplay = replay === false && R.wave === w0 && !R.room;
     return { item, mapOk, chosen: opts + ' rooms reachable', evOk: shown && bought && !R.room && noStale && noReplay }; });
   await page.screenshot({ path: path.join(OUT, '5-items-map.png') });
+  // 4. save mid-run, reload, continue: the same run (and screen) must come back
+  const resume = await page.evaluate(() => { const G = window.__RW, R = G.R; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; }); R.b = null; R.room = null; R.phase = 'plan'; R.wave = 7; R.gold = 77; G.enterRoom('treasure'); return R.seed; });
+  await page.reload(); await page.waitForTimeout(1200);
+  const resumed = await page.evaluate(() => { const b = document.getElementById('contB'); if (!b || b.hidden) return null; b.click(); const R = window.__RW.R; return { seed: R.seed, wave: R.wave, gold: R.gold, room: R.room && R.room.t, shown: !document.getElementById('ovRoom').hidden }; });
+  const resumeOk = !!resumed && resumed.seed === resume && resumed.wave === 7 && resumed.gold === 77 && resumed.room === 'treasure' && resumed.shown;
+  // 5. the smallest landscape phone: nothing spills off screen
+  const small = await browser.newContext({ viewport: { width: 568, height: 320 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); const sp = await small.newPage(); sp.on('pageerror', (e) => errors.push('small phone: ' + e.message));
+  await sp.goto(url); await sp.waitForTimeout(1200); await sp.click('#playB'); await sp.waitForTimeout(600);
+  const fit = await sp.evaluate(() => { const W = innerWidth, H = innerHeight; return document.documentElement.scrollWidth <= W + 1 && ![...document.querySelectorAll('#top button,#top .pill,#shop button')].some((e) => { const r = e.getBoundingClientRect(); return r.width && (r.right > W + 1 || r.bottom > H + 1); }); });
+  await sp.screenshot({ path: path.join(OUT, '6-small-phone.png') }); await small.close();
   await browser.close(); srv.close();
   const d = ft.slice(1).map((t, i) => t - ft[i]).sort((a, b) => a - b);
   const avg = d.reduce((a, b) => a + b, 0) / Math.max(1, d.length), p95 = d[Math.floor(d.length * .95)] || 0;
   let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
     `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles, ${busy.ko} heroes knocked out), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
+    `- Save, reload and continue restored the same run on the same screen: ${resumeOk ? 'yes' : '**no** ' + JSON.stringify(resumed)}\n- Smallest phone (568×320) fits without spilling off screen: ${fit ? 'yes' : '**no**'}\n` +
     `- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item, closed, and left no stale map behind: ${extra.evOk ? 'yes' : '**no**'}\n` +
     `  (CI has no GPU, so real phones run far faster; compare this number between builds)\n- Screenshots are attached to the run as **browser-check-screens**.\n`;
   if (errors.length) md += '\n```\n' + errors.slice(0, 10).join('\n') + '\n```\n';
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');
-  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk ? 1 : 0);
+  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk || !resumeOk || !fit ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

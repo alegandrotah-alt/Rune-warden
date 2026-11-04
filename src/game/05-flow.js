@@ -18,7 +18,7 @@ function endWave(){
   if(boss){const a=w/10;if(R.leakAct===0)award('perfect');R.leakAct=0;R.calm=0;
     if(a===1){award('act1');if(R.rerolls===0)award('h_miser')}if(a===2)award('act2');
     if(a===3){award('win');META.wins=(META.wins||0)+1;R.won=1;saveMeta();banner('THE EMBER DRAGON FALLS','#ffd76a')}
-    else{R.act=a;genField();if(guardLv('oracle')>=3)R.stones.push(2);banner(`ACT ${['I','II','III'][a]}: ${ACTS[a].n.toUpperCase()}`,'#ffd76a');bgDirty=1}}
+    else{R.act=a;const fix=Math.ceil((R.hpMax-R.hp)*.5);R.hp+=fix;if(fix>0)floatText(FW+T*.2,FH/2-T*1.2,'+'+fix,'#7dff9a',1.3);genField();if(guardLv('oracle')>=3)R.stones.push(2);banner(`ACT ${['I','II','III'][a]}: ${ACTS[a].n.toUpperCase()}`,'#ffd76a');bgDirty=1}}
   R.wave++;if(R.endless&&R.wave>=40)award('endless40');
   rollShop(true);R.node=null;if(boss)genMap();if(R.won&&!R.endless)R.map=null;R.nextQ=waveList(R.wave);autoNode();
   R.queue=[];
@@ -52,17 +52,21 @@ function runOver(win){
   META.gems+=gems;META.runs++;META.best=Math.max(META.best,waves);if(R.endless)META.bestEndless=Math.max(META.bestEndless||0,waves);
   if(win&&!R.endless&&!R.daily){const a=R.asc||0;if(a>=1)award('asc1');if(a>=5)award('asc5');if(a>=10)award('asc10');META.asc=Math.max(META.asc||0,Math.min(10,a+1));R.ascUp=META.asc>a}
   if(R.daily){award('daily');const D=META.daily&&META.daily.d===R.daily?META.daily:{d:R.daily,best:0,tries:0};D.tries++;R.dailyNew=waves>D.best;D.best=Math.max(D.best,waves);META.daily=D}
+  // a short history of runs, newest first, for the Records tab
+  const top=(R.lastDmg?R.lastDmg.rows:[]).slice(0,3).map(r=>r.k+r.star);
+  META.hist=[{t:Date.now(),f:waves,win:!!win,tw:!!R.trueWin,asc:R.asc||0,day:!!R.daily,by:win?'':R.lastLeak||'',top,rel:R.relics.length,kills:R.stats.kills,lvl:R.lvl}].concat(META.hist||[]).slice(0,30);
   saveMeta();clearRun();
   R.endGems=gems;R.win=win;showEnd(win)}
 function goEndless(){R.endless=true;R.final=0;R.won=0;R.phase='plan';R.act=2;R.map=null;R.node='battle';R.room=null;R.queue=null;genField();rollShop(true);R.nextQ=waveList(R.wave);hideEnd();saveRun();uiRefresh()}
 // ---------- saving a run in progress (between waves) ----------
-function saveRun(){if(!R||R.phase==='over')return;try{const o=Object.assign({},R,{b:null,field:{obs:R.field.obs,runes:R.field.runes,portals:R.field.portals,blk:Array.from(R.field.blk).map(v=>v===2?2:0)}});localStorage.setItem('runewarden-run',JSON.stringify(o))}catch(e){}}
+// only a run the player actually started is saved: the placeholder run behind the menu must never overwrite it
+function saveRun(){if(!R||!R.live||R.phase==='over')return;try{const o=Object.assign({},R,{b:null,field:{obs:R.field.obs,runes:R.field.runes,portals:R.field.portals,blk:Array.from(R.field.blk).map(v=>v===2?2:0)}});localStorage.setItem('runewarden-run',JSON.stringify(o))}catch(e){}}
 function loadRun(){try{const o=JSON.parse(localStorage.getItem('runewarden-run')||'null');if(!o||!o.field)return false;R=o;R.field.blk=Uint8Array.from(o.field.blk);R.b=null;if(R.phase==='wave')R.phase='plan';
   UID=1+Math.max(0,...allHeroes().map(h=>h.uid||0));R.items=R.items||[];for(const h of allHeroes()){h.it=h.it||[];h.ko=0}for(const k of HKEYS)if(R.pool[k]==null)R.pool[k]=unlocked(k)?POOL[HEROES[k].c]:0;
   R.asc=R.asc||0;R.stats.elites=R.stats.elites||0;R.potions=R.potions||[];
   // runs saved before the branching map get a fresh map for the current act
   if(!R.map||!R.map.nodes){if(R.wave<=30&&!R.endless){const w=R.wave;genMap();R.wave=w}else{R.map=null;R.node='battle'}}
-  if(R.phase==='reward'&&!R.spoils)R.phase='plan';if(R.phase==='room'&&!R.room)R.phase='plan';
+  if(R.phase==='reward'&&!R.spoils){R.phase='plan';R.queue=null}if(R.phase==='pick'&&!(R.picks&&R.picks.length))R.phase='plan';if(R.phase==='room'&&!R.room)R.phase='plan';
   rebuildBlk();calcTraits();if(!R.nextQ)R.nextQ=waveList(R.wave);return true}catch(e){return false}}
 function clearRun(){try{localStorage.removeItem('runewarden-run')}catch(e){}}
 const hasSavedRun=()=>{try{return !!localStorage.getItem('runewarden-run')}catch(e){return false}};

@@ -23,8 +23,8 @@ function itemSlot(i){const B=bottomLayout(),col=i%5,row=(i/5)|0;return{x:B.L+B.s
 function drawItemIcon(id,x,y,s,alpha){const I=ITEMS[id];if(!I)return;ctx.save();if(alpha!=null)ctx.globalAlpha=alpha;const fin=!isComp(id),r=s*.5;
   ctx.fillStyle=fin?'#3a2812':'#241c16';ctx.strokeStyle=fin?'#ffd76a':I.col;ctx.lineWidth=fin?2:1.5;ctx.beginPath();ctx.roundRect?ctx.roundRect(x-r,y-r,s,s,s*.22):ctx.rect(x-r,y-r,s,s);ctx.fill();ctx.stroke();
   ctx.textAlign='center';ctx.textBaseline='middle';
-  if(fin){const a=ITEMS[I.c[0]],b=ITEMS[I.c[1]];ctx.font=`900 ${s*.44}px sans-serif`;ctx.fillStyle=a.col;ctx.fillText(a.ic,x-s*.17,y-s*.12);ctx.fillStyle=b.col;ctx.fillText(b.ic,x+s*.17,y+s*.14)}
-  else{ctx.font=`900 ${s*.62}px sans-serif`;ctx.fillStyle=I.col;ctx.fillText(I.ic,x,y+s*.03)}ctx.restore()}
+  if(fin){const a=ITEMS[I.c[0]],b=ITEMS[I.c[1]];drawIcon(a.icn,x-s*.17,y-s*.13,s*.5,a.col);drawIcon(b.icn,x+s*.17,y+s*.15,s*.5,b.col)}
+  else drawIcon(I.icn,x,y,s*.68,I.col);ctx.restore()}
 function drawItems(){const B=bottomLayout(),p0=itemSlot(0),s=B.s;
   // the rack: a panel with ten slots and a label, always visible so you know where items go
   const x0=B.L,y0=p0.y-s*.62,wd=B.rackW,ht=s*2.24;ctx.save();ctx.fillStyle='rgba(20,13,8,.72)';ctx.strokeStyle=R.itemNew?`rgba(255,215,106,${.55+.35*Math.sin(TIME*5)})`:'rgba(255,215,106,.3)';ctx.lineWidth=R.itemNew?2.5:1.2;

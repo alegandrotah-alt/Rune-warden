@@ -1,6 +1,8 @@
 // ---------- waves, monsters, heroes, projectiles, spells ----------
 // Monster health grows steeply wave after wave, just like Gate Rush keeps; your answer is stars, traits, items, relics and × runes.
-const hpBase=w=>24*Math.pow(1.19,w-1)*(w>30?Math.pow(1.07,Math.pow(w-30,1.25)):1);
+// steep through act I, a little gentler after, so hero power (stars, items, runes) can keep up; endless gets brutal again
+const hpBase=w=>24*Math.pow(1.19,Math.min(w,10)-1)*Math.pow(HPG,Math.max(0,Math.min(w,30)-10))*(w>30?Math.pow(1.19,w-30)*Math.pow(1.07,Math.pow(w-30,1.25)):1);
+let HPG=1.158;
 // what a monster hit does to a hero: grows slower than monster health, so stars and items keep up
 const mDmgBase=w=>14*Math.pow(1.105,w-1)*(w>30?Math.pow(1.04,w-30):1);
 const actOf=w=>Math.min(2,Math.floor((w-1)/10));
@@ -20,7 +22,7 @@ function startWave(){
   mapEnter();
   R.phase='wave';R.b={mons:[],projs:[],fx:[],traps:[],zones:[],q:(R.nextQ&&R.nextQ.length?R.nextQ:waveList(R.wave)).map(e=>Object.assign({},e)),qT:.3,t:0,leaked:0,kills:0,big:0,ko:0,drops:0};
   for(const h of R.board){const I=itemStats(h);h.mana=I.mana||0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0;h.stk=0;h.ac=0;h.ko=0;h.chillT=0;h.tauntT=0;h.hurtT=0;h.hpMax=heroMaxHp(h);h.hp=h.hpMax;if(R.hymn)h.mana=HEROES[h.k].mana}R.hymn=0;
-  calcTraits();guardWave();if(R.final){sfx('elite',1);banner('THE RUNE DEVOURER','#c07aff');shake(10)}else if(R.wave%10===0&&R.wave<=30){sfx('elite',.8);banner(MON[ACTS[actOf(R.wave)].boss].n.toUpperCase(),'#ff6a5a')}else sfx('ready',.5);
+  calcTraits();guardWave();if(R.final||R.wave%10===0&&R.wave<=30)sfx('elite',.8);else sfx('ready',.5);
   return true}
 function spawnMon(k,elite,x,y,hpFrac){
   const D=MON[k],B=R.b,hp=D.hp*hpBase(R.wave)*(elite?6:1)*(R.wave>30&&D.boss&&!D.final?3:1)*(asc(1)?1.15:1)*(asc(9)?1.15:1)*(D.boss&&asc(7)?1.35:1)*(has('philo')?1.2:1);
@@ -29,6 +31,7 @@ function spawnMon(k,elite,x,y,hpFrac){
     slowT:0,slowP:1,stunT:0,rootT:0,dots:[],psn:null,portals:0,bounty:(elite?3:0)+(R.node==='treasure'?.5:0),face:1,wob:Math.random()*6,sumT:3,healT:2,c:-1,r:-1,hitT:0,atkT:.6+Math.random()};
   if(D.final){m.cap=1;m.capLeft=m.max*.03;m.capT=1;m.bodT=6;m.phase=0}if(D.beh==='phase')m.phT=2+Math.random()*2;
   if(elite&&!x){m.aff=rnd(AFFKEYS);if(m.aff==='swift')m.sp*=1.4;if(m.aff==='shield')m.sh=m.max*.35}
+  if(D.boss&&x==null&&!B.intro){B.intro={k,t:0,dur:2.6};shake(12);sfx('boomBig',.7,.7);fx({k:'ring',x:0,y:m.y,r:T*2.5,col:'#ff5a4a',dur:1})}
   B.mons.push(m);return m}
 const monAlive=()=>R.b?R.b.mons.filter(m=>m.hp>0):[];
 // how far along the road a monster is: lower = closer to the keep
@@ -68,7 +71,7 @@ function monTick(m,dt){
   for(const tp of B.traps){if(tp.uses>0&&!m.fly&&Math.hypot(tp.x-m.x,tp.y-m.y)<T*.45&&!tp.hit.has(m.id)){tp.hit.add(m.id);tp.uses--;m.rootT=Math.max(m.rootT,tp.root);dealRaw(m,tp.dmg*(1-m.ar),tp.src,0);fx({k:'ring',x:m.x,y:m.y,r:T*.5,col:'#9aff6a',dur:.35})}}
   // specials
   if(D.heal){m.healT-=dt;if(m.healT<=0){m.healT=3;for(const o of B.mons)if(o!==m&&o.hp>0&&Math.hypot(o.x-m.x,o.y-m.y)<T*1.6){o.hp=Math.min(o.max,o.hp+o.max*.15)}fx({k:'ring',x:m.x,y:m.y,r:T*1.6,col:'#7dff9a',dur:.5})}}
-  if(D.summon){m.sumT-=dt;if(m.sumT<=0){m.sumT=4.5;for(let i=0;i<2;i++){const s=spawnMon(D.summon,0,m.x+(Math.random()-.5)*T*.6,m.y+(Math.random()-.5)*T*.6);s.c=m.c;s.r=m.r;s.portals=-1}fx({k:'ring',x:m.x,y:m.y,r:T,col:'#c07aff',dur:.5})}}
+  if(D.summon){m.sumT-=dt;if(m.sumT<=0){m.sumT=6;for(let i=0;i<2;i++){const s=spawnMon(D.summon,0,m.x+(Math.random()-.5)*T*.6,m.y+(Math.random()-.5)*T*.6);s.c=m.c;s.r=m.r;s.portals=-1}fx({k:'ring',x:m.x,y:m.y,r:T,col:'#c07aff',dur:.5})}}
   monAttack(m,dt);
   if(m.x>FW+T*.35){leak(m)}
 }
@@ -92,9 +95,9 @@ function hurtHero(h,d,m){if(!heroUp(h))return;let dr=h.au?h.au.dr:0;if(HEROES[h.
 function healHero(h,amt){if(!heroUp(h)||!(amt>0))return;const before=h.hp;h.hp=Math.min(h.hpMax,h.hp+amt);if(h.hp-before>h.hpMax*.08){const p=heroPos(h);if(TXT.length<20)floatText(p.x,p.y-T*.5,'+'+fmt(h.hp-before),'#7dff9a',.8)}}
 function portalSplit(m,p,pi){
   m.portals|=1<<pi;const v=portalMul(p),bv=.35*(has('baron')?2:1)*(has('riftlord')?3:1);m.bounty+=bv;
-  for(let i=1;i<v;i++){const c=spawnMon(m.k,m.elite,m.x+(Math.random()-.5)*T*.5,m.y+(Math.random()-.5)*T*.5,m.hp/m.max);c.portals=m.portals;c.bounty=m.bounty;c.c=m.c;c.r=m.r;c.psn=m.psn?Object.assign({},m.psn):null}
+  for(let i=1;i<v;i++){const c=spawnMon(m.k,m.elite,m.x+(Math.random()-.5)*T*.5,m.y+(Math.random()-.5)*T*.5,m.hp/m.max*.7);c.portals=m.portals;c.bounty=m.bounty;c.c=m.c;c.r=m.r;c.psn=m.psn?Object.assign({},m.psn):null}
   p.flash=.4;fx({k:'ring',x:hx(p.c,p.r),y:hy(p.r),r:T*.7,col:'#c07aff',dur:.4});if(Math.random()<.4)sfx('zap',.25,1.3)}
-function leak(m){m.hp=0;m.dead=1;R.hp-=m.w;R.b.leaked+=m.w;R.stats.leaks+=m.w;R.leakAct+=m.w;shake(m.boss?14:5);sfx('lost',.5);floatText(FW+T*.2,m.y,'-'+m.w,'#ff5a5a',1)}
+function leak(m){R.lastLeak=m.k;m.hp=0;m.dead=1;R.hp-=m.w;R.b.leaked+=m.w;R.stats.leaks+=m.w;R.leakAct+=m.w;shake(m.boss?14:5);sfx('lost',.5);floatText(FW+T*.2,m.y,'-'+m.w,'#ff5a5a',1)}
 // ---------- poison: stacks that eat a share of the hero's damage every second ----------
 function poison(m,src,n,s){if(m.hp<=0||!(n>0))return;const per=(s||heroStats(src)).dmg*.12,p=m.psn||(m.psn={n:0,dps:0,t:0,src});p.n=Math.min(12,p.n+n);p.dps=Math.max(p.dps,per);p.t=4;p.src=src;if(p.n>=10)award('plague10')}
 // ---------- damage ----------

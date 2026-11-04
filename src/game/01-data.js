@@ -46,26 +46,27 @@ const POOL=[0,22,20,17,10,9];
 const XPNEED=[0,0,2,2,6,10,20,36,48,72,84];// xp to go from level i to i+1
 const STARM=[0,1,1.8,3.24];
 // monsters: hp in units of the wave base, sp in tiles/s, ar = physical armour, mr = magic resist, w = keep damage on leak
+const EPITHET={necro:'Lord of the Hollow Crypts',mushking:'The Rot-Crowned Sovereign',dragon:'Scourge of the Ember Wastes',devourer:'The Hunger Beneath the World'};
 const MON={
   minion:{n:'Skeleton Minion',hp:.7,sp:1.25,ar:0,mr:0,w:1,sz:.85,atk:{k:'melee',r:1.45,cd:1.4,m:.4}},
   warrior:{n:'Skeleton Warrior',hp:1.3,sp:.9,ar:.3,mr:0,w:2,sz:.95,atk:{k:'melee',r:1.45,cd:1.3,m:1}},
   srogue:{n:'Skeleton Rogue',beh:'rush',hp:.8,sp:1.6,ar:0,mr:.1,w:2,sz:.85},
   smage:{n:'Skeleton Mage',hp:1,sp:.9,ar:0,mr:.35,w:2,sz:.9,heal:1,atk:{k:'bolt',r:2.4,cd:2.2,m:.9}},
   golem:{n:'Bone Golem',beh:'hunt',hp:5,sp:.6,ar:.45,mr:.1,w:5,sz:1.35,big:1,atk:{k:'slam',r:1.4,cd:2.8,m:2}},
-  necro:{n:'The Necromancer',hp:40,sp:.45,ar:.2,mr:.4,w:20,sz:1.7,boss:1,summon:'minion',atk:{k:'bolt',r:2.8,cd:1.6,m:1.2}},
+  necro:{n:'The Necromancer',hp:34,sp:.45,ar:.2,mr:.4,w:20,sz:1.7,boss:1,summon:'minion',atk:{k:'bolt',r:2.8,cd:1.6,m:1.2}},
   orc:{n:'Orc Grunt',hp:1.2,sp:1,ar:.15,mr:0,w:2,sz:.95,atk:{k:'melee',r:1.45,cd:1.3,m:1}},
   orcskull:{n:'Skullcrusher',beh:'hunt',hp:2,sp:.85,ar:.45,mr:0,w:3,sz:1.05,atk:{k:'melee',r:1.45,cd:1.5,m:1.4}},
   tribal:{n:'Tribal Runner',beh:'rush',hp:.8,sp:1.7,ar:0,mr:0,w:2,sz:.9},
   yeti:{n:'Yeti',beh:'hunt',hp:5,sp:.6,ar:.2,mr:.3,w:5,sz:1.3,big:1,atk:{k:'slam',r:1.4,cd:2.8,m:2}},
   blob:{n:'Gel Blob',hp:1.4,sp:.8,ar:0,mr:.2,w:2,sz:.8,split:2},
-  mushking:{n:'The Mushroom King',hp:48,sp:.45,ar:.3,mr:.3,w:20,sz:1.8,boss:1,summon:'blob',atk:{k:'slam',r:1.8,cd:3,m:1.5}},
-  demon:{n:'Demon',beh:'hunt',hp:1.5,sp:1.05,ar:.2,mr:.2,w:2,sz:1,atk:{k:'melee',r:1.45,cd:1.2,m:1.2}},
-  bluedemon:{n:'Frost Demon',hp:1.7,sp:.95,ar:.1,mr:.5,w:3,sz:1,atk:{k:'bolt',r:2.4,cd:2,m:.9,chill:1}},
-  ghost:{n:'Skull Wraith',beh:'phase',hp:.9,sp:1.1,ar:0,mr:.3,w:2,sz:.85,fly:1,atk:{k:'bolt',r:2,cd:2,m:.7}},
-  armabee:{n:'Armabee',beh:'rush',hp:1,sp:1.35,ar:.35,mr:0,w:2,sz:.8,fly:1},
+  mushking:{n:'The Mushroom King',hp:30,sp:.45,ar:.3,mr:.3,w:20,sz:1.8,boss:1,summon:'blob',atk:{k:'slam',r:1.8,cd:3,m:1.5}},
+  demon:{n:'Demon',beh:'hunt',hp:1.3,sp:1.05,ar:.2,mr:.2,w:2,sz:1,atk:{k:'melee',r:1.45,cd:1.2,m:1.2}},
+  bluedemon:{n:'Frost Demon',hp:1.4,sp:.95,ar:.1,mr:.4,w:3,sz:1,atk:{k:'bolt',r:2.4,cd:2,m:.9,chill:1}},
+  ghost:{n:'Skull Wraith',beh:'phase',hp:.8,sp:1.1,ar:0,mr:.3,w:2,sz:.85,fly:1,atk:{k:'bolt',r:2,cd:2,m:.7}},
+  armabee:{n:'Armabee',beh:'rush',hp:.85,sp:1.35,ar:.35,mr:0,w:2,sz:.8,fly:1},
   goleling:{n:'Goleling',hp:4.5,sp:.65,ar:.5,mr:.2,w:5,sz:1.2,fly:1,big:1,atk:{k:'slam',r:1.4,cd:3,m:2}},
   devourer:{n:'The Rune Devourer',hp:70,sp:.2,ar:.35,mr:.35,w:999,sz:2.7,boss:1,final:1,atk:{k:'slam',r:2.3,cd:5,m:1}},
-  dragon:{n:'The Ember Dragon',hp:60,sp:.5,ar:.3,mr:.4,w:25,sz:2,boss:1,fly:1,summon:'ghost',atk:{k:'breath',r:2.6,cd:3.5,m:1.6}},
+  dragon:{n:'The Ember Dragon',hp:36,sp:.5,ar:.3,mr:.4,w:25,sz:2,boss:1,fly:1,summon:'ghost',atk:{k:'breath',r:2.6,cd:3.5,m:1.6}},
 };
 // three acts of ten waves; wave 10 of each act is its boss
 const ACTS=[
@@ -224,12 +225,12 @@ const RECIPE={};for(const k in ITEMS){const I=ITEMS[k];if(I.c){RECIPE[I.c.slice(
 const FINISHED=Object.keys(ITEMS).filter(k=>ITEMS[k].c);
 // ---------- the act map: branching roads of rooms, like a dungeon crawl ----------
 const NODES={
-  battle:{n:'Battle',ic:'⚔',col:'#d8c8a8',fight:1,d:'A wave of monsters. Win to pick a new recruit.'},
-  elite:{n:'Elite',ic:'☠',col:'#ff7a5a',fight:1,d:'A wave with two elite champions. Win for an item, 3 gold, a recruit and a relic.'},
-  event:{n:'Unknown',ic:'?',col:'#d6a8ff',d:'Something waits on the road. No monsters.'},
-  rest:{n:'Campfire',ic:'♨',col:'#ffa64a',d:'Rest to repair the keep, or train a hero into a veteran. No monsters.'},
-  merchant:{n:'Merchant',ic:'⚖',col:'#7ad0ff',d:'Buy items, potions and relics. No monsters.'},
-  treasure:{n:'Treasure',ic:'◆',col:'#ffcf2e',d:'A chest: choose a relic. No monsters.'},
+  battle:{n:'Battle',ic:'⚔',col:'#d8c8a8',fight:1,d:'A wave of monsters. Win for 3 bonus gold and a free recruit.'},
+  elite:{n:'Elite',ic:'☠',col:'#ff7a5a',fight:1,d:'A wave with two elite champions. Win for an item, 6 gold, a recruit and a relic.'},
+  event:{n:'Unknown',ic:'?',col:'#d6a8ff',d:'Something waits on the road. No monsters, and no interest this floor.'},
+  rest:{n:'Campfire',ic:'♨',col:'#ffa64a',d:'Rest to repair the keep, or train a hero into a veteran. No monsters, and no interest this floor.'},
+  merchant:{n:'Merchant',ic:'⚖',col:'#7ad0ff',d:'Buy items, potions and relics. No monsters, and no interest this floor.'},
+  treasure:{n:'Treasure',ic:'◆',col:'#ffcf2e',d:'A chest: choose a relic. No monsters, and no interest this floor.'},
   boss:{n:'Boss',ic:'♛',col:'#ff5a4a',fight:1,d:'The act boss. Win for a boss relic.'},
 };
 // potions: one use each, from fights, events and the merchant

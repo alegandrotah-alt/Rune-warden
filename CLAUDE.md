@@ -10,6 +10,10 @@
 - The board is pointy-top hexes in offset rows: use `hx(c,r)`/`hy(r)` for centres, `cellOf(x,y)` for the hex under a point, `nbrs(c,r)` for neighbours and `hexPath()` to draw one. Never assume square tiles.
 - Run flow: every floor is one auto-battler round. Map rooms (`05b-map.js`) are fights (`NODES[t].fight`: battle, elite, boss) or rooms without monsters (`05c-rooms.js`: rest, merchant, treasure, event, plus the oracle at the start). Phases: plan, wave, reward (recruit pick), pick (relics), room, over; after a fight `R.queue` plays the screens in order via `advance()`. `roomView()` describes a room for both the screen and the sim bot.
 - Keep guardians live in `04c-keep.js` (`GUARDS` data in `01-data.js`, `META.gl` levels, `META.geq` stationed); frontline auras are computed in `calcTraits()` into `h.au`, and monster-side zones use `R.b.fl` built every battle tick.
+- Onboarding stages (`08d-onboard.js`): stage 0 first run, 1 adds events/merchant/potions/oracle, 2 adds keep guardians; `stage()` gates them and `SET.allSys` turns everything on. The sim always plays with all systems on. Hint cards (`TIPS`) show once each; add `&notips` to the URL in screenshot scripts.
+- Icons are drawn (`00b-icons.js`): `icon(name)` gives SVG for the page, `drawIcon()` paints the same art on the canvas; data entries get `.ic` (SVG) and `.icn` (name) from `applyIcons()`. Don't use emoji-prone text symbols for UI icons.
+- `saveRun()` only saves a run with `R.live` set (a run the player started); the placeholder run behind the menu must never overwrite a saved run.
+- Balance: `node tools/sim.js --runs 80` (strong bot) should land around 10-25% wins with deaths spread over act III; `--bot pacifist` must not clearly beat it; `--fuzz` hands out random relic piles.
 - Gameplay randomness that must repeat in a daily challenge (shops, waves, map, field, relic offers, events) goes through `rng()`/`rndS()`, not `Math.random`.
 - Bump the cache name in `www/sw.js` when files in `www/gfx` or `www/music` are renamed or replaced.
 - Pushing to `main` releases: Android APK on Releases (version = run number) and the web version on GitHub Pages.

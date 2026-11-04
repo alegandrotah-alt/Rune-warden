@@ -14,7 +14,7 @@ function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),hp=100+10*rank
   R={act:0,wave:1,gold:8+2*rank('gold')-(A>=3?3:0),lvl:2,xp:0,hp,hpMax:hp,bench:new Array(8+rank('bench')).fill(null),board:[],items:[],
     shop:[],relics:[],stones:rank('stone')?[2]:[],streak:0,phase:'plan',rerolls:0,freeRoll:0,portalGold:0,goldFrac:0,egg:-1,pool:{},picks:[],leakAct:0,
     stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null};
-  R.guards=o.daily?[{k:'archers',l:1,t:1}]:guardLoadout();const ban=R.guards.find(g=>g.k==='banner');if(ban){R.hpMax+=10*ban.l;R.hp=R.hpMax}
+  R.guards=o.daily?[{k:'archers',l:1,t:1}]:stage()<2?[]:guardLoadout();const ban=R.guards.find(g=>g.k==='banner');if(ban){R.hpMax+=10*ban.l;R.hp=R.hpMax}
   if(rank('promo'))R.lvl=3;if(rank('potion'))R.potions.push(rnd(POTKEYS));for(let i=0;i<rank('item');i++)R.items.push(rnd(COMPS));
   if(R.daily){let h=7;for(const ch of R.daily)h=Math.imul(h^ch.charCodeAt(0),2654435761);R.rs=h|0;R.seed=h>>>0}
   for(const k of HKEYS)R.pool[k]=unlocked(k)||R.daily?POOL[HEROES[k].c]:0;
@@ -29,7 +29,10 @@ function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),hp=100+10*rank
 }
 // obstacles, runes and portals are re-dealt every act
 function genField(){
+  // runes you placed yourself travel with you into the next act
+  const mine=R.field?R.field.runes.filter(q=>q.mine):[];
   const F=R.field={blk:new Uint8Array(COLS*ROWS),obs:[],runes:[],portals:[]};
+  for(const q of mine)F.runes.push({c:q.c,r:q.r,v:q.v,ph:q.ph||0,flash:.6,mine:1});
   const free=(c,r)=>!F.blk[r*COLS+c]&&!F.runes.some(q=>q.c===c&&q.r===r)&&!F.portals.some(q=>q.c===c&&q.r===r)&&!(c<=1&&SPAWN_ROWS.includes(r))&&!(c>=COLS-2&&KEEP_ROWS.includes(r));
   const kinds=[[0,0,1,2,3,4,5],[0,1,2,3,3,4,5],[0,1,2,3,4,5,5]][R.act];
   for(let i=0,n=6+R.act*2,tries=0;i<n&&tries<200;tries++){const c=1+((rng()*(COLS-2))|0),r=(rng()*ROWS)|0;if(!free(c,r))continue;F.blk[r*COLS+c]=2;
@@ -37,7 +40,7 @@ function genField(){
   // runes sit in the middle of the field; portals are off to the side so you choose whether to route monsters through them
   const put=(arr,v,cmin,cmax,rows)=>{for(let t=0;t<80;t++){const c=cmin+((rng()*(cmax-cmin+1))|0),r=rndS(rows);if(free(c,r)){arr.push({c,r,v,ph:rng()*6});return}}};
   put(F.runes,2,4,6,[2,3,4,5]);put(F.runes,2,7,10,[1,2,5,6]);if(R.act>=1)put(F.runes,3,5,9,[0,7]);
-  put(F.portals,2,3,6,[0,1,6,7]);if(R.act>=1)put(F.portals,2,8,11,[0,1,6,7]);if(R.act>=2)put(F.portals,3,5,9,[3,4]);
+  put(F.portals,2,3,6,[0,1,6,7]);if(R.act>=1)put(F.portals,2,8,11,[0,1,6,7]);if(R.act>=2)put(F.portals,3,5,9,[1,6]);
   // heroes left on blocked tiles go back to the bench
   for(const h of R.board.slice())if(F.blk[h.r*COLS+h.c]||F.runes.some(q=>q.c===h.c&&q.r===h.r)||F.portals.some(q=>q.c===h.c&&q.r===h.r))toBench(h);
   rebuildBlk();if(typeof bgDirty!=='undefined')bgDirty=1;
@@ -84,7 +87,7 @@ function removeHero(h){const i=R.board.indexOf(h);if(i>=0){R.board.splice(i,1);r
 function toBench(h){const j=R.bench.indexOf(null);if(j<0)return false;const i=R.board.indexOf(h);if(i>=0)R.board.splice(i,1);R.bench[j]=h;h.c=h.r=-1;rebuildBlk();return true}
 function placeHero(h,c,r){if(!canPlace(c,r))return false;const onBoard=R.board.includes(h);if(!onBoard&&R.board.length>=boardMax())return false;
   if(onBoard){R.board.splice(R.board.indexOf(h),1);rebuildBlk();if(!canPlace(c,r)){R.board.push(h);rebuildBlk();return false}}
-  const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null;h.c=c;h.r=r;R.board.push(h);rebuildBlk();META.seen[h.k]=1;if(HKEYS.every(k=>META.seen[k]))award('all18');return true}
+  const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null;h.c=c;h.r=r;R.board.push(h);rebuildBlk();if(HEROES[h.k].c===5&&!onBoard&&typeof fx==='function'){fx({k:'pillar',x:hx(c,r),y:hy(r),dur:.9});sfx('sp_holy',.5,.8)}META.seen[h.k]=1;if(HKEYS.every(k=>META.seen[k]))award('all18');return true}
 const sellValue=h=>HEROES[h.k].c*Math.pow(3,h.star-1)-(h.star>1&&HEROES[h.k].c>1?1:0);
 function sellHero(h){R.gold+=sellValue(h);R.pool[h.k]+=Math.pow(3,h.star-1);removeHero(h);for(const it of h.it||[])stashItem(it);h.it=[];sfx('coin',.5)}
 // ---------- traits and hero stats ----------
