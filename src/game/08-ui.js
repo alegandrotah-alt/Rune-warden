@@ -5,14 +5,14 @@ function toast(t){if(!DOM)return;const el=$('toast');el.textContent=t;el.hidden=
 function portrait(k,size){const c=mk(size*2,size*2);if(!c)return c;const g=c.getContext('2d');const f=frame('h_'+k,160,0,size*2);if(f&&g&&g.drawImage)g.drawImage(f,-size*.15,-size*.1,size*2.3,size*2.3);return c}
 function onSheet(name){if(DOM&&name.startsWith('h_')){renderShop();if(!$('ovStart').hidden){clearTimeout(onSheet.t);onSheet.t=setTimeout(renderCol,200)}}if(/^props|^keep/.test(name))bgDirty=1}
 function uiRefresh(){if(!DOM||!R)return;calcTraits();
-  $('waveT').textContent=R.endless?`Wave ${R.wave} · Endless`:`Wave ${R.wave} / 30`;$('actT').textContent=`Act ${['I','II','III'][R.act]} · ${ACTS[R.act].n}`;
+  $('waveT').textContent=R.endless?`Wave ${R.wave} · Endless`:`Floor ${R.wave} / 30`;uiPots();$('actT').textContent=`Act ${['I','II','III'][R.act]} · ${ACTS[R.act].n}`;
   $('goldT').textContent=R.gold;$('lvlT').textContent='Lv '+R.lvl;const need=XPNEED[R.lvl]||0;$('xpF').style.width=(R.lvl>=10?100:100*R.xp/need)+'%';$('xpT').textContent=R.lvl>=10?'max':`${R.xp}/${need}`;
   $('fieldT').textContent=`${R.board.length}/${boardMax()} heroes`;$('fieldT').style.color=R.board.length<boardMax()&&R.bench.some(Boolean)?'#ffd76a':'';
   $('hpT').textContent='♥ '+Math.ceil(R.hp);
   const st=$('streakT');st.hidden=Math.abs(R.streak)<2;st.textContent=R.streak>0?`🔥 ${R.streak} win streak`:`❄ ${-R.streak} loss streak`;
   $('xpB').disabled=R.gold<4||R.lvl>=10;$('rollB').disabled=R.gold<rerollCost();$('rollC').textContent=rerollCost()?rerollCost()+' gold':'free';
-  const fb=$('fightB');if(R.phase==='wave'){fb.classList.add('speed');fb.innerHTML=`<b>×${R.speed}</b><small>speed</small>`}else{fb.classList.remove('speed');fb.innerHTML=needMap()?`<b>ROAD</b><small>choose next stop</small>`:`<b>FIGHT!</b><small>${R.wave%10===0&&R.wave<=30?'Boss wave':R.node&&R.node!=='battle'?NODES[R.node].n:'Space'}</small>`}
-  const mb=$('mapB');mb.hidden=!R.map;mb.classList.toggle('on',needMap());
+  const fb=$('fightB');if(R.phase==='wave'){fb.classList.add('speed');fb.innerHTML=`<b>×${R.speed}</b><small>speed</small>`}else{fb.classList.remove('speed');fb.innerHTML=needMap()?`<b>MAP</b><small>choose a room</small>`:`<b>FIGHT!</b><small>${R.wave%10===0&&R.wave<=30?'Boss':R.node&&R.node!=='battle'?NODES[R.node].n:'Space'}</small>`}
+  $('relN').textContent=R.relics.length;const mb=$('mapB');mb.hidden=!R.map;mb.classList.toggle('on',needMap());
   renderShop();renderTraits();uiDmg();uiWave();uiZoom()}
 let SHOPSIG='';
 function renderShop(force){if(!DOM||!R)return;const owned={};for(const h of allHeroes())if(h.star===1)owned[h.k]=(owned[h.k]||0)+1;
@@ -34,17 +34,23 @@ function uiItem(id){if(!DOM||!id)return;const el=$('info'),I=ITEMS[id];let rec='
   el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3><span style="color:${I.col}">${I.ic}</span> ${I.n}</h3><div class="ab">${I.d}</div>${rec}<p class="sub" style="text-align:left;margin:6px 0 0">Drag it onto a hero. Two components on one hero combine. Three items per hero.</p>`;
   el.querySelector('.x').addEventListener('click',()=>{el.hidden=true});el.hidden=false}
 function uiInfo(h){if(!DOM)return;const el=$('info');if(!h){el.hidden=true;return}const D=HEROES[h.k],s=h.preview?{dmg:D.dmg,as:D.as,rng:D.rng,crit:0}:heroStats(h);
-  el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>${D.n} ${'★'.repeat(h.star)}</h3><div class="tags"><span style="color:${TIERCOL[D.c]}">${D.c} gold</span>${D.tr.map(t=>`<span style="color:${TRAITS[t].col}">${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join('')}</div>
+  el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>${D.n} ${'★'.repeat(h.star)}${h.vet?` <span class="vet">${'❯'.repeat(h.vet)} veteran</span>`:''}</h3><div class="tags"><span style="color:${TIERCOL[D.c]}">${D.c} gold</span>${D.tr.map(t=>`<span style="color:${TRAITS[t].col}">${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join('')}</div>
    <div class="st"><div><small>Damage</small>${fmt(s.dmg)}</div><div><small>Speed</small>${s.as.toFixed(2)}</div><div><small>Range</small>${s.rng.toFixed(1)}</div><div><small>${D.dt==='m'?'Magic':'Physical'}</small>${s.crit?Math.round(s.crit*100)+'% crit':'—'}</div></div>
    <div class="ab"><b>${D.ab.n}</b> (${D.mana} mana): ${D.d}</div>${h.preview?'':`<div class="its">${(h.it||[]).map(id=>`<div><b style="color:${ITEMS[id].col}">${ITEMS[id].ic} ${ITEMS[id].n}</b><small>${ITEMS[id].d}</small></div>`).join('')||'<small>No items. Drag items from beside the bench onto a hero.</small>'}</div>
    <p class="sub" style="text-align:left;margin:6px 0 0">Health ${h.hpMax&&R.phase==='wave'?fmt(h.hp)+' / ':''}${fmt(heroMaxHp(h))}. Sells for ${sellValue(h)} gold: drag onto the shop.</p>`}`;
   el.querySelector('.x').addEventListener('click',()=>{SEL=null;el.hidden=true});el.hidden=false}
+function uiMon(m){if(!DOM)return;const D=MON[m.k],el=$('info'),A=D.atk,tags=MTAGS(m.k).map(t=>t[0]);
+  const atk=!A?'Does not attack heroes.':A.k==='melee'?'Swings at heroes next to the road.':A.k==='bolt'?`Throws bolts at heroes up to ${A.r} hexes away${A.chill?' and chills them (slower attacks)':''}.`:A.k==='slam'?'Slams the ground, hitting every hero close by.':'Breathes fire in a cone.';
+  el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>${m.elite?'Elite ':''}${D.n}</h3><div class="tags">${m.aff?`<span style="color:${AFFIX[m.aff].col}">${AFFIX[m.aff].n}: ${AFFIX[m.aff].d}</span>`:''}${tags.map(t=>`<span>${t}</span>`).join('')}</div>
+   <div class="st"><div><small>Health</small>${fmt(m.hp)}</div><div><small>Armour</small>${Math.round(m.ar*100)}%</div><div><small>Magic res.</small>${Math.round(m.mr*100)}%</div><div><small>Keep dmg</small>${m.w}</div></div><div class="ab">${atk}${m.psn?` Poisoned: ${m.psn.n} stacks.`:''}</div>`;
+  el.querySelector('.x').addEventListener('click',()=>{el.hidden=true});el.hidden=false}
 function uiSellHint(v){if(!DOM)return;const el=$('sellHint');el.hidden=!v;if(v)el.textContent=`Sell for ${v} gold`}
-function fight(){if(!R||R.phase!=='plan')return;$('traitP').hidden=true;if(R.event){showEvent();return}if(needMap()){showMap();return}if(!R.board.length){toast('Drag a hero from your bench onto the field first');return}if(startWave()){uiRefresh()}}
+function fight(){if(!R)return;if(R.phase==='room'){showRoom();return}if(R.phase==='reward'){showSpoils();return}if(R.phase==='pick'){showPick();return}if(R.phase!=='plan')return;$('traitP').hidden=true;if(needMap()){showMap();return}if(!R.board.length){toast('Drag a hero from your bench onto the field first');return}if(startWave()){uiRefresh()}}
 function cycleSpeed(){R.speed=R.speed>=3?1:R.speed+1;SET.speedPref=R.speed;saveSet();uiRefresh()}
-const RIC={stones:'ᚱ',tithe:'⛀',scholar:'✎',haste:'⚡',masons:'⛫',mire:'≈',eagle:'◉',arcana:'✧',runesmith:'⚒',baron:'⌾',richer:'⚖',recruit:'⚑',cheap:'↻',crit:'⚔',collector:'❖',egg:'◒',reaper:'☠',heart:'❤',kingmaker:'♛',treasury:'⛁',ascend:'★',riftlord:'✺',echo:'❂'};
-function showPick(){if(!DOM)return;const box=$('pickList');box.innerHTML='';const t=RELIC[R.picks[0]]?RELIC[R.picks[0]].t:1;$('pickSub').textContent=['','Silver relics','Gold relics','Prismatic relics'][t]+'. Relics last the whole run.';
-  for(const id of R.picks){const r=RELIC[id],col=['','#cfd8e0','#ffcf6a','#e6a8ff'][r.t],b=document.createElement('button');b.type='button';b.className='relic';b.style.setProperty('--c',col);
+const RIC={belt:'⚱',shovel:'⛏',whetstone:'◇',membership:'✉',toolbox:'⚙',bloodvial:'♥',prayer:'☸',crown:'♕',philo:'☿',dome:'◓',ecto:'☁',sozu:'⚗',coffee:'☕',fusion:'⚒',astrolabe:'✵',pandora:'▣',calling:'♪',tinyhouse:'⌂',stones:'ᚱ',tithe:'⛀',scholar:'✎',haste:'⚡',masons:'⛫',mire:'≈',eagle:'◉',arcana:'✧',runesmith:'⚒',baron:'⌾',richer:'⚖',recruit:'⚑',cheap:'↻',crit:'⚔',collector:'❖',egg:'◒',reaper:'☠',heart:'❤',kingmaker:'♛',treasury:'⛁',ascend:'★',riftlord:'✺',echo:'❂'};
+function showPick(){if(!DOM)return;const box=$('pickList');box.innerHTML='';const t=RELIC[R.picks[0]]?RELIC[R.picks[0]].t:1;
+  $('pickH').textContent=t===4?'Choose a boss relic':'Choose a relic';$('pickSub').textContent=(t===4?'Boss relics are powerful, and most come with a price.':R.pickSrc==='elite'?'The elite was guarding a relic.':['','Silver relics','Gold relics','Prismatic relics'][t]+'.')+' Relics last the whole run.';
+  for(const id of R.picks){const r=RELIC[id],col=['','#cfd8e0','#ffcf6a','#e6a8ff','#ff8a6a'][r.t],b=document.createElement('button');b.type='button';b.className='relic';b.style.setProperty('--c',col);
     b.innerHTML=`<span class="gem">${r.em?TRAITS[r.em].ic:RIC[id]||r.n[0]}</span><b>${r.n}</b><span>${r.d}</span>`;b.addEventListener('click',()=>{$('ovPick').hidden=true;takeRelic(id)});box.appendChild(b)}
   $('ovPick').hidden=false}
 function showEnd(win){if(!DOM)return;$('endT').textContent=win?'Victory!':'The keep has fallen';
@@ -78,8 +84,9 @@ function renderSettings(){if(!DOM)return;const box=$('setList');box.innerHTML=''
   const slider=k=>{const i=document.createElement('input');i.type='range';i.min=0;i.max=1;i.step=.05;i.value=SET[k];i.addEventListener('input',()=>{SET[k]=+i.value;saveSet()});return i};
   const seg=(k,opts)=>{const d=document.createElement('div');d.className='seg';for(const [v,l] of opts){const b=document.createElement('button');b.type='button';b.textContent=l;b.className=SET[k]===v?'on':'';b.addEventListener('click',()=>{SET[k]=v;saveSet();renderSettings();if(k==='quality')resize()});d.appendChild(b)}return d};
   row('Music',slider('music'));row('Sound effects',slider('sfx'));row('Screen shake',seg('shake',[[1,'On'],[.4,'Low'],[0,'Off']]));row('Damage numbers',seg('nums',[[1,'On'],[0,'Off']]));row('Graphics',seg('quality',[['auto','Auto'],['high','High'],['low','Low']]));{const b=document.createElement('button');b.type='button';b.textContent=META.tut?'Replay':'On';b.className='seg';b.style.cssText='border:1px solid rgba(255,207,106,.3);background:rgba(0,0,0,.25);border-radius:8px;padding:4px 10px';b.addEventListener('click',()=>{META.tut=0;saveMeta();toast('The tutorial will play on your next new run');renderSettings()});row('Tutorial',b)}}
-function startGame(o){clearRun();newRun(o);$('ovStart').hidden=true;hideEnd();MUSMODE='game';bgDirty=1;uiRefresh();if(!o||!o.daily)tutStart();else toast(`Daily challenge ${R.daily}: ascension 2, and you start with ${RELIC[R.dailyRelic].n}`);if(needMap()&&!TUT)showMap()}
-function bindUI(){if(!DOM)return;bindPanels();bindTut();bindMap();
+function startGame(o){o=Object.assign({},o);clearRun();const tut=!META.tut&&!o.daily;o.oracle=!tut;newRun(o);$('ovStart').hidden=true;hideEnd();MUSMODE='game';bgDirty=1;uiRefresh();
+  if(tut)tutStart();else if(o.daily)toast(`Daily challenge ${R.daily}: ascension 2, and you start with ${RELIC[R.dailyRelic].n}`);if(R.phase==='room')showRoom();else if(needMap()&&!TUT)showMap()}
+function bindUI(){if(!DOM)return;bindPanels();bindTut();bindMap();bindRooms();
   $('ascL').addEventListener('click',()=>{ASCSEL--;renderAsc()});$('ascR').addEventListener('click',()=>{ASCSEL++;renderAsc()});
   $('dailyB').addEventListener('click',()=>startGame({daily:dayKey()}));
   $('xpB').addEventListener('click',()=>{if(buyXP())uiRefresh()});$('rollB').addEventListener('click',()=>{if(reroll())uiRefresh()});
@@ -87,7 +94,7 @@ function bindUI(){if(!DOM)return;bindPanels();bindTut();bindMap();
   $('pauseB').addEventListener('click',()=>togglePause());$('resumeB').addEventListener('click',()=>togglePause(false));
   $('quitB').addEventListener('click',()=>{togglePause(false);runOver(false)});
   $('playB').addEventListener('click',()=>startGame({asc:ASCSEL||0}));
-  $('contB').addEventListener('click',()=>{if(loadRun()){$('ovStart').hidden=true;MUSMODE='game';bgDirty=1;uiRefresh();if(R.phase==='pick')showPick();else if(R.event)showEvent();else if(needMap())showMap()}});
+  $('contB').addEventListener('click',()=>{if(loadRun()){$('ovStart').hidden=true;MUSMODE='game';bgDirty=1;uiRefresh();if(R.phase==='pick')showPick();else if(R.phase==='room')showRoom();else if(R.phase==='reward')showSpoils();else if(needMap())showMap()}});
   $('againB').addEventListener('click',()=>startGame(R&&R.daily?{daily:dayKey()}:{asc:R?R.asc:0}));
   $('menuB').addEventListener('click',()=>{hideEnd();showStart()});$('endlessB').addEventListener('click',()=>{goEndless();MUSMODE='game'});
   document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('#ovStart .tab').forEach(t=>t.hidden=t.id!==b.dataset.tab);ensureAudio()}));

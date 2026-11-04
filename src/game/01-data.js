@@ -106,6 +106,24 @@ const RELICS=[
   {id:'ascend',t:3,n:'Ascension',d:'Your strongest ★1 hero on the field becomes ★2, and your strongest ★2 becomes ★3.'},
   {id:'riftlord',t:3,n:'Rift Lord',d:'Portals multiply by 1 more and monsters from them are worth triple gold.'},
   {id:'echo',t:3,n:'Echoing Spells',d:'Spells have a 35% chance to cast twice.'},
+  {id:'belt',t:1,n:'Potion Belt',d:'+1 potion slot, and gain a random potion.'},
+  {id:'shovel',t:2,n:'Shovel',d:'At campfires you can also dig for a random relic.'},
+  {id:'whetstone',t:1,n:'Whetstone',d:'Your two strongest fielded heroes become veterans.'},
+  {id:'membership',t:2,n:'Guild Card',d:'Everything at the merchant costs 30% less.'},
+  {id:'toolbox',t:1,n:'Toolbox',d:'Gain an item component after every elite and boss.'},
+  {id:'bloodvial',t:1,n:'Blood Vial',d:'The keep repairs 2 health after every fight.'},
+  {id:'prayer',t:2,n:'Prayer Wheel',d:'After every normal battle you choose from 4 recruits instead of 3, and they may be one cost higher.'},
+  {id:'crown',t:4,n:'Cursed Crown',d:'+1 hero on the field. Rerolling the shop costs 1 more.'},
+  {id:'philo',t:4,n:'Philosopher\'s Stone',d:'Heroes deal 30% more damage. Monsters have 20% more health.'},
+  {id:'dome',t:4,n:'Runic Dome',d:'Every rune multiplies by 2 more. You can no longer see the coming wave.'},
+  {id:'ecto',t:4,n:'Ectoplasm',d:'+1 hero on the field. You earn no interest.'},
+  {id:'sozu',t:4,n:'Sozu',d:'+1 hero on the field. You can no longer get potions.'},
+  {id:'coffee',t:4,n:'Coffee Dripper',d:'+1 hero on the field. You can no longer rest at campfires.'},
+  {id:'fusion',t:4,n:'Fusion Hammer',d:'+1 hero on the field. You can no longer train at campfires.'},
+  {id:'astrolabe',t:4,n:'Astrolabe',d:'Three random ★1 heroes you own become ★2.'},
+  {id:'pandora',t:4,n:'Pandora\'s Box',d:'Every ★1 hero you own turns into a random hero that costs 1 more.'},
+  {id:'calling',t:4,n:'Calling Bell',d:'Gain three random silver relics. The keep loses 15 maximum health.'},
+  {id:'tinyhouse',t:4,n:'Tiny House',d:'An item component, a potion, 15 gold, 10 maximum keep health and 5 XP.'},
 ];
 const RELIC={};RELICS.forEach(r=>RELIC[r.id]=r);
 // research between runs, paid with gems
@@ -143,6 +161,10 @@ const ACH=[
   {id:'asc5',n:'Unbowed',d:'Win a run on ascension 5 or higher',g:150},
   {id:'asc10',n:'Eternal Warden',d:'Win a run on ascension 10',g:300},
   {id:'daily',n:'Daily Devotion',d:'Finish a daily challenge',g:15},
+  {id:'vet2',n:'Drill Master',d:'Train a hero to veteran rank 2',g:25},
+  {id:'potion5',n:'Apothecary',d:'Drink 5 potions in one run',g:25},
+  {id:'boss4',n:'Collector of Curses',d:'Own two boss relics at once',g:40},
+  {id:'nofight',n:'Pacifist Road',d:'Visit four rooms without monsters in one act',g:30},
   {id:'h_lone',n:'One Warden',hidden:'One is all it takes.',d:'Clear a wave after wave 5 with a single hero on the field',g:60},
   {id:'h_three',n:'Trinity',hidden:'Three legends at once.',d:'Have three ★3 heroes on the field at once',g:120},
   {id:'h_dragon',n:'Dragonheart',hidden:'Raise a dragon to its full glory.',d:'Get a ★3 Wyrmling',g:150},
@@ -183,15 +205,49 @@ const ITEMS={
 };
 const RECIPE={};for(const k in ITEMS){const I=ITEMS[k];if(I.c){RECIPE[I.c.slice().sort().join('+')]=k;I.ic=ITEMS[I.c[0]].ic+ITEMS[I.c[1]].ic;I.col=ITEMS[I.c[0]].col}}
 const FINISHED=Object.keys(ITEMS).filter(k=>ITEMS[k].c);
-// ---------- the act map: three lanes, nine stops and a boss ----------
+// ---------- the act map: branching roads of rooms, like a dungeon crawl ----------
 const NODES={
-  battle:{n:'Battle',ic:'⚔',col:'#d8c8a8',d:'A normal wave.'},
-  elite:{n:'Elite',ic:'☠',col:'#ff7a5a',d:'Two extra elite monsters. Clear it for an item component and 3 gold.'},
-  shrine:{n:'Rune Shrine',ic:'ᚱ',col:'#8ab8ff',d:'30% fewer monsters. Clear it for a ×2 rune stone.'},
-  treasure:{n:'Treasure Road',ic:'◆',col:'#ffcf2e',d:'30% more monsters, but every one carries extra gold.'},
-  camp:{n:'Camp',ic:'✚',col:'#7ddc6a',d:'A small wave. Afterwards the keep heals 15.'},
-  mystery:{n:'Mystery',ic:'?',col:'#d6a8ff',d:'Something happens on the road. Then a normal wave.'},
-  boss:{n:'Boss',ic:'♛',col:'#ff5a4a',d:'The act boss.'},
+  battle:{n:'Battle',ic:'⚔',col:'#d8c8a8',fight:1,d:'A wave of monsters. Win to pick a new recruit.'},
+  elite:{n:'Elite',ic:'☠',col:'#ff7a5a',fight:1,d:'A wave with two elite champions. Win for an item, 3 gold, a recruit and a relic.'},
+  event:{n:'Unknown',ic:'?',col:'#d6a8ff',d:'Something waits on the road. No monsters.'},
+  rest:{n:'Campfire',ic:'♨',col:'#ffa64a',d:'Rest to repair the keep, or train a hero into a veteran. No monsters.'},
+  merchant:{n:'Merchant',ic:'⚖',col:'#7ad0ff',d:'Buy items, potions and relics. No monsters.'},
+  treasure:{n:'Treasure',ic:'◆',col:'#ffcf2e',d:'A chest: choose a relic. No monsters.'},
+  boss:{n:'Boss',ic:'♛',col:'#ff5a4a',fight:1,d:'The act boss. Win for a boss relic.'},
+};
+// potions: one use each, from fights, events and the merchant
+const POTIONS={
+  fire:{n:'Fire Flask',ic:'✹',col:'#ff7a3a',wave:1,d:'Every monster burns for 20% of its health (bosses 6%).'},
+  frost:{n:'Frost Phial',ic:'❄',col:'#8ad8ff',wave:1,d:'Freezes every monster for 3 seconds.'},
+  heal:{n:'Healing Draught',ic:'✚',col:'#7ddc6a',d:'Repairs 25 keep health.'},
+  rage:{n:'Berserk Brew',ic:'⚡',col:'#ff5a6a',wave:1,d:'Heroes attack 60% faster for 8 seconds.'},
+  mana:{n:'Liquid Mana',ic:'✦',col:'#5fa8ff',wave:1,d:'Every hero\'s mana fills up: they all cast at once.'},
+  phoenix:{n:'Phoenix Feather',ic:'❦',col:'#ffb04a',wave:1,d:'Knocked-out heroes get back up, and every hero heals 50%.'},
+  gold:{n:'Midas Draught',ic:'⛁',col:'#ffcf2e',plan:1,d:'+12 gold.'},
+  ink:{n:'Rune Ink',ic:'ᚱ',col:'#9cc4ff',d:'Every rune multiplies by 1 more until the next wave ends.'},
+  insight:{n:'Elixir of Insight',ic:'◉',col:'#c9a8ff',plan:1,d:'+6 XP.'},
+};
+const POTKEYS=Object.keys(POTIONS);
+// elite champions come with a twist
+const AFFIX={
+  vamp:{n:'Vampiric',col:'#ff4a6a',d:'heals when it hits a hero'},
+  shield:{n:'Shielded',col:'#e8f0ff',d:'a shield soaks the first 35% of its health'},
+  swift:{n:'Swift',col:'#ffe06a',d:'moves 40% faster'},
+  thorns:{n:'Thorned',col:'#a6e04a',d:'heroes that hit it take damage back'},
+  regen:{n:'Undying',col:'#7dff9a',d:'regenerates 2% health every second'},
+};
+const AFFKEYS=Object.keys(AFFIX);
+// the oracle at the gate offers a blessing at the start of a run
+const ORACLE={
+  gold:{n:'A purse of gold',d:'+15 gold.'},
+  comp:{n:'An armourer\'s gift',d:'Two item components.'},
+  potion:{n:'An apothecary\'s gift',d:'Two random potions.'},
+  relic:{n:'A trinket',d:'A random silver relic.'},
+  lvl:{n:'Veterans\' oath',d:'Start at level 3.'},
+  stone:{n:'An old rune',d:'A ×3 rune stone.'},
+  vet:{n:'A trained recruit',d:'Your starting hero is a veteran (+25% damage and health).'},
+  risk:{n:'A blood price',d:'Lose 15 keep health. Gain a random gold relic.',risk:1},
+  risk2:{n:'A heavy purse',d:'The keep starts with 20 less health. +30 gold.',risk:1},
 };
 // ---------- ascension: each level adds its rule to all the ones below it ----------
 const ASC=['Monsters have 15% more health.','An extra elite monster every wave from wave 4.','Start runs with 3 less gold.','Monsters move 8% faster.','The keep has 20 less health.','Monsters hit your heroes 30% harder.','Bosses have 35% more health.','Interest is capped at 4 gold.','Monsters have another 15% more health.','Relic picks offer one fewer choice.'];
@@ -201,7 +257,7 @@ const UNLOCK={duelist:60,frostmage:90,plague:90,warlord:140,necromancer:140};
 const SKINS=[{id:'blue',n:'Azure Keep',sh:'keep'},{id:'red',n:'Crimson Keep',sh:'keep_red',ach:'act1'},{id:'green',n:'Verdant Keep',sh:'keep_green',ach:'act2'},{id:'yellow',n:'Golden Keep',sh:'keep_yellow',ach:'win'}];
 // decorations: obstacles on the field and props along the far edge, per act. [sheet, cell, scale]
 const OBS_SETS=[
-  [['props2',3,1.35],['props2',0,.9],['props2',1,.95],['props',2,.95],['props2',13,.95],['props2',7,1.1]],
+  [['props2',3,1.12],['props2',0,.9],['props2',1,.95],['props',2,.95],['props2',13,.95],['props2',7,1.1]],
   [['props',0,1.25],['props',1,1.2],['props2',10,.85],['props2',7,1.15],['props',3,.75],['props2',8,.95]],
   [['props2',12,1.05],['props2',13,.95],['props2',11,.85],['props',4,.85],['props2',14,.8],['props',2,.95]],
 ];

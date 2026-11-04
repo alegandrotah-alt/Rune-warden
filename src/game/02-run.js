@@ -12,7 +12,7 @@ const relicN=id=>R?R.relics.filter(r=>r===id).length:0;
 function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),hp=100+10*rank('keep')-(A>=5?20:0);
   R={act:0,wave:1,gold:8+2*rank('gold')-(A>=3?3:0),lvl:2,xp:0,hp,hpMax:hp,bench:new Array(8+rank('bench')).fill(null),board:[],items:[],
     shop:[],relics:[],stones:rank('stone')?[2]:[],streak:0,phase:'plan',rerolls:0,freeRoll:0,portalGold:0,goldFrac:0,egg:-1,pool:{},picks:[],leakAct:0,
-    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0},endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null};
+    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null};
   if(R.daily){let h=7;for(const ch of R.daily)h=Math.imul(h^ch.charCodeAt(0),2654435761);R.rs=h|0;R.seed=h>>>0}
   for(const k of HKEYS)R.pool[k]=unlocked(k)||R.daily?POOL[HEROES[k].c]:0;
   genField();genMap();autoNode();rollShop(true);
@@ -20,6 +20,8 @@ function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),hp=100+10*rank
   const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);
   if(R.daily){const r2=RELICS.filter(r=>r.t===2&&!['egg','recruit'].includes(r.id));const id=rndS(r2).id;R.relics.push(id);applyRelic(id);R.dailyRelic=id}
   R.freeRoll=rank('reroll');R.nextQ=nodeQ(waveList(1));
+  // the oracle offers three plain gifts and one with a price
+  if(o.oracle){const safe=Object.keys(ORACLE).filter(k=>!ORACLE[k].risk),pick=[];while(pick.length<3){const k=rndS(safe);if(!pick.includes(k))pick.push(k)}pick.push(rndS(['risk','risk2']));R.room={t:'oracle',opts:pick};R.phase='room'}
 }
 // obstacles, runes and portals are re-dealt every act
 function genField(){
@@ -41,21 +43,21 @@ function rebuildBlk(){const F=R.field;for(let i=0;i<F.blk.length;i++)if(F.blk[i]
 function flow(blk){
   const d=new Int16Array(COLS*ROWS).fill(-1),q=[];
   for(const r of KEEP_ROWS){const i=r*COLS+COLS-1;if(!blk[i]){d[i]=0;q.push(i)}}
-  for(let h=0;h<q.length;h++){const i=q[h],c=i%COLS,r=(i/COLS)|0;for(const [dc,dr] of [[1,0],[-1,0],[0,1],[0,-1]]){const nc=c+dc,nr=r+dr;if(nc<0||nr<0||nc>=COLS||nr>=ROWS)continue;const j=nr*COLS+nc;if(blk[j]||d[j]>=0)continue;d[j]=d[i]+1;q.push(j)}}
+  for(let h=0;h<q.length;h++){const i=q[h],c=i%COLS,r=(i/COLS)|0;for(const [nc,nr] of nbrs(c,r)){const j=nr*COLS+nc;if(blk[j]||d[j]>=0)continue;d[j]=d[i]+1;q.push(j)}}
   return SPAWN_ROWS.some(r=>d[r*COLS]>=0)?d:null}
 function canPlace(c,r){const F=R.field,i=r*COLS+c;if(c<0||r<0||c>=COLS||r>=ROWS||F.blk[i])return false;if(F.runes.some(q=>q.c===c&&q.r===r)||F.portals.some(q=>q.c===c&&q.r===r))return false;
   const b=F.blk.slice();b[i]=1;return !!flow(b)}
 function nextCell(c,r){const d=R.field.dist,cur=d[r*COLS+c];let best=null,bd=cur<0?1e9:cur;
-  for(const [dc,dr] of [[1,0],[0,1],[0,-1],[-1,0]]){const nc=c+dc,nr=r+dr;if(nc<0||nr<0||nc>=COLS||nr>=ROWS)continue;const v=d[nr*COLS+nc];if(v>=0&&v<bd){bd=v;best=[nc,nr]}}
+  for(const [nc,nr] of nbrs(c,r)){const v=d[nr*COLS+nc];if(v>=0&&v<bd){bd=v;best=[nc,nr]}}
   return best}
 function traceRoute(){const d=R.field.dist;if(!d)return[];let r=SPAWN_ROWS.filter(rr=>d[rr*COLS]>=0).sort((a,b)=>d[a*COLS]-d[b*COLS])[0];if(r==null)return[];let c=0;const out=[[c,r]];
   for(let i=0;i<COLS*ROWS;i++){const n=nextCell(c,r);if(!n)break;[c,r]=n;out.push([c,r])}const L=out.length;if(R.stats&&L>R.stats.maxMaze){R.stats.maxMaze=L;if(L>=40)award('maze40');if(L>=70)award('h_maze')}return out}
 const runeAt=(c,r)=>R.field.runes.find(q=>q.c===c&&q.r===r);
 const portalAt=(c,r)=>R.field.portals.find(q=>q.c===c&&q.r===r);
-const runeMul=q=>q.v+(has('runesmith')?1:0)+(has('heart')?2:0);
+const runeMul=q=>q.v+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0);
 const portalMul=q=>q.v+(has('riftlord')?1:0);
 // ---------- heroes: bench, field, merging ----------
-const boardMax=()=>R.lvl+(has('recruit')?1:0)+(has('kingmaker')?2:0);
+const boardMax=()=>R.lvl+(has('recruit')?1:0)+(has('kingmaker')?2:0)+['crown','ecto','sozu','coffee','fusion'].filter(has).length;
 function heroAt(c,r){return R.board.find(h=>h.c===c&&h.r===r)}
 function mkHero(k,star){return{uid:UID++,k,star,mana:0,cd:Math.random()*.5,atk:0,face:1,hits:0,buffT:0,c:-1,r:-1,it:[]}}
 function addHero(k,star,free){
@@ -71,7 +73,7 @@ function merge(h){
   const same=allHeroes().filter(x=>x.k===h.k&&x.star===h.star);if(h.tmp&&!same.includes(h))same.push(h);
   if(same.length<3||h.star>=3){if(h.tmp)delete h.tmp;return}
   const keep=same.find(x=>R.board.includes(x))||same.find(x=>!x.tmp)||same[0];
-  for(const x of same.slice(0,3)){if(x===keep)continue;removeHero(x);for(const it of x.it||[])giveItem(keep,it)}
+  for(const x of same.slice(0,3)){if(x===keep)continue;removeHero(x);keep.vet=Math.max(keep.vet||0,x.vet||0);for(const it of x.it||[])giveItem(keep,it)}
   delete keep.tmp;keep.star++;keep.mana=0;fxStar(keep);if(keep.star===3){award('star3');if(keep.k==='wyrm')award('h_dragon');if(R.board.filter(x=>x.star===3).length>=3)award('h_three')}
   merge(keep)}
 function removeHero(h){const i=R.board.indexOf(h);if(i>=0){R.board.splice(i,1);rebuildBlk()}const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null}
@@ -97,10 +99,11 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
   if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
   if(h.buffT>0)s.as*=h.buffAs||2;
+  if(h.vet)s.dmg*=1+.25*h.vet;if(has('philo'))s.dmg*=1.3;if(R.b&&R.b.rageT>0)s.as*=1.6;
   // items
   const I=itemStats(h);s.dmg*=1+I.dmg;s.as*=1+I.as;s.spell*=1+I.sp;s.crit=1-(1-s.crit)*(1-I.crit);s.rng+=I.rng||0;
   if(hasIt(h,'edge'))s.cm+=.5;if(hasIt(h,'titan'))s.dmg*=1+Math.min(.8,.04*(h.stk||0));if(hasIt(h,'rage'))s.as*=1+Math.min(2,.04*(h.stk||0));
   if(h.chillT>0)s.as*=.7;
   return s}
 // hero health: bigger heroes, stars and Guardians are tougher; it refills every wave
-function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(1+itemStats(h).hp))}
+function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0)))}

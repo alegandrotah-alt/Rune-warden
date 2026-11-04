@@ -7,6 +7,8 @@
 - The sim loads the game with no DOM at all: keep DOM-only code behind `DOM` / `$()` null checks so game logic runs headless.
 - Sprite sheets in `www/gfx/` are rendered offline from CC0 KayKit / Quaternius / Kenney models: heroes `h_<key>.png` (10 cells of 160: idle 0-3, attack 4-9, facing right), monsters `m_<key>.png` (6 walk cells), `keep.png` and `keep_<colour>.png` skins (320), `props.png` (192 cells), `props2.png` (graveyard/ember props, 160 cells; see `OBS_SETS`/`EDGE_SETS` in `01-data.js`).
 - Music in `www/music/` (one track per act plus menu and boss, see CREDITS.txt); sound effects (`sp_*` spell sounds, `m_*` monster hits) and particle textures are embedded from `src/assets/`.
+- The board is pointy-top hexes in offset rows: use `hx(c,r)`/`hy(r)` for centres, `cellOf(x,y)` for the hex under a point, `nbrs(c,r)` for neighbours and `hexPath()` to draw one. Never assume square tiles.
+- Run flow: every floor is one auto-battler round. Map rooms (`05b-map.js`) are fights (`NODES[t].fight`: battle, elite, boss) or rooms without monsters (`05c-rooms.js`: rest, merchant, treasure, event, plus the oracle at the start). Phases: plan, wave, reward (recruit pick), pick (relics), room, over; after a fight `R.queue` plays the screens in order via `advance()`. `roomView()` describes a room for both the screen and the sim bot.
 - Gameplay randomness that must repeat in a daily challenge (shops, waves, map, field, relic offers, events) goes through `rng()`/`rndS()`, not `Math.random`.
 - Bump the cache name in `www/sw.js` when files in `www/gfx` or `www/music` are renamed or replaced.
 - Pushing to `main` releases: Android APK on Releases (version = run number) and the web version on GitHub Pages.

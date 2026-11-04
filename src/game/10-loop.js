@@ -8,6 +8,6 @@ function loop(now){const dt=Math.min(.1,(now-LAST)/1000||1/60);LAST=now;FRAME_DT
   if(DOM&&R&&R.phase==='wave'&&((now/250)|0)!==loop.k){loop.k=(now/250)|0;uiRefresh()}
   requestAnimationFrame(loop)}
 function init(){bindUI();measure();resize();newRun();for(const k of HKEYS)sheet('h_'+k);sheet('keep');sheet('props');sheet('props2');const sk=SKINS.find(q=>q.id===SET.skin);if(sk)sheet(sk.sh);showStart();uiRefresh();requestAnimationFrame(loop);
-  if(typeof location!=='undefined'&&/debug/.test(location.search))window.__RW={get R(){return R},newRun,startWave,buy,reroll,buyXP,placeHero,addHero,takeRelic,genField,uiRefresh,calcTraits,canPlace,heroAt,offerRelics,set speed(v){R.speed=v},get SYN(){return SYN},benchSlot,tileXY:(c,r)=>({x:sx((c+.5)*T),y:sy((r+.5)*T)}),stoneSlot,itemSlot,dropItem,equipFrom,chooseNode,mapOptions,needMap,showMap,startEvent,resolveEvent,genMap,startGame,get META(){return META}}}
+  if(typeof location!=='undefined'&&/debug/.test(location.search))window.__RW={get R(){return R},newRun,startWave,buy,reroll,buyXP,placeHero,addHero,takeRelic,genField,uiRefresh,calcTraits,canPlace,heroAt,offerRelics,set speed(v){R.speed=v},get SYN(){return SYN},benchSlot,tileXY:(c,r)=>({x:sx(hx(c,r)),y:sy(hy(r))}),stoneSlot,itemSlot,dropItem,equipFrom,chooseNode,mapOptions,needMap,showMap,enterRoom,roomAct,roomView,takeRecruit,usePotion,gainPotion,genMap,startGame,get META(){return META}}}
 if(DOM)init();
 })();

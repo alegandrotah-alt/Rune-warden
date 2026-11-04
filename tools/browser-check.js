@@ -55,18 +55,19 @@ function serve() {
   await page.screenshot({ path: path.join(OUT, '4-busy-wave.png') });
   const busy = await page.evaluate(() => { const B = window.__RW.R.b; return B ? { mons: B.mons.length, projs: B.projs.length, ko: B.ko } : { mons: 0, projs: 0, ko: 0 }; });
   // 3. items combine on a hero, the act map and a mystery event open
-  const extra = await page.evaluate(() => { const G = window.__RW, R = G.R; R.b = null; R.phase = 'plan'; R.items.length = 0; const h = R.board[0]; h.it = [];
-    G.dropItem('sword'); G.dropItem('bow'); G.equipFrom(0, h); G.equipFrom(0, h); const item = h.it.join();
-    R.wave = 12; R.act = 1; G.genMap(); R.map.pos = { row: 0, lane: 1 }; const opts = G.mapOptions().length; G.showMap(); const mapOk = !document.getElementById('ovMap').hidden && document.querySelectorAll('#mapGrid .mn.can').length === opts;
-    document.querySelector('#mapGrid .mn.can').click(); const chosen = R.node; G.startEvent(); const evOk = !document.getElementById('ovEvent').hidden && document.querySelectorAll('#evList .relic').length > 1; G.resolveEvent(G.R.event.id === 'well' ? 1 : 0);
-    return { item, mapOk, chosen, evOk }; });
+  const extra = await page.evaluate(() => { const G = window.__RW, R = G.R; R.b = null; R.phase = 'plan'; R.room = null; R.queue = null; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; });
+    R.items.length = 0; const h = R.board[0]; h.it = []; G.dropItem('sword'); G.dropItem('bow'); G.equipFrom(0, h); G.equipFrom(0, h); const item = h.it.join();
+    R.wave = 12; R.act = 1; G.genMap(); const opts = G.mapOptions().length; G.showMap(); const mapOk = opts > 0 && !document.getElementById('ovMap').hidden && document.querySelectorAll('#mapGrid .mn.can').length === opts;
+    document.getElementById('ovMap').hidden = true; R.gold = 60; G.enterRoom('merchant'); const shown = !document.getElementById('ovRoom').hidden && document.querySelectorAll('#roomList button').length > 3;
+    const g0 = R.gold; const buy = G.roomView().opts.findIndex((q) => q.cost && !q.sold && q.item); G.roomAct(buy); const bought = R.gold < g0;
+    G.roomAct(G.roomView().opts.findIndex((q) => q.leave)); return { item, mapOk, chosen: opts + ' rooms reachable', evOk: shown && bought && !R.room }; });
   await page.screenshot({ path: path.join(OUT, '5-items-map.png') });
   await browser.close(); srv.close();
   const d = ft.slice(1).map((t, i) => t - ft[i]).sort((a, b) => a - b);
   const avg = d.reduce((a, b) => a + b, 0) / Math.max(1, d.length), p95 = d[Math.floor(d.length * .95)] || 0;
   let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
     `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles, ${busy.ko} heroes knocked out), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
-    `- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (picked ${extra.chosen}); mystery event opened: ${extra.evOk ? 'yes' : '**no**'}\n` +
+    `- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item and closed: ${extra.evOk ? 'yes' : '**no**'}\n` +
     `  (CI has no GPU, so real phones run far faster; compare this number between builds)\n- Screenshots are attached to the run as **browser-check-screens**.\n`;
   if (errors.length) md += '\n```\n' + errors.slice(0, 10).join('\n') + '\n```\n';
   console.log(md);

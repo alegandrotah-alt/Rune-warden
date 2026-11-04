@@ -5,8 +5,16 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v,rnd=a=>a[(Math.random()*a.length)|0],lerp=(a,
 const fmt=n=>{n=Math.round(n);const a=Math.abs(n);return a>=1e9?(n/1e9).toFixed(1)+'B':a>=1e6?(n/1e6).toFixed(1)+'M':a>=1e4?(n/1e3).toFixed(1)+'K':String(n)};
 const mk=(w,h)=>{if(typeof document==='undefined'||!document.createElement)return null;const c=document.createElement('canvas');c.width=w;c.height=h;return c};
 const hexA=(h,a)=>{const n=parseInt(h.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
-// field: COLS x ROWS tiles of T world units. Monsters enter on the left and walk to the keep on the right.
-const COLS=14,ROWS=8,T=64,FW=COLS*T,FH=ROWS*T,VY=.62;
+// field: a COLS x ROWS board of pointy-top hexes (odd rows shifted right by half a hex), T world units between hex centres.
+// Monsters enter on the left and walk to the keep on the right.
+const COLS=14,ROWS=8,T=64,RS=T*.866,FW=(COLS+.5)*T,FH=(ROWS-1)*RS+T,VY=.62,HR=T/1.732;
+const hx=(c,r)=>(c+.5+(r&1)*.5)*T,hy=r=>r*RS+T/2;
+const NBO=[[[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[-1,0]],[[1,0],[1,-1],[1,1],[0,-1],[0,1],[-1,0]]];
+function nbrs(c,r){const o=[];for(const [dc,dr] of NBO[r&1]){const nc=c+dc,nr=r+dr;if(nc>=0&&nr>=0&&nc<COLS&&nr<ROWS)o.push([nc,nr])}return o}
+// the hex under a world point (null off the board)
+function cellOf(x,y){let best=null,bd=1e9;const r0=Math.round((y-T/2)/RS);for(let r=r0-1;r<=r0+1;r++){if(r<0||r>=ROWS)continue;const c0=Math.round(x/T-.5-(r&1)*.5);for(let c=c0-1;c<=c0+1;c++){if(c<0||c>=COLS)continue;const d=(hx(c,r)-x)**2+(hy(r)-y)**2;if(d<bd){bd=d;best=[c,r]}}}return best&&bd<=HR*HR?best:null}
+// hex outline in screen space (pointy top), optionally lifted
+function hexPath(g,c,r,k,lift){const x=hx(c,r),y=hy(r),R_=HR*(k||1);g.beginPath();for(let i=0;i<6;i++){const a=(-90+60*i)*Math.PI/180,px=sx(x+Math.cos(a)*R_),py=sy(y+Math.sin(a)*R_)-(lift||0);i?g.lineTo(px,py):g.moveTo(px,py)}g.closePath()}
 const cv=$('cv'),ctx=cv&&cv.getContext?cv.getContext('2d'):null;
 let W=0,H=0,DPR=1,VIEW={s:1,ox:0,oy:0},VB={s:1,ox:0,oy:0},ZM={z:1,x:0,y:0};
 let SET={music:.6,sfx:.7,shake:1,nums:1,quality:'auto',speedPref:1};

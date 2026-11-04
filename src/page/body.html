@@ -2,14 +2,15 @@
 <canvas id="cv"></canvas>
 <header id="top">
   <div class="tl"><b id="waveT">Wave 1</b><small id="actT">Act I · Hollow Crypts</small></div>
-  <div class="tc"><span class="pill gold" id="goldT">0</span><span class="pill lvl"><b id="lvlT">Lv 2</b><i class="xpbar"><i id="xpF"></i></i><small id="xpT">0/2</small></span><span class="pill" id="fieldT">0/2 heroes</span><span class="pill" id="streakT" hidden></span></div>
-  <div class="tr"><button id="mapB" class="tbtn" type="button" aria-label="Act map" hidden>⚑</button><button id="zoomB" class="tbtn" type="button" aria-label="Reset zoom" hidden>⤢</button><button id="dmgB" class="tbtn" type="button" aria-label="Damage chart">▤</button><span class="pill keep" id="hpT">♥ 100</span><button id="pauseB" type="button" aria-label="Pause">❚❚</button></div>
+  <div class="tc"><span class="pill gold" id="goldT">0</span><span class="pill lvl"><b id="lvlT">Lv 2</b><i class="xpbar"><i id="xpF"></i></i><small id="xpT">0/2</small></span><span class="pill" id="fieldT">0/2 heroes</span><span class="pill" id="streakT" hidden></span><span id="pots"></span></div>
+  <div class="tr"><button id="relB" class="tbtn" type="button" aria-label="Relics">◈<small id="relN">0</small></button><button id="mapB" class="tbtn" type="button" aria-label="Act map" hidden>⚑</button><button id="zoomB" class="tbtn" type="button" aria-label="Reset zoom" hidden>⤢</button><button id="dmgB" class="tbtn" type="button" aria-label="Damage chart">▤</button><span class="pill keep" id="hpT">♥ 100</span><button id="pauseB" type="button" aria-label="Pause">❚❚</button></div>
 </header>
 <aside id="traits"></aside>
 <aside id="info" hidden></aside>
 <aside id="dmgP" hidden></aside>
 <aside id="waveP" hidden></aside>
 <aside id="traitP" hidden></aside>
+<aside id="relP" hidden></aside>
 <div id="coachRing" hidden></div>
 <div id="coach" hidden><p id="coachT"></p><div class="row"><button id="coachOk" type="button" class="primary" hidden>Got it</button><button id="coachSkip" type="button">Skip tutorial</button></div></div>
 <footer id="shop">
@@ -19,9 +20,10 @@
   <div id="sellHint" hidden>Drop to sell</div>
 </footer>
 <div id="toast" hidden></div>
-<section id="ovPick" class="overlay" hidden><div class="card wide"><h2>Choose a relic</h2><p class="sub" id="pickSub">Relics last the whole run.</p><div id="pickList" class="picks"></div></div></section>
-<section id="ovMap" class="overlay" hidden><div class="card wide"><h2 id="mapT">Act map</h2><p class="sub" id="mapS"></p><div id="mapGrid"></div><div class="row"><button id="mapClose" type="button">Close</button></div></div></section>
-<section id="ovEvent" class="overlay" hidden><div class="card wide"><h2 id="evT"></h2><p class="sub" id="evD"></p><div id="evList" class="picks"></div></div></section>
+<section id="ovPick" class="overlay" hidden><div class="card wide"><h2 id="pickH">Choose a relic</h2><p class="sub" id="pickSub">Relics last the whole run.</p><div id="pickList" class="picks"></div></div></section>
+<section id="ovMap" class="overlay" hidden><div class="card wide"><h2 id="mapT">Act map</h2><p class="sub" id="mapS"></p><div id="mapGrid"></div><div id="mapLeg"></div><div class="row"><button id="mapClose" type="button">Close</button></div></div></section>
+<section id="ovRoom" class="overlay" hidden><div class="card wide room"><div class="roomhead"><span id="roomI" class="roomic">?</span><div><h2 id="roomT"></h2><p class="sub" id="roomD"></p></div></div><div id="roomList" class="picks"></div></div></section>
+<section id="ovReward" class="overlay" hidden><div class="card wide"><h2 id="rwT">Victory</h2><ul id="rwL" class="spoils"></ul><p class="sub">Choose a recruit to join you for free, or skip.</p><div id="rwHeroes" class="recruits"></div><div class="row"><button id="rwSkip" type="button">Skip</button></div></div></section>
 <section id="ovEnd" class="overlay" hidden><div class="card"><h2 id="endT">Defeat</h2><p class="sub" id="endS"></p><div id="endStats" class="stats"></div><div class="row"><button id="endlessB" type="button" class="primary" hidden>Endless mode</button><button id="againB" type="button" class="primary">New run</button><button id="menuB" type="button">Menu</button></div></div></section>
 <section id="ovPause" class="overlay" hidden><div class="card"><h2>Paused</h2><p class="sub" id="pauseS"></p><div id="pauseRelics" class="relicrow"></div><div class="row"><button id="resumeB" type="button" class="primary">Resume</button><button id="quitB" type="button">Abandon run</button></div></div></section>
 <section id="ovStart" class="overlay start"><div class="card wide">
@@ -30,7 +32,7 @@
   <div id="tPlay" class="tab"><div class="row"><button id="contB" type="button" class="primary" hidden>Continue run</button><button id="playB" type="button" class="primary big">New run</button><button id="dailyB" type="button" class="daily"><b>Daily challenge</b><small id="dailyS"></small></button></div><p class="sub" id="bestT"></p>
     <div id="ascBox" hidden><div class="ascrow"><button id="ascL" type="button" aria-label="Lower ascension">◀</button><b id="ascT">Normal</b><button id="ascR" type="button" aria-label="Higher ascension">▶</button></div><ul id="ascD"></ul></div>
     <details><summary>How to play</summary><dl class="how">
-      <dt>The road</dt><dd>Monsters come out of the portal on the left and walk to your keep on the right. Every hero you place blocks a tile, so the heroes are the maze. Twist the road to make monsters walk past your heroes for longer. You can never block it completely.</dd>
+      <dt>The road</dt><dd>Monsters come out of the portal on the left and walk to your keep on the right. The field is a board of hexes; every hero you place stands on a raised stone plinth and blocks that hex, so the heroes are the maze. Twist the road to make monsters walk past your heroes for longer. You can never block it completely.</dd>
       <dt>The shop</dt><dd>Tap a hero card to buy it to your bench, then drag it onto the field between waves. Drag a hero onto the shop to sell it. Gold earns interest: 1 gold for every 10 you hold, up to 5. Win and loss streaks pay extra.</dd>
       <dt>Stars</dt><dd>Three copies of the same hero merge into a ★2, and three ★2 into a ★3. Each star is much stronger.</dd>
       <dt>Levels</dt><dd>Your level is how many heroes you can field. Buy XP to level faster; higher levels find rarer heroes in the shop.</dd>
@@ -39,11 +41,15 @@
       <dt>× Portals</dt><dd>A monster that walks through a purple × portal splits into that many copies, and every copy drops gold when it dies. Route monsters through portals for profit, or around them to stay safe.</dd>
       <dt>Spells</dt><dd>Heroes fill their blue mana bar by attacking. When it is full they cast their special ability.</dd>
       <dt>Health</dt><dd>Monsters swing at the heroes they walk past, and some throw bolts or slam the ground. A hero whose green health bar runs out is knocked out until the wave ends, but still blocks the road. Guardians are tougher and monsters prefer to hit them.</dd>
-      <dt>Items</dt><dd>Elites and bosses drop item components. Drag one from beside the bench onto a hero. Two components on the same hero combine into a finished item, and a hero holds up to three. Selling a hero gives its items back.</dd>
-      <dt>The map</dt><dd>Each act is a road of ten stops. Before every wave pick the next one: Elite battles drop items, Rune Shrines give rune stones, Treasure Roads carry extra gold, Camps repair the keep, and Mystery stops hold events.</dd>
+      <dt>Items</dt><dd>Items appear in the ITEMS rack to the left of your bench. Drag one onto a hero. Two components on the same hero forge a finished item, and a hero holds up to three. Tap an item to read it and see its recipes. Selling a hero gives its items back.</dd>
+      <dt>The map</dt><dd>Each act is a map of branching roads ending at the boss. Before every floor pick a room joined to where you stand. Battles and Elites send a wave; Elites bring champions with a twist and give an item, a relic and gold. Campfires (rest or train), the Merchant, Treasure chests and ? rooms have no monsters, but still pay your income.</dd>
+      <dt>Recruits</dt><dd>After every fight, choose one of three heroes to join you for free, or skip for 2 gold.</dd>
+      <dt>Veterans</dt><dd>Train a hero at a campfire or the merchant: each veteran rank gives +25% damage and health (two ranks at most). Veterans show chevrons on their plinth.</dd>
+      <dt>Potions</dt><dd>You carry up to two potions, shown at the top of the screen. Tap one to drink it; most work during a wave.</dd>
+      <dt>Relics</dt><dd>Relics come from elites, chests, the merchant, events and bosses. The ◈ button lists yours. Boss relics are strong and most have a price.</dd>
       <dt>Poison</dt><dd>Plaguebringer heroes stack poison on monsters. Each stack eats a share of the hero's damage every second, up to 12 stacks.</dd>
       <dt>Ascension and dailies</dt><dd>Win a run to unlock the next ascension level: harder rules, more gems. The daily challenge gives everyone the same shops, waves and map for the day.</dd>
-      <dt>Relics</dt><dd>After some waves and every boss you choose a relic that lasts the whole run. Three acts, three bosses. Win, then try endless mode.</dd>
+      <dt>Acts</dt><dd>Three acts of ten floors, three bosses. Win, then try endless mode.</dd>
       <dt>Keys</dt><dd>Space: fight or change speed. D: reroll. F: buy XP. P: pause.</dd>
       <dt>Credits</dt><dd>Heroes, skeletons, keep and nature from KayKit by Kay Lousberg (kaylousberg.com), monsters from Quaternius Ultimate Monsters, particles and sounds by Kenney (kenney.nl), all CC0, re-rendered for this game. Graveyard props by Kenney (CC0). Spell sounds from Ninja Adventure by Pixel-boy and AAA (CC0). Music from Generic RPG Pack by Estúdio Vaca Roxa (CC0).</dd>
     </dl></details></div>

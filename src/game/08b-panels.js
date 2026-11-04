@@ -12,11 +12,11 @@ function uiDmg(){if(!DOM||!R)return;const el=$('dmgP'),open=!!SET.dmgOpen&&$('ov
   if(!rows.length)el.innerHTML+='<p class="sub" style="margin:4px 0">Each hero\'s damage shows up here during and after every wave.</p>'}
 const MTAGS=k=>{const D=MON[k],t=[];if(D.boss)t.push(['BOSS','boss']);if(D.fly)t.push(['Flying: ignores your maze','fly']);if(D.sp>=1.3)t.push(['Fast','']);if(D.ar>=.3)t.push(['Armored','']);if(D.mr>=.3)t.push(['Magic resist','']);if(D.heal)t.push(['Heals','']);if(D.split)t.push(['Splits','']);if(D.summon)t.push(['Summons','']);if(D.big)t.push(['Tank','']);return t};
 let WAVESIG='';
-function uiWave(){if(!DOM||!R)return;const el=$('waveP'),show=(R.phase==='plan'||R.phase==='pick')&&$('ovStart').hidden&&R.nextQ;el.hidden=!show;if(!show)return;
+function uiWave(){if(!DOM||!R)return;const el=$('waveP'),show=R.phase==='plan'&&$('ovStart').hidden&&R.nextQ&&(!R.map||R.map.next||!needMap())&&!has('dome');el.hidden=!show;if(!show)return;
   const road=R.field.route?R.field.route.length:0,sig=R.wave+'|'+R.nextQ.length+'|'+road+'|'+R.node+'|'+(SPR.st['m_'+R.nextQ[0].k]||0);if(sig===WAVESIG)return;WAVESIG=sig;
   const cnt={},el2={};for(const e of R.nextQ){cnt[e.k]=(cnt[e.k]||0)+1;if(e.elite)el2[e.k]=1}const ks=Object.keys(cnt).sort((a,b)=>(MON[b].boss?99:0)+cnt[b]-(MON[a].boss?99:0)-cnt[a]);
   for(const k of ks)sheet('m_'+k);
-  const N=R.node&&R.node!=='battle'?NODES[R.node]:null;el.innerHTML=`<b>Wave ${R.wave}</b>${N?`<span class="tg" style="color:${N.col};border-color:${N.col}">${N.ic} ${N.n}</span>`:''}<span class="tg road">Road ${road} tiles</span>`;
+  const N=R.node&&R.node!=='battle'?NODES[R.node]:null;el.innerHTML=`<b>Wave ${R.wave}</b>${N?`<span class="tg" style="color:${N.col};border-color:${N.col}">${N.ic} ${N.n}</span>`:''}<span class="tg road">Road ${road} hexes</span>`;
   for(const k of ks.slice(0,5)){const d=document.createElement('span');d.className='mc';d.title=MON[k].n;d.innerHTML=`×${cnt[k]}${el2[k]?'<i class="tg">elite</i>':''}`;const p=smallPortrait('m_',k,13);if(p)d.prepend(p);el.appendChild(d)}
   const tags=new Map();for(const k of ks)for(const [t,c] of MTAGS(k))tags.set(t,c);for(const [t,c] of tags){const s=document.createElement('span');s.className='tg '+c;s.textContent=t;el.appendChild(s)}}
 function openTrait(t){if(!DOM)return;const T_=TRAITS[t],s=SYN[t]||{n:0,tier:-1},el=$('traitP');
@@ -25,6 +25,10 @@ function openTrait(t){if(!DOM)return;const T_=TRAITS[t],s=SYN[t]||{n:0,tier:-1},
   const hs=el.querySelector('.hs'),onB=new Set(R.board.map(h=>h.k)),own=new Set(allHeroes().map(h=>h.k));
   for(const k of HKEYS.filter(k=>HEROES[k].tr.includes(t)).sort((a,b)=>HEROES[a].c-HEROES[b].c)){const D=HEROES[k],d=document.createElement('div');d.className=onB.has(k)?'field':own.has(k)?'own':'';d.style.setProperty('--c',TIERCOL[D.c]);d.innerHTML=`<br>${D.n}<br><small>${D.c}g${onB.has(k)?' · fielded':own.has(k)?' · bench':''}</small>`;const p=smallPortrait('h_',k,23);if(p)d.prepend(p);hs.appendChild(d)}
   el.querySelector('.x').addEventListener('click',()=>{el.hidden=true});el.hidden=false;sfx('click',.3)}
-function bindPanels(){if(!DOM)return;
+function openRelics(){if(!DOM||!R)return;const el=$('relP');if(!el.hidden){el.hidden=true;return}const col=['','#cfd8e0','#ffcf6a','#e6a8ff','#ff8a6a'];
+  el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>Relics</h3>`+(R.relics.length?R.relics.map(id=>{const r=RELIC[id];return`<div class="rl" style="--c:${col[r.t]}"><span class="gem">${r.em?TRAITS[r.em].ic:RIC[id]||r.n[0]}</span><div><b>${r.n}</b><small>${r.d}</small></div></div>`}).join(''):'<p class="sub">No relics yet. Elites, chests, the merchant, events and bosses give them.</p>')+
+    `<h3>Potions</h3>`+(R.potions.length?R.potions.map(id=>`<div class="rl" style="--c:${POTIONS[id].col}"><span class="gem">${POTIONS[id].ic}</span><div><b>${POTIONS[id].n}</b><small>${POTIONS[id].d}${POTIONS[id].wave?' (during a wave)':POTIONS[id].plan?' (between waves)':''}</small></div></div>`).join(''):'<p class="sub">No potions. Tap a potion at the top of the screen to drink it.</p>');
+  el.querySelector('.x').addEventListener('click',()=>{el.hidden=true});el.hidden=false;sfx('click',.3)}
+function bindPanels(){if(!DOM)return;$('relB').addEventListener('click',openRelics);
   $('dmgB').addEventListener('click',()=>{SET.dmgOpen=!SET.dmgOpen;saveSet();DMGSIG='';uiDmg()});
   $('zoomB').addEventListener('click',()=>{ZM.z=1;applyZoom();uiZoom()});}
