@@ -63,7 +63,7 @@ function monTick(m,dt){
 }
 // ---------- monsters fight back: they swing at heroes they pass, they don't stop walking ----------
 const heroUp=h=>!h.ko&&h.hp>0;
-function mDmg(m){return mDmgBase(R.wave)*MON[m.k].atk.m*(m.elite?1.8:1)*(m.boss?2.5:1)*(m.child?.5:1)*(asc(6)?1.3:1)}
+function mDmg(m){const A=MON[m.k].atk;return mDmgBase(R.wave)*(A?A.m:.6)*(m.elite?1.8:1)*(m.boss?2.5:1)*(m.child?.5:1)*(asc(6)?1.3:1)}
 function monAttack(m,dt){const A=MON[m.k].atk;if(!A||m.x<0||m.x>FW)return;m.atkT-=dt;if(m.atkT>0)return;
   const rr=A.r*T;let best=null,bs=1e9;
   for(const h of R.board){if(!heroUp(h))continue;const p=heroPos(h),d=Math.hypot(p.x-m.x,p.y-m.y);if(d>rr)continue;const s=d-(h.tauntT>0?T*9:0)-(HEROES[h.k].tr.includes('guardian')?T*2:0);if(s<bs){bs=s;best=h}}

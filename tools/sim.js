@@ -22,7 +22,7 @@ function runOnce(seed, opt) {
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     setTimeout: () => 0, clearTimeout: () => 0, performance: { now: () => 0 } };
   ctx.globalThis = ctx; vm.createContext(ctx); script.runInContext(ctx);
-  WALL = null; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true }); const R = () => G.R;
+  WALL = null; RAND = rand; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true }); const R = () => G.R;
   const nodes = {}, rooms = {}; let kos = 0;
   let err = null, waves = 0;
   try {
@@ -96,13 +96,13 @@ function place(G, h) {
     let rune = 0; if (!melee) for (const q of R.field.runes) if (dist(q.c, q.r, c, r) <= s.rng) rune += .8;
     // a planned serpentine: two walls with the gap at opposite ends; single tiles barely lengthen a shortest path, walls do
     const wall = WALL && WALL.has(c + ',' + r) ? WALL.get(c + ',' + r) : 0;
-    const score = cov * (melee ? 1.3 : 1) + route.length * .45 + rune + wall + Math.random() * .3;
+    const score = cov * (melee ? 1.3 : 1) + route.length * .45 + rune + wall + RAND() * .3;
     if (score > bs) { bs = score; best = [c, r]; }
   }
   if (best) G.placeHero(h, best[0], best[1]);
 }
 // pick columns where a wall (with one gap at the top or bottom) can actually be built around runes and portals
-let WALL = null;
+let WALL = null, RAND = Math.random;
 function planWalls(G) { const R = G.R, C = G.COLS, RR = G.ROWS, opts = [];
   for (let c = 3; c <= 10; c++) for (const gap of [0, RR - 1]) { let need = 0, ok = true; for (let r = 0; r < RR; r++) { if (r === gap) continue; const b = R.field.blk[r * C + c]; if (b === 2) continue; if (G.runeAt(c, r) || G.portalAt(c, r)) { ok = false; break; } need++; } if (ok) opts.push({ c, gap, need }); }
   opts.sort((a, b) => a.need - b.need); WALL = new Map(); const first = opts[0]; if (!first) return; const add = (o, v) => { for (let r = 0; r < RR; r++) if (r !== o.gap) WALL.set(o.c + ',' + r, v); };
