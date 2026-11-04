@@ -1,5 +1,5 @@
 """Customise the generated Capacitor Android project:
-launcher icons, splash, landscape lock, full-screen immersive mode, keep-screen-on and version numbers."""
+launcher icons, splash, rotation in both orientations, full-screen immersive mode, keep-screen-on and version numbers."""
 import os, re, glob
 from PIL import Image, ImageDraw
 
@@ -42,11 +42,11 @@ for p in glob.glob(os.path.join(RES, 'drawable*', 'splash.png')):
     l, t = (im.width - w) // 2, (im.height - h) // 2
     im.crop((l, t, l + w, t + h)).save(p)
 
-# landscape lock on the main activity
+# the game lays itself out for portrait or landscape: follow the sensor (and the user's rotation lock)
 man = os.path.join(AND, 'src', 'main', 'AndroidManifest.xml')
 x = open(man, encoding='utf-8').read()
 if 'android:screenOrientation' not in x:
-    x = re.sub(r'(<activity\b)', r'\1\n            android:screenOrientation="sensorLandscape"', x, count=1)
+    x = re.sub(r'(<activity\b)', r'\1\n            android:screenOrientation="fullUser"', x, count=1)
 open(man, 'w', encoding='utf-8').write(x)
 
 # full-screen immersive game activity that keeps the screen awake

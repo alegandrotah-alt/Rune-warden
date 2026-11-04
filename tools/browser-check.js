@@ -43,7 +43,7 @@ function serve() {
   // 2. a busy late wave, CPU slowed 4x, frame times measured
   await page.evaluate(() => { const G = window.__RW, R = G.R; R.phase = 'plan'; R.b = null; R.wave = 24; R.nextQ = null; R.act = 2; G.genField(); R.lvl = 9; R.gold = 999;
     const ks = ['templar', 'wyrm', 'tiefling', 'druid', 'archer', 'ninja', 'blackknight', 'vampire', 'scout']; for (const k of ks) { G.addHero(k, 2, true); }
-    let i = 0; for (const h of R.bench.filter(Boolean)) { const spots = [[2, 1], [4, 6], [6, 1], [8, 6], [10, 1], [3, 3], [7, 4], [11, 5], [5, 2]]; G.placeHero(h, ...spots[i++ % spots.length]); }
+    let i = 0; for (const h of R.bench.filter(Boolean)) { const spots = [[2, 1], [4, 7], [6, 1], [8, 7], [10, 1], [3, 3], [7, 5], [12, 6], [5, 2]]; G.placeHero(h, ...spots[i++ % spots.length]); }
     G.startWave(); G.speed = 2; G.uiRefresh(); });
   await page.waitForTimeout(3000);
   const cdp = await ctx.newCDPSession(page);
@@ -75,16 +75,27 @@ function serve() {
   await sp.goto(url); await sp.waitForTimeout(1200); await sp.click('#playB'); await sp.waitForTimeout(600);
   const fit = await sp.evaluate(() => { const W = innerWidth, H = innerHeight; return document.documentElement.scrollWidth <= W + 1 && ![...document.querySelectorAll('#top button,#top .pill,#shop button')].some((e) => { const r = e.getBoundingClientRect(); return r.width && (r.right > W + 1 || r.bottom > H + 1); }); });
   await sp.screenshot({ path: path.join(OUT, '6-small-phone.png') }); await small.close();
+  // 6. a phone held upright: portrait layout, a fight, then turned sideways and back mid-wave
+  const port = await browser.newContext({ viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); const pp = await port.newPage(); pp.on('pageerror', (e) => errors.push('portrait: ' + e.message));
+  await pp.goto(url); await pp.waitForTimeout(1200); await pp.click('#playB'); await pp.waitForTimeout(600);
+  await pp.evaluate(() => { const G = window.__RW, R = G.R; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; }); if (G.needMap()) { const o = G.mapOptions()[0]; G.chooseNode(o.f, o.l); } for (const k of ['archer', 'squire']) G.addHero(k, 1, true); for (const h of R.bench.filter(Boolean)) { for (let c = 4; c < 12; c++) { if (G.placeHero(h, c, 3)) break; } } G.uiRefresh(); G.startWave(); });
+  await pp.waitForTimeout(2500);
+  const portrait = await pp.evaluate(() => { const v = window.__RW.dbgView(), W = innerWidth, H = innerHeight, sh = document.getElementById('shop').getBoundingClientRect(), b = window.__RW.benchSlot(0);
+    return { rot: v.ROT, fits: document.documentElement.scrollWidth <= W + 1 && ![...document.querySelectorAll('#top button,#top .pill,#shop button')].some((e) => { const r = e.getBoundingClientRect(); return r.width && (r.right > W + 1 || r.bottom > H + 1); }), benchClear: b.y + b.w * .3 < sh.top }; });
+  await pp.screenshot({ path: path.join(OUT, '7-portrait.png') });
+  await pp.setViewportSize({ width: 667, height: 375 }); await pp.waitForTimeout(500); const turned = await pp.evaluate(() => window.__RW.dbgView().ROT);
+  await pp.setViewportSize({ width: 375, height: 667 }); await pp.waitForTimeout(500); const back = await pp.evaluate(() => window.__RW.dbgView().ROT); await port.close();
+  const portOk = portrait.rot === 1 && portrait.fits && portrait.benchClear && turned === 0 && back === 1;
   await browser.close(); srv.close();
   const d = ft.slice(1).map((t, i) => t - ft[i]).sort((a, b) => a - b);
   const avg = d.reduce((a, b) => a + b, 0) / Math.max(1, d.length), p95 = d[Math.floor(d.length * .95)] || 0;
   let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
     `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles, ${busy.ko} heroes knocked out), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
-    `- Save, reload and continue restored the same run on the same screen: ${resumeOk ? 'yes' : '**no** ' + JSON.stringify(resumed)}\n- Smallest phone (568×320) fits without spilling off screen: ${fit ? 'yes' : '**no**'}\n` +
+    `- Save, reload and continue restored the same run on the same screen: ${resumeOk ? 'yes' : '**no** ' + JSON.stringify(resumed)}\n- Smallest phone (568×320) fits without spilling off screen: ${fit ? 'yes' : '**no**'}\n- Portrait phone (375×667): spawn on top and keep below, fits, bench clear of the shop, turning sideways and back switches layouts: ${portOk ? 'yes' : '**no** ' + JSON.stringify({ portrait, turned, back })}\n` +
     `- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item, closed, and left no stale map behind: ${extra.evOk ? 'yes' : '**no**'}\n` +
     `  (CI has no GPU, so real phones run far faster; compare this number between builds)\n- Screenshots are attached to the run as **browser-check-screens**.\n`;
   if (errors.length) md += '\n```\n' + errors.slice(0, 10).join('\n') + '\n```\n';
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');
-  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk || !resumeOk || !fit ? 1 : 0);
+  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk || !resumeOk || !fit || !portOk ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

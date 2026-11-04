@@ -61,7 +61,10 @@ function goEndless(){R.endless=true;R.final=0;R.won=0;R.phase='plan';R.act=2;R.m
 // ---------- saving a run in progress (between waves) ----------
 // only a run the player actually started is saved: the placeholder run behind the menu must never overwrite it
 function saveRun(){if(!R||!R.live||R.phase==='over')return;try{const o=Object.assign({},R,{b:null,field:{obs:R.field.obs,runes:R.field.runes,portals:R.field.portals,gates:R.field.gates,ter:Array.from(R.field.ter||[]),blk:Array.from(R.field.blk).map(v=>v===2?2:0)}});localStorage.setItem('runewarden-run',JSON.stringify(o))}catch(e){}}
-function loadRun(){try{const o=JSON.parse(localStorage.getItem('runewarden-run')||'null');if(!o||!o.field)return false;R=o;R.field.blk=Uint8Array.from(o.field.blk);R.field.ter=o.field.ter&&o.field.ter.length?Uint8Array.from(o.field.ter):new Uint8Array(COLS*ROWS);R.field.gates=o.field.gates||[{k:'west',c:0,r:3,id:0}];R.b=null;if(R.phase==='wave')R.phase='plan';
+function loadRun(){try{const o=JSON.parse(localStorage.getItem('runewarden-run')||'null');if(!o||!o.field)return false;R=o;
+  // runs saved on the smaller board get a fresh field; heroes keep their hexes where they still fit
+  if(o.field.blk.length!==COLS*ROWS){R.field={runes:[]};R.board=R.board.filter(h=>{if(h.c<COLS&&h.r<ROWS)return true;const j=R.bench.indexOf(null);if(j>=0){h.c=h.r=-1;R.bench[j]=h}return false});R.board.forEach(h=>{});const keep=R.board.slice();R.board=[];genField();for(const h of keep){if(!placeHero(h,h.c,h.r)){const j=R.bench.indexOf(null);if(j>=0){h.c=h.r=-1;R.bench[j]=h}}}o.field=R.field;o.field.blk=Array.from(R.field.blk);o.field.ter=Array.from(R.field.ter)}
+  R.field.blk=Uint8Array.from(o.field.blk);R.field.ter=o.field.ter&&o.field.ter.length?Uint8Array.from(o.field.ter):new Uint8Array(COLS*ROWS);R.field.gates=o.field.gates||[{k:'west',c:0,r:4,id:0}];R.b=null;if(R.phase==='wave')R.phase='plan';
   UID=1+Math.max(0,...allHeroes().map(h=>h.uid||0));R.items=R.items||[];for(const h of allHeroes()){h.it=h.it||[];h.ko=0}for(const k of HKEYS)if(R.pool[k]==null)R.pool[k]=unlocked(k)?POOL[HEROES[k].c]:0;
   R.asc=R.asc||0;R.stats.elites=R.stats.elites||0;R.potions=R.potions||[];
   // runs saved before the branching map get a fresh map for the current act

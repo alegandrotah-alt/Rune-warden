@@ -2,7 +2,7 @@
 // Monster health grows steeply wave after wave, just like Gate Rush keeps; your answer is stars, traits, items, relics and × runes.
 // steep through act I, a little gentler after, so hero power (stars, items, runes) can keep up; endless gets brutal again
 const hpBase=w=>24*Math.pow(1.19,Math.min(w,10)-1)*Math.pow(HPG,Math.max(0,Math.min(w,30)-10))*(w>30?Math.pow(1.19,w-30)*Math.pow(1.07,Math.pow(w-30,1.25)):1);
-let HPG=1.158;
+let HPG=1.14;
 // what a monster hit does to a hero: grows slower than monster health, so stars and items keep up
 const mDmgBase=w=>14*Math.pow(1.105,w-1)*(w>30?Math.pow(1.04,w-30):1);
 const actOf=w=>Math.min(2,Math.floor((w-1)/10));
@@ -57,7 +57,9 @@ function monTick(m,dt){
   const rush=D.beh==='rush';let zs=1;
   if(!m.fly)for(const f of B.fl){const d=Math.hypot(f.x-m.x,f.y-m.y);if(f.sanct&&d<T*2.1){dealRaw(m,m.max*(m.boss?.004:.03)*dt,f.h,1)}if(d>T*1.5)continue;if(!rush)zs=Math.min(zs,f.k==='thirst'?.75:.85);if(f.k==='dread')m.dreadT=.25}
   // hunters stop to fight a hero in reach; runners never stop
-  if(D.beh==='hunt'&&D.atk&&m.x>0&&R.board.some(h=>heroUp(h)&&Math.hypot(hx(h.c,h.r)-m.x,hy(h.r)-m.y)<=D.atk.r*T)){monAttack(m,dt);return}
+  // (after a long brawl they push on for a while, so a stalemate can't stop a wave)
+  if(m.huntCd>0)m.huntCd-=dt;
+  if(D.beh==='hunt'&&D.atk&&m.x>0&&!(m.huntCd>0)&&R.board.some(h=>heroUp(h)&&Math.hypot(hx(h.c,h.r)-m.x,hy(h.r)-m.y)<=D.atk.r*T)){m.huntT=(m.huntT||0)+dt;if(m.huntT>(m.boss?6:10)){m.huntT=0;m.huntCd=4}monAttack(m,dt);return}
   if(m.kb>0){kbTick(m,dt);return}
   if(m.slowT>0)m.slowT-=dt;else m.slowP=1;
   let sp=m.sp*T*(rush?Math.max(m.slowP,.75):m.slowP)*(has('mire')?.9:1)*zs;
@@ -71,7 +73,7 @@ function monTick(m,dt){
     else if(m.x>FW-T*.2&&m.c>=0&&R.field.dist[m.r*COLS+m.c]===0){tx=FW+T;ty=m.y}
     else{const [c,r]=cl||[m.c,m.r];if(c!==m.c||r!==m.r){m.c=c;m.r=r;const p=portalAt(c,r),pi=p?R.field.portals.indexOf(p):-1;if(p&&!(m.portals>>pi&1)&&!m.boss)portalSplit(m,p,pi)}
       const d=R.field.dist[r*COLS+c];if(d===0){tx=FW+T;ty=hy(r)}else{const n=nextCell(c,r);if(n){tx=hx(n[0],n[1]);ty=hy(n[1])}else{tx=FW+T;ty=m.y}}}}
-  const dx=tx-m.x,dy=ty-m.y,dd=Math.hypot(dx,dy)||1;m.x+=dx/dd*sp*dt;m.y+=dy/dd*sp*dt;if(Math.abs(dx)>2)m.face=dx>0?1:-1;
+  const dx=tx-m.x,dy=ty-m.y,dd=Math.hypot(dx,dy)||1;m.x+=dx/dd*sp*dt;m.y+=dy/dd*sp*dt;if(Math.abs(dx)>2)m.face=dx>0?1:-1;if(Math.abs(dy)>2)m.fy=dy>0?1:-1;
   // traps
   for(const tp of B.traps){if(tp.uses>0&&!m.fly&&Math.hypot(tp.x-m.x,tp.y-m.y)<T*.45&&!tp.hit.has(m.id)){tp.hit.add(m.id);tp.uses--;m.rootT=Math.max(m.rootT,tp.root);dealRaw(m,tp.dmg*(1-m.ar),tp.src,0);fx({k:'ring',x:m.x,y:m.y,r:T*.5,col:'#9aff6a',dur:.35})}}
   // specials
@@ -152,7 +154,7 @@ function heroTick(h,dt){
   if(h.cd>0)return;
   const rr=s.rng*T;let best=null,bp=1e9;for(const m of B.mons){if(!targetable(m))continue;const d=Math.hypot(m.x-p.x,(m.y-p.y));if(d>rr+T*.3)continue;const pr=progress(m);if(pr<bp){bp=pr;best=m}}
   if(!best)return;
-  h.cd=1/s.as;h.atk=.42;h.face=best.x>=p.x?1:-1;h.ac++;h.stk++;
+  h.cd=1/s.as;h.atk=.42;h.face=best.x>=p.x?1:-1;h.fy=best.y>=p.y?1:-1;h.ac++;h.stk++;
   h.mana+=(10+(hasIt(h,'spear')?8:0))*(has('arcana')?1.5:1);
   if(h.mana>=D.mana){h.mana=hasIt(h,'sigil')?30:0;cast(h,s,best);if(has('echo')&&Math.random()<.35)setTimeoutSafe(()=>{if(R&&R.b&&R.board.includes(h)&&!h.ko)cast(h,heroStats(h),best.hp>0?best:monAlive()[0]||best)},250);return}
   const crit=Math.random()<s.crit,dmg=s.dmg*(crit?s.cm:1);
@@ -239,7 +241,7 @@ function kbTick(m,dt){const d=R.field.dist;if(!d||m.c<0){m.kb=0;return}const cur
   const tx=hx(best[0],best[1]),ty=hy(best[1]),dx=tx-m.x,dy=ty-m.y,dd=Math.hypot(dx,dy)||1,st=Math.min(m.kb,T*7*dt,dd);m.x+=dx/dd*st;m.y+=dy/dd*st;m.kb-=st;
   if(dd-st<T*.1){m.c=best[0];m.r=best[1]}if(st<.01)m.kb=0}
 // a breach tears open on a free hex of the road and spills monsters
-function openRift(n,elite){const F=R.field,d=F.dist;if(!d)return;const opts=[];for(let r=0;r<ROWS;r++)for(let c=2;c<COLS-2;c++){const v=d[r*COLS+c];if(v>=5&&v<=18&&!F.blk[r*COLS+c])opts.push([c,r])}if(!opts.length)return;
+function openRift(n,elite){const F=R.field,d=F.dist;if(!d)return;const opts=[];for(let r=0;r<ROWS;r++)for(let c=2;c<COLS-2;c++){const v=d[r*COLS+c];if(v>=6&&v<=22&&!F.blk[r*COLS+c])opts.push([c,r])}if(!opts.length)return;
   const [c,r]=rnd(opts),x=hx(c,r),y=hy(r);fx({k:'breach',x,y,dur:2.4});fx({k:'ring',x,y,r:T*1.1,col:'#c07aff',dur:.6});sfx('zap',.4,.6);
   for(let i=0;i<n+1;i++){const m=spawnMon(rndS(actD(R.act).roster),i<elite?1:0,x+(Math.random()-.5)*T*.4,y+(Math.random()-.5)*T*.4);m.c=c;m.r=r;m.portals=-1;if(m.elite&&!m.aff)m.aff=rnd(AFFKEYS)}}
 // ---------- the Rune Devourer: barely hurt by anything, it heals, it hunts your best heroes and eats your runes ----------

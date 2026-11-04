@@ -6,7 +6,7 @@ const isComp=id=>!ITEMS[id].c;
 const ITEM_MAX=10;const FLY=[];
 function stashItem(id){if(R.items.length<ITEM_MAX){R.items.push(id);return true}R.gold+=2;toast(`Item bench full: ${ITEMS[id].n} sold for 2 gold`);return false}
 function dropItem(id,x,y){if(!stashItem(id))return;R.itemNew=1;const i=R.items.length-1;if(x!=null)floatText(x,y-T*.9,'+ '+ITEMS[id].n,ITEMS[id].col,1.05);
-  if(DOM)FLY.push({id,i,x0:x!=null?sx(x):W/2,y0:x!=null?sy(y)-ss(T*.5):H*.4,t:0});sfx('item',.45)}
+  if(DOM)FLY.push({id,i,x0:x!=null?scr(x,y)[0]:W/2,y0:x!=null?scr(x,y)[1]-ss(T*.5):H*.4,t:0});sfx('item',.45)}
 // put an item on a hero; a component on a hero that holds a component makes a finished item
 function giveItem(h,id){h.it=h.it||[];
   if(isComp(id)){const j=h.it.findIndex(isComp);if(j>=0){const fin=RECIPE[[h.it[j],id].sort().join('+')];h.it[j]=fin;if(DOM)toast(`${ITEMS[fin].n}: ${ITEMS[fin].d}`);fxItem(h);checkKit(h);return true}}
@@ -17,9 +17,13 @@ function checkKit(h){if(h.it.filter(x=>!isComp(x)).length>=3)award('items3')}
 function fxItem(h){if(h.c>=0)fx({k:'star',x:hx(h.c,h.r),y:hy(h.r),dur:.5,col:'#ffd76a'})}
 function randomFinished(){return rndS(FINISHED)}
 // ---------- the bottom strip: ITEMS rack on the left, the hero bench in the middle, RUNES on the right ----------
-function bottomLayout(){const s=Math.max(14,bss(T*.44)),gap=s*.45,L=bsx(-T*.1),Rr=bsx(FW+T*.1),rackW=5*s*1.12,runeW=2*s*1.12,n=R.bench.length,avail=Rr-L-rackW-runeW-gap*2,w=Math.min(bss(T*.9),avail/n);
-  return{s,w,cx:L+rackW+gap+avail/2,y:bsy(FH)+bss(T*.3)+w*.42,L,Rr,rackW,runeW}}
-function itemSlot(i){const B=bottomLayout(),col=i%5,row=(i/5)|0;return{x:B.L+B.s*.56+col*B.s*1.12,y:B.y-B.s*.56+row*B.s*1.12,s:B.s}}
+// landscape: one strip under the field. Portrait: the bench across the full width, the ITEMS and RUNES racks under it.
+// iy is the centre line of the racks.
+function bottomLayout(){const n=R.bench.length,L=FB.l,Rr=FB.r;
+  if(ROT){const s=Math.max(16,Math.min(bss(T*.5),(Rr-L)/11)),w=Math.min(bss(T*1.05),(Rr-L)/n),y=FB.b+w*.42,rackW=5*s*1.12,runeW=2*s*1.12;return{s,w,cx:(L+Rr)/2,y,iy:y+w*.5+s*1.35,L,Rr,rackW,runeW}}
+  const s=Math.max(14,bss(T*.44)),gap=s*.45,rackW=5*s*1.12,runeW=2*s*1.12,avail=Rr-L-rackW-runeW-gap*2,w=Math.min(bss(T*.9),avail/n),y=FB.b+bss(T*.3)+w*.42;
+  return{s,w,cx:L+rackW+gap+avail/2,y,iy:y,L,Rr,rackW,runeW}}
+function itemSlot(i){const B=bottomLayout(),col=i%5,row=(i/5)|0;return{x:B.L+B.s*.56+col*B.s*1.12,y:B.iy-B.s*.56+row*B.s*1.12,s:B.s}}
 function drawItemIcon(id,x,y,s,alpha){const I=ITEMS[id];if(!I)return;ctx.save();if(alpha!=null)ctx.globalAlpha=alpha;const fin=!isComp(id),r=s*.5;
   ctx.fillStyle=fin?'#3a2812':'#241c16';ctx.strokeStyle=fin?'#ffd76a':I.col;ctx.lineWidth=fin?2:1.5;ctx.beginPath();ctx.roundRect?ctx.roundRect(x-r,y-r,s,s,s*.22):ctx.rect(x-r,y-r,s,s);ctx.fill();ctx.stroke();
   ctx.textAlign='center';ctx.textBaseline='middle';

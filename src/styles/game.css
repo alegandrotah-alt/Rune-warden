@@ -167,3 +167,29 @@ svg.icn{width:1em;height:1em;vertical-align:-.15em;flex:none}
 @media (max-width:640px){#actT{display:none}.tl b{font-size:13px}.pill{font-size:12px;padding:2px 6px}.pill.gold{font-size:14px}.lvl .xpbar{width:40px}.tbtn,#pauseB{width:30px;height:28px}
   .hc .nm b{font-size:12.5px}.hc .nm small{font-size:9.5px}.sbtn button b{font-size:13px}.sbtn button small{font-size:10px}#pots .pot{width:24px;height:24px}}
 @media (max-width:640px){.hc .nm small{font-size:0;line-height:1}.hc .nm small svg.icn{width:13px;height:13px;margin-right:4px}}
+
+/* ---------- portrait: spawn at the top, keep at the bottom ---------- */
+.zb{font-size:20px!important;font-weight:700;width:32px}.zb:disabled{opacity:.35}
+body.port #top{height:auto;flex-wrap:wrap;row-gap:4px;column-gap:6px;padding-top:max(4px,env(safe-area-inset-top))}
+body.port #top .tc{order:3;flex-basis:100%;justify-content:center;flex-wrap:wrap;row-gap:3px}
+body.port #top .tr{gap:4px}
+body.port .tbtn,body.port #pauseB{width:30px;height:30px}
+body.port #actT{display:block}
+body.port #traits{top:calc(var(--topB,72px) + 3px);right:max(6px,env(safe-area-inset-right));max-width:none;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:4px}
+body.port #traits::-webkit-scrollbar{display:none}
+body.port .tr8{flex:none;padding:2px 6px 2px 3px;font-size:12px}body.port .tr8 .nm,body.port .tr8 .bp{display:none}body.port .tr8 .cnt{display:inline}body.port .tr8 .ic{width:20px;height:20px}
+body.port #waveP{top:calc(var(--topH,100px) + 2px);max-width:96vw;overflow-x:auto;scrollbar-width:none}
+body.port #dmgP{top:calc(var(--topH,100px) + 2px);width:190px;max-width:56vw;max-height:calc(100% - var(--topH,100px) - var(--shopH,160px) - 90px)}
+body.port #info{top:calc(var(--topH,100px) + 2px);max-width:72vw}
+body.port #traitP{left:8px;top:calc(var(--topH,100px) + 2px);max-width:92vw}
+body.port #relP{top:calc(var(--topH,100px) + 2px)}
+body.port #toast{top:calc(var(--topH,100px) + 40px)}
+body.port #shop{flex-wrap:wrap;gap:5px;padding-top:5px}
+body.port #cards{order:-1;flex-basis:100%;gap:4px}
+body.port .sbtn{flex-direction:row;flex:1;width:auto;height:40px;gap:5px}
+body.port .sbtn button{flex:1}
+body.port .hc{min-height:74px}body.port .hc canvas{width:58px;height:58px;right:-8px;top:-6px}body.port .hc .nm{padding:2px 4px}body.port .hc .nm b{font-size:12px}body.port .hc .nm small{font-size:0;line-height:1}body.port .hc .nm small svg.icn{width:12px;height:12px;margin-right:3px}
+body.port .hc .cost{font-size:12px}
+body.port .card{max-height:calc(100vh - 24px)}
+body.port .picks{grid-template-columns:1fr}
+@media (max-width:380px){body.port #actT{display:none}body.port .tl b{font-size:13px}body.port .tbtn,body.port #pauseB{width:26px;height:28px}body.port .zb{width:26px;font-size:17px!important}body.port #top .tr{gap:3px}body.port #hpT{padding:2px 6px;font-size:13px}body.port .pill{font-size:12px;padding:2px 6px}body.port .hc{min-height:64px}body.port .hc canvas{width:50px;height:50px}body.port .hc .nm b{font-size:11px}}

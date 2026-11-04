@@ -124,5 +124,9 @@ function bindUI(){if(!DOM)return;bindPanels();bindTut();bindMap();bindRooms();bi
   $('menuB').addEventListener('click',()=>{hideEnd();showStart()});$('endlessB').addEventListener('click',()=>{goEndless();MUSMODE='game'});
   document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('#ovStart .tab').forEach(t=>t.hidden=t.id!==b.dataset.tab);ensureAudio()}));
   document.addEventListener('pointerdown',e=>{const b=e.target&&e.target.closest&&e.target.closest('button');if(b&&!b.disabled){ensureAudio();sfx('click',.3)}},true);
-  window.addEventListener('resize',()=>{measure();resize()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&R&&R.phase==='wave')togglePause(true)})}
-function measure(){if(!DOM)return;const s=$('shop');if(s&&s.getBoundingClientRect)UI.shopH=s.getBoundingClientRect().height;document.documentElement.style.setProperty('--shopH',UI.shopH+'px')}
+  window.addEventListener('resize',()=>{measure();resize()});
+  // the shop and top bar change height as cards and pills fill in: lay the field out again when they do
+  if(typeof ResizeObserver!=='undefined'){let last='';const ro=new ResizeObserver(()=>{const s=$('shop'),t=$('top'),k=Math.round(s.getBoundingClientRect().height)+'|'+Math.round(t.getBoundingClientRect().height);if(k===last)return;last=k;measure();resize()});ro.observe($('shop'));ro.observe($('top'))}document.addEventListener('visibilitychange',()=>{if(document.hidden&&R&&R.phase==='wave')togglePause(true)})}
+function measure(){if(!DOM)return;const s=$('shop');if(s&&s.getBoundingClientRect)UI.shopH=s.getBoundingClientRect().height;document.documentElement.style.setProperty('--shopH',UI.shopH+'px');
+  // portrait: the field starts under the top bar and the row of traits
+  const t=$('top'),tr=$('traits');if(t&&t.getBoundingClientRect){const tb=t.getBoundingClientRect().bottom;document.documentElement.style.setProperty('--topB',tb+'px');UI.topH=ROT?tb+31:Math.max(tb,tr&&!tr.hidden&&tr.getBoundingClientRect?tr.getBoundingClientRect().bottom:0);document.documentElement.style.setProperty('--topH',UI.topH+'px')}}

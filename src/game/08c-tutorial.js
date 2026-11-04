@@ -1,22 +1,22 @@
 // ---------- guided first run: coach bubbles that point at what to do next ----------
 let TUT=null;
 const rectOf=el=>{const e=$(el);if(!e||!e.getBoundingClientRect)return null;const r=e.getBoundingClientRect();return{l:r.left,t:r.top,r:r.right,b:r.bottom}};
-const fieldRect=()=>({l:sx(0),t:sy(0),r:sx(FW),b:sy(FH)});
-const tileRect=(c,r)=>({l:sx(hx(c,r)-T*.5)-4,t:sy(hy(r)-T*.5)-ss(T)*.55,r:sx(hx(c,r)+T*.5)+4,b:sy(hy(r)+T*.5)+4});
+const fieldRect=()=>fieldBox();
+const tileRect=(c,r)=>{const [X,Y]=scr(hx(c,r),hy(r)),h=ss(T)*.5;return{l:X-h-4,t:Y-h*VY-ss(T)*.55,r:X+h+4,b:Y+h*VY+4}};
 function tutTile(){const rt=R.field.route||[];for(let i=Math.floor(rt.length*.35);i<rt.length;i++){const [c,r]=rt[i];for(const [cc,rr] of nbrs(c,r)){if(rr!==r&&canPlace(cc,rr)&&!heroAt(cc,rr))return[cc,rr]}}return[5,2]}
 const TUTS=[
-  {id:'buy',txt:'Welcome, Warden! Monsters will march from the portal on the left to your castle on the right. First, <b>tap a hero card</b> in the shop to buy it. It goes to your bench under the field.',tg:()=>rectOf('cards'),done:()=>allHeroes().length>=2},
+  {id:'buy',txt:'Welcome, Warden! Monsters will march from the portal to your castle. First, <b>tap a hero card</b> in the shop to buy it. It goes to your bench under the field.',tg:()=>rectOf('cards'),done:()=>allHeroes().length>=2},
   {id:'place',txt:'Now <b>drag a hero from your bench onto the field</b>. At level 2 you can field 2 heroes, so place both.',tg:()=>{const i=R.bench.findIndex(Boolean);if(i<0)return fieldRect();const b=benchSlot(i);return{l:b.x-b.w*.5,t:b.y-b.w*.6,r:b.x+b.w*.5,b:b.y+b.w*.5}},hand:1,done:()=>R.board.length>=Math.min(2,boardMax())||!R.bench.some(Boolean)},
   {id:'road',txt:'Heroes block their tile, so <b>your heroes are the maze</b>. The dashed line is the road monsters will take: bend it so they walk past your heroes for longer. You can never close it completely.',tg:fieldRect,ok:1},
   {id:'fight',txt:'Ready? Press <b>FIGHT!</b> to send the first wave. Use the same button to speed the battle up.',tg:()=>rectOf('fightB'),done:()=>R.phase==='wave'},
   {id:'mana',txt:'Heroes attack on their own. Under each hero, the <b>blue bar</b> is mana: when it fills, the hero casts a spell. The <b>green bar</b> is health: monsters hit heroes they pass, and a knocked-out hero sits out until the wave ends.',tg:fieldRect,wave:1,auto:9},
   {id:'income',txt:'Every wave pays gold, plus <b>1 interest for every 10 gold you keep</b> (up to 5). <b>Buy XP</b> to level up: you field more heroes and find rarer ones.',tg:()=>rectOf('goldT'),ok:1,plan:1},
   {id:'map',txt:'Each act is a <b>map of branching roads</b> (the ⚑ button). Battles and elites send monsters; campfires, merchants, chests and <b>?</b> rooms do not. Elites drop items and relics. Plan your route to the boss.',tg:()=>rectOf('mapB'),ok:1,plan:1},
-  {id:'items',txt:'Items land in the <b>ITEMS rack</b> left of your bench. Drag one onto a hero to equip it. Two components on the same hero forge a finished item.',tg:()=>{const a=itemSlot(0),b=itemSlot(ITEM_MAX-1);return{l:Math.min(a.x,b.x)-a.s,t:Math.min(a.y,b.y)-a.s*1.4,r:Math.max(a.x,b.x)+a.s,b:Math.max(a.y,b.y)+a.s}},ok:1,plan:1},
+  {id:'items',txt:'Items land in the <b>ITEMS rack</b> by your bench. Drag one onto a hero to equip it. Two components on the same hero forge a finished item.',tg:()=>{const a=itemSlot(0),b=itemSlot(ITEM_MAX-1);return{l:Math.min(a.x,b.x)-a.s,t:Math.min(a.y,b.y)-a.s*1.4,r:Math.max(a.x,b.x)+a.s,b:Math.max(a.y,b.y)+a.s}},ok:1,plan:1},
   {id:'roles',txt:'<b>⚔ Frontline</b> heroes (short range) are tough, slow monsters near them, and many buff the heroes beside them, taunt, or put monsters to sleep. <b>➶ Backline</b> heroes deal the damage. While you drag a hero, the hexes it reaches light up.',tg:()=>rectOf('cards'),ok:1,plan:1},
   {id:'merge',txt:'<b>Three copies</b> of the same hero merge into a much stronger <b>★2</b>, and three ★2 into ★3. A glowing card in the shop completes a pair.',tg:()=>rectOf('cards'),ok:1,plan:1},
   {id:'runes',txt:'Shots that fly over a blue <b>× rune</b> are multiplied. Monsters that walk through a purple <b>× portal</b> split into copies, and every copy drops gold. Route them through for profit, or around for safety.',tg:()=>{const q=R.field.runes[0];return q?tileRect(q.c,q.r):fieldRect()},ok:1,plan:1},
-  {id:'traits',txt:'Different heroes that share a <b>trait</b> power it up. Tap a trait on the left to see what it does and who has it. The <b>▤</b> button shows how much damage each hero dealt. Good luck!',tg:()=>rectOf('traits'),ok:1,plan:1},
+  {id:'traits',txt:'Different heroes that share a <b>trait</b> power it up. Tap a trait in the trait list to see what it does and who has it. The <b>▤</b> button shows how much damage each hero dealt. Good luck!',tg:()=>rectOf('traits'),ok:1,plan:1},
 ];
 function tutStart(){if(!DOM||META.tut)return;TUT={i:0,t:0};$('coach').hidden=false;tutShow()}
 function tutEnd(skip){TUT=null;META.tut=1;saveMeta();if(DOM){$('coach').hidden=true;$('coachRing').hidden=true}if(!skip)toast('Tutorial complete')}
@@ -34,7 +34,7 @@ function tutTick(dt){if(!TUT||!DOM)return;const s=TUTS[TUT.i],co=$('coach'),ring
   if(r.b-r.t>H*.5){y=60;x=clamp(r.r-bw-10,8,W-bw-8)}
   const k2=Math.round(x)+','+Math.round(y);if(k2!==TUT.ck){TUT.ck=k2;co.style.left=x+'px';co.style.top=y+'px'}}
 // a ghost hand that shows the drag from bench to field
-function drawTutHand(){if(!TUT||!TUTS[TUT.i].hand||!TUT.tile||R.phase!=='plan')return;const i=R.bench.findIndex(Boolean);if(i<0)return;const a=benchSlot(i),c=TUT.tile,bx=sx(hx(c[0],c[1])),by=sy(hy(c[1]));
+function drawTutHand(){if(!TUT||!TUTS[TUT.i].hand||!TUT.tile||R.phase!=='plan')return;const i=R.bench.findIndex(Boolean);if(i<0)return;const a=benchSlot(i),c=TUT.tile,[bx,by]=scr(hx(c[0],c[1]),hy(c[1]));
   const p=(TIME*.6)%1,e=p<.15?0:p>.85?1:(p-.15)/.7,x=a.x+(bx-a.x)*e,y=a.y+(by-a.y)*e;
   ctx.save();ctx.globalAlpha=p>.9?(1-p)*10:1;ctx.strokeStyle='#ffd76a';ctx.lineWidth=3;ctx.setLineDash([6,6]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(bx,by);ctx.stroke();ctx.setLineDash([]);
   hexPath(ctx,c[0],c[1],.9);ctx.stroke();

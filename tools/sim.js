@@ -84,7 +84,7 @@ function plan(G, rand, opt) {
   botItems(G);
   while (R.stones.length) { const at = STRONG ? bestStone(G) : null; let ok = false;
     if (at) ok = G.placeStone(0, at[0], at[1]);
-    if (!ok) { const route = R.field.route; const [c, r] = route[(route.length / 2 + (rand() - .5) * 6) | 0] || [5, 3]; for (const [dc, dr] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1]]) { if (G.placeStone(0, c + dc, r + dr)) { ok = true; break; } } }
+    if (!ok) { const route = R.field.route; const [c, r] = route[(route.length / 2 + (rand() - .5) * 6) | 0] || [6, 4]; for (const [dc, dr] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1]]) { if (G.placeStone(0, c + dc, r + dr)) { ok = true; break; } } }
     if (!ok) R.stones.shift(); }
 }
 // a rune stone is best where the most backline shots cross it on their way to the road
@@ -132,7 +132,7 @@ function place(G, h) {
 // pick columns where a wall (with one gap at the top or bottom) can actually be built around runes and portals
 let WALL = null, RAND = Math.random, BOTKIND = 'strong';
 function planWalls(G) { const R = G.R, C = G.COLS, RR = G.ROWS, opts = [];
-  for (let c = 3; c <= 10; c++) for (const gap of [0, RR - 1]) { let need = 0, ok = true; for (let r = 0; r < RR; r++) { if (r === gap) continue; const b = R.field.blk[r * C + c]; if (b === 2) continue; if (G.runeAt(c, r) || G.portalAt(c, r)) { ok = false; break; } need++; } if (ok) opts.push({ c, gap, need }); }
+  for (let c = 3; c <= C - 4; c++) for (const gap of [0, RR - 1]) { let need = 0, ok = true; for (let r = 0; r < RR; r++) { if (r === gap) continue; const b = R.field.blk[r * C + c]; if (b === 2) continue; if (G.runeAt(c, r) || G.portalAt(c, r)) { ok = false; break; } need++; } if (ok) opts.push({ c, gap, need }); }
   opts.sort((a, b) => a.need - b.need); WALL = new Map(); const first = opts[0]; if (!first) return; const add = (o, v) => { for (let r = 0; r < RR; r++) if (r !== o.gap) WALL.set(o.c + ',' + r, v); };
   add(first, 8); const second = opts.find((o) => Math.abs(o.c - first.c) >= 3 && o.gap !== first.gap); if (second) add(second, 4); }
 // every few waves, lift each hero and put it back where the maze is best now

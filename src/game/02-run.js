@@ -1,5 +1,5 @@
 // ---------- run state, the field, the maze ----------
-const SPAWN_ROWS=[3,4],KEEP_ROWS=[3,4];
+const SPAWN_ROWS=[4,5],KEEP_ROWS=[4,5];
 let R=null,UID=1;
 const has=id=>R&&R.relics.includes(id);
 // gameplay randomness: seeded during a daily challenge so everyone gets the same shops, waves, map and field
@@ -42,11 +42,11 @@ function genField(){
   // runes you placed yourself travel with you into the next act
   const mine=R.field?R.field.runes.filter(q=>q.mine):[];
   const A=actD(R.act),TW=A.ter||{water:1,hill:3,mud:2,thorn:1};
-  const F=R.field={blk:new Uint8Array(COLS*ROWS),ter:new Uint8Array(COLS*ROWS),obs:[],runes:[],portals:[],gates:[{k:'west',c:0,r:3,id:0}]};
+  const F=R.field={blk:new Uint8Array(COLS*ROWS),ter:new Uint8Array(COLS*ROWS),obs:[],runes:[],portals:[],gates:[{k:'west',c:0,r:4,id:0}]};
   // gates for this act: one edge gate in act I, both in act II, both plus a breach in act III
-  const gl=[];const eg=(k,r)=>{for(let t=0;t<30;t++){const c=2+((rng()*5)|0);if(!F.gates.some(g=>g.c===c&&g.r===r)){F.gates.push({k,c,r,id:F.gates.length});return}}};
+  const gl=[];const eg=(k,r)=>{for(let t=0;t<30;t++){const c=2+((rng()*6)|0);if(!F.gates.some(g=>g.c===c&&g.r===r)){F.gates.push({k,c,r,id:F.gates.length});return}}};
   const ns=rng()<.5;if(R.act>=0)eg(ns?'north':'south',ns?0:ROWS-1);if(R.act>=1)eg(ns?'south':'north',ns?ROWS-1:0);
-  if(R.act>=2||R.endless){for(let t=0;t<40;t++){const c=4+((rng()*4)|0),r=2+((rng()*4)|0);if(!F.gates.some(g=>Math.abs(g.c-c)+Math.abs(g.r-r)<3)){F.gates.push({k:'breach',c,r,id:F.gates.length});break}}}
+  if(R.act>=2||R.endless){for(let t=0;t<40;t++){const c=4+((rng()*6)|0),r=2+((rng()*6)|0);if(!F.gates.some(g=>Math.abs(g.c-c)+Math.abs(g.r-r)<3)){F.gates.push({k:'breach',c,r,id:F.gates.length});break}}}
   const gateNear=(c,r)=>F.gates.some(g=>g.k!=='west'&&Math.abs(g.c-c)<=1&&Math.abs(g.r-r)<=1);
   for(const q of mine)if(!gateNear(q.c,q.r))F.runes.push({c:q.c,r:q.r,v:q.v,ph:q.ph||0,flash:.6,mine:1});
   const free=(c,r)=>!F.blk[r*COLS+c]&&!F.ter[r*COLS+c]&&!F.runes.some(q=>q.c===c&&q.r===r)&&!F.portals.some(q=>q.c===c&&q.r===r)&&!gateNear(c,r)&&!(c<=1&&SPAWN_ROWS.includes(r))&&!(c>=COLS-2&&KEEP_ROWS.includes(r));
@@ -55,7 +55,7 @@ function genField(){
     for(let j=1;j<n;j++){const nb=nbrs(c,r).filter(([a,b])=>free(a,b)&&!cells.some(([x,y])=>x===a&&y===b));if(!nb.length)break;[c,r]=rndS(nb);cells.push([c,r])}
     for(const [a,b] of cells){F.blk[b*COLS+a]=2;F.ter[b*COLS+a]=4}if(!flow(F.blk)){for(const [a,b] of cells){F.blk[b*COLS+a]=0;F.ter[b*COLS+a]=0}continue}i++}
   const kinds=[[0,0,1,2,3,4,5],[0,1,2,3,3,4,5],[0,1,2,3,4,5,5]][R.act];
-  for(let i=0,n=5+R.act*2,tries=0;i<n&&tries<200;tries++){const c=1+((rng()*(COLS-2))|0),r=(rng()*ROWS)|0;if(!free(c,r))continue;F.blk[r*COLS+c]=2;
+  for(let i=0,n=7+R.act*2,tries=0;i<n&&tries<200;tries++){const c=1+((rng()*(COLS-2))|0),r=(rng()*ROWS)|0;if(!free(c,r))continue;F.blk[r*COLS+c]=2;
     if(!flow(F.blk)){F.blk[r*COLS+c]=0;continue}F.obs.push({c,r,k:rndS(kinds),a:A.obs??R.act});i++}
   // soft terrain: patches of mud and thorns along the middle, single hills where shooters like to stand
   const patch=(t,n,sz)=>{for(let i=0,tries=0;i<n&&tries<80;tries++){let c=2+((rng()*(COLS-4))|0),r=(rng()*ROWS)|0;if(!free(c,r))continue;F.ter[r*COLS+c]=t;
@@ -63,12 +63,20 @@ function genField(){
   patch(1,TW.hill||0,1);patch(2,TW.mud||0,3);patch(3,TW.thorn||0,2);
   // runes sit in the middle of the field; portals are off to the side so you choose whether to route monsters through them
   const put=(arr,v,cmin,cmax,rows)=>{for(let t=0;t<80;t++){const c=cmin+((rng()*(cmax-cmin+1))|0),r=rndS(rows);if(free(c,r)){arr.push({c,r,v,ph:rng()*6});return}}};
-  put(F.runes,2,4,6,[2,3,4,5]);put(F.runes,2,7,10,[1,2,5,6]);if(R.act>=1)put(F.runes,3,5,9,[0,7]);
-  put(F.portals,2,3,6,[0,1,6,7]);if(R.act>=1)put(F.portals,2,8,11,[0,1,6,7]);if(R.act>=2)put(F.portals,3,5,9,[1,6]);
+  put(F.runes,2,4,7,[2,3,4,5,6,7]);put(F.runes,2,8,12,[1,2,7,8]);if(R.act>=1)put(F.runes,3,5,11,[0,9]);
+  put(F.portals,2,3,7,[0,1,8,9]);if(R.act>=1)put(F.portals,2,9,13,[0,1,8,9]);if(R.act>=2)put(F.portals,3,6,10,[1,8]);
   // heroes left on blocked tiles go back to the bench
   for(const h of R.board.slice())if(F.blk[h.r*COLS+h.c]||isGate(h.c,h.r)||F.runes.some(q=>q.c===h.c&&q.r===h.r)||F.portals.some(q=>q.c===h.c&&q.r===h.r))toBench(h);
-  rebuildBlk();if(typeof bgDirty!=='undefined')bgDirty=1;
+  rebuildBlk();fixRoads();if(typeof bgDirty!=='undefined')bgDirty=1;
 }
+// heroes kept from the last act may wall off a new gate: lift the ones nearest the gates until every road is open,
+// then put them back wherever the roads stay open (or on the bench, or sell them if the bench is full)
+function fixRoads(){const F=R.field;if(F.dist)return;const G=(F.gates||[]).filter(g=>g.k!=='west'),lift=[];
+  const gd=h=>Math.min(99,...G.map(g=>Math.hypot(hx(g.c,g.r)-hx(h.c,h.r),hy(g.r)-hy(h.r))),Math.hypot(hx(h.c,h.r),hy(h.r)-hy(SPAWN_ROWS[0])));
+  while(!F.dist&&R.board.length){const h=R.board.slice().sort((a,b)=>gd(a)-gd(b))[0];R.board.splice(R.board.indexOf(h),1);lift.push(h);rebuildBlk()}
+  for(const h of lift){const c0=h.c,r0=h.r;let best=null,bd=1e9;for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){if(!canPlace(c,r))continue;const d=Math.hypot(hx(c,r)-hx(c0,r0),hy(r)-hy(r0));if(d<bd){bd=d;best=[c,r]}}
+    if(best){h.c=best[0];h.r=best[1];R.board.push(h);rebuildBlk();continue}
+    h.c=h.r=-1;const j=R.bench.indexOf(null);if(j>=0)R.bench[j]=h;else{R.gold+=sellValue(h);R.pool[h.k]+=Math.pow(3,h.star-1);for(const it of h.it||[])stashItem(it)}}}
 const isGate=(c,r)=>!!(R.field.gates&&R.field.gates.some(g=>g.k!=='west'&&g.c===c&&g.r===r));
 function rebuildBlk(){const F=R.field;for(let i=0;i<F.blk.length;i++)if(F.blk[i]===1)F.blk[i]=0;for(const h of R.board)F.blk[h.r*COLS+h.c]=1;F.dist=flow(F.blk);F.route=traceRoute();F.routes=(F.gates||[]).map(g=>traceRoute(g));}
 // breadth-first flow field from the keep; returns null if any gate can't reach it
@@ -91,8 +99,9 @@ function traceRoute(g){const d=R.field.dist;if(!d)return[];let c,r;
   for(let i=0;i<COLS*ROWS;i++){const n=nextCell(c,r);if(!n)break;[c,r]=n;out.push([c,r])}const L=out.length;if(!g&&R.stats&&L>R.stats.maxMaze){R.stats.maxMaze=L;if(L>=40)award('maze40');if(L>=70)award('h_maze')}return out}
 // which gates a wave uses: early floors come only from the west, later ones split between several gates
 function gatePlan(w){const F=R.field,G=F&&F.gates||[{k:'west',id:0}];if(G.length<2)return[0];const wi=((w-1)%10)+1,boss=wi===10;
-  let n=boss?G.length:Math.min(G.length,(R.act===0?(wi>=(stage()<1?5:3)?2:1):R.act===1?(wi>=2?2:1)+(wi>=6?1:0):2+(wi>=4?1:0))+(R.endless?1:0));
-  const others=G.slice(1).map(g=>g.id);const out=[0];while(out.length<n&&others.length)out.push(others.splice((rng()*others.length)|0,1)[0]);
+  let n=boss?Math.min(G.length,R.act+2):Math.min(G.length-(wi<5&&G.some(g=>g.k==='breach')?1:0),(R.act===0?(wi>=(stage()<1?5:3)?2:1):R.act===1?(wi>=3?2:1)+(wi>=7?1:0):2+(wi>=6?1:0))+(R.endless?1:0));
+  // a breach in the middle of the field only opens once the act has warmed up
+  const others=G.slice(1).filter(g=>g.k!=='breach'||wi>=5).map(g=>g.id);const out=[0];while(out.length<n&&others.length)out.push(others.splice((rng()*others.length)|0,1)[0]);
   // sometimes the west gate stays shut and every monster comes from the others
   if(out.length>2&&rng()<.3)out.shift();return out}
 // hand out the wave's monsters to its gates in runs of a few, so each gate sends a little pack

@@ -36,4 +36,4 @@ function relicsHTML(){const col=['','#cfd8e0','#ffcf6a','#e6a8ff','#ff8a6a'];ret
 function openRelics(){SET.dmgOpen=true;SET.ptab='rel';saveSet();DMGSIG='';uiDmg()}
 function bindPanels(){if(!DOM)return;$('relB').addEventListener('click',openRelics);for(const [id,n] of [['mapB','flag'],['dmgB','bars']])$(id).innerHTML=icon(n)+($(id).innerHTML.includes('relN')?'':'');$('dmgB').insertAdjacentHTML('beforeend','<small id="relN2"></small>');
   $('dmgB').addEventListener('click',()=>{SET.dmgOpen=!SET.dmgOpen;saveSet();DMGSIG='';uiDmg()});
-  $('zoomB').addEventListener('click',()=>{ZM.z=1;applyZoom();uiZoom()});}
+  $('zoomOB').addEventListener('click',()=>zoomStep(1/1.3));$('zoomIB').addEventListener('click',()=>zoomStep(1.3));uiZoom();}
