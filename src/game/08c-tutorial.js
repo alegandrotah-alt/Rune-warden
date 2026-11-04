@@ -9,8 +9,9 @@ const TUTS=[
   {id:'place',txt:'Now <b>drag a hero from your bench onto the field</b>. At level 2 you can field 2 heroes, so place both.',tg:()=>{const i=R.bench.findIndex(Boolean);if(i<0)return fieldRect();const b=benchSlot(i);return{l:b.x-b.w*.5,t:b.y-b.w*.6,r:b.x+b.w*.5,b:b.y+b.w*.5}},hand:1,done:()=>R.board.length>=Math.min(2,boardMax())||!R.bench.some(Boolean)},
   {id:'road',txt:'Heroes block their tile, so <b>your heroes are the maze</b>. The dashed line is the road monsters will take: bend it so they walk past your heroes for longer. You can never close it completely.',tg:fieldRect,ok:1},
   {id:'fight',txt:'Ready? Press <b>FIGHT!</b> to send the first wave. Use the same button to speed the battle up.',tg:()=>rectOf('fightB'),done:()=>R.phase==='wave'},
-  {id:'mana',txt:'Heroes attack on their own. The <b>blue bar</b> under each hero is mana: when it fills, the hero casts a special spell.',tg:fieldRect,wave:1,auto:7},
+  {id:'mana',txt:'Heroes attack on their own. Under each hero, the <b>blue bar</b> is mana: when it fills, the hero casts a spell. The <b>green bar</b> is health: monsters hit heroes they pass, and a knocked-out hero sits out until the wave ends.',tg:fieldRect,wave:1,auto:9},
   {id:'income',txt:'Every wave pays gold, plus <b>1 interest for every 10 gold you keep</b> (up to 5). <b>Buy XP</b> to level up: you field more heroes and find rarer ones.',tg:()=>rectOf('goldT'),ok:1,plan:1},
+  {id:'map',txt:'Before every wave you <b>pick the next stop on the act map</b> (the ⚑ button). Elite battles drop items, shrines give rune stones, camps repair the keep, and mystery stops are... a mystery.',tg:()=>rectOf('mapB'),ok:1,plan:1},
   {id:'merge',txt:'<b>Three copies</b> of the same hero merge into a much stronger <b>★2</b>, and three ★2 into ★3. A glowing card in the shop completes a pair.',tg:()=>rectOf('cards'),ok:1,plan:1},
   {id:'runes',txt:'Shots that fly over a blue <b>× rune</b> are multiplied. Monsters that walk through a purple <b>× portal</b> split into copies, and every copy drops gold. Route them through for profit, or around for safety.',tg:()=>{const q=R.field.runes[0];return q?tileRect(q.c,q.r):fieldRect()},ok:1,plan:1},
   {id:'traits',txt:'Different heroes that share a <b>trait</b> power it up. Tap a trait on the left to see what it does and who has it. The <b>▤</b> button shows how much damage each hero dealt. Good luck!',tg:()=>rectOf('traits'),ok:1,plan:1},
@@ -20,7 +21,7 @@ function tutEnd(skip){TUT=null;META.tut=1;saveMeta();if(DOM){$('coach').hidden=t
 function tutShow(){const s=TUTS[TUT.i];$('coachT').innerHTML=s.txt;$('coachOk').hidden=!s.ok;TUT.t=0;TUT.tile=s.hand?tutTile():null}
 function tutNext(){TUT.i++;if(TUT.i>=TUTS.length){tutEnd();return}tutShow()}
 function tutTick(dt){if(!TUT||!DOM)return;const s=TUTS[TUT.i],co=$('coach'),ring=$('coachRing');
-  const blocked=!$('ovStart').hidden||!$('ovPick').hidden||!$('ovEnd').hidden||PAUSED,wrongPhase=s.wave&&R.phase!=='wave'||s.plan&&R.phase!=='plan';
+  const blocked=!$('ovStart').hidden||!$('ovPick').hidden||!$('ovEnd').hidden||!$('ovMap').hidden||!$('ovEvent').hidden||PAUSED,wrongPhase=s.wave&&R.phase!=='wave'||s.plan&&R.phase!=='plan';
   if(s.wave&&R.phase!=='wave'&&TUT.t>0){tutNext();return}
   co.hidden=blocked||wrongPhase;ring.hidden=co.hidden;if(co.hidden)return;
   TUT.t+=dt;if(s.done&&s.done()){tutNext();return}if(s.auto&&TUT.t>s.auto){tutNext();return}

@@ -53,15 +53,23 @@ function serve() {
   const ft = await page.evaluate(() => window.__ft);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   await page.screenshot({ path: path.join(OUT, '4-busy-wave.png') });
-  const busy = await page.evaluate(() => { const B = window.__RW.R.b; return B ? { mons: B.mons.length, projs: B.projs.length } : { mons: 0, projs: 0 }; });
+  const busy = await page.evaluate(() => { const B = window.__RW.R.b; return B ? { mons: B.mons.length, projs: B.projs.length, ko: B.ko } : { mons: 0, projs: 0, ko: 0 }; });
+  // 3. items combine on a hero, the act map and a mystery event open
+  const extra = await page.evaluate(() => { const G = window.__RW, R = G.R; R.b = null; R.phase = 'plan'; R.items.length = 0; const h = R.board[0]; h.it = [];
+    G.dropItem('sword'); G.dropItem('bow'); G.equipFrom(0, h); G.equipFrom(0, h); const item = h.it.join();
+    R.wave = 12; R.act = 1; G.genMap(); R.map.pos = { row: 0, lane: 1 }; const opts = G.mapOptions().length; G.showMap(); const mapOk = !document.getElementById('ovMap').hidden && document.querySelectorAll('#mapGrid .mn.can').length === opts;
+    document.querySelector('#mapGrid .mn.can').click(); const chosen = R.node; G.startEvent(); const evOk = !document.getElementById('ovEvent').hidden && document.querySelectorAll('#evList .relic').length > 1; G.resolveEvent(G.R.event.id === 'well' ? 1 : 0);
+    return { item, mapOk, chosen, evOk }; });
+  await page.screenshot({ path: path.join(OUT, '5-items-map.png') });
   await browser.close(); srv.close();
   const d = ft.slice(1).map((t, i) => t - ft[i]).sort((a, b) => a - b);
   const avg = d.reduce((a, b) => a + b, 0) / Math.max(1, d.length), p95 = d[Math.floor(d.length * .95)] || 0;
   let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
-    `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
+    `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles, ${busy.ko} heroes knocked out), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
+    `- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (picked ${extra.chosen}); mystery event opened: ${extra.evOk ? 'yes' : '**no**'}\n` +
     `  (CI has no GPU, so real phones run far faster; compare this number between builds)\n- Screenshots are attached to the run as **browser-check-screens**.\n`;
   if (errors.length) md += '\n```\n' + errors.slice(0, 10).join('\n') + '\n```\n';
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');
-  process.exit(errors.length || !drag || !placed || !tut ? 1 : 0);
+  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

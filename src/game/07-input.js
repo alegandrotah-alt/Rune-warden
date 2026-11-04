@@ -6,14 +6,16 @@ function benchAt(px,py){for(let i=0;i<R.bench.length;i++){const b=benchSlot(i);i
 function heroUnder(px,py){const c=cellAt(px,py+ss(T*.25));if(c){const h=heroAt(c.c,c.r);if(h)return h}const c2=cellAt(px,py);return c2?heroAt(c2.c,c2.r):null}
 function overShop(px,py){const el=$('shop');if(!el||!el.getBoundingClientRect)return false;const r=el.getBoundingClientRect();return py>=r.top-6&&px>=r.left&&px<=r.right}
 function pdown(e){if(!R||R.phase==='over'||R.phase==='pick')return;ensureAudio();const px=e.clientX,py=e.clientY;
+  const ii=itemAt(px,py);if(ii>=0){DRAG={item:ii,x:px,y:py,sx:px,sy:py};return}
   for(let i=0;i<R.stones.length;i++){const p=stoneSlot(i);if(Math.hypot(px-p.x,py-p.y)<p.s*.8){DRAG={stone:i,x:px,y:py,sx:px,sy:py};return}}
   const bi=benchAt(px,py);if(bi>=0&&R.bench[bi]){DRAG={h:R.bench[bi],from:'bench',bi,x:px,y:py,sx:px,sy:py};startValid();return}
   const h=heroUnder(px,py);if(h){DRAG={h,from:'board',x:px,y:py,sx:px,sy:py,locked:R.phase!=='plan'};startValid();return}
   SEL=null;uiInfo(null);const now=performance.now();if(now-(pdown.lastTap||0)<320&&ZM.z>1){ZM.z=1;applyZoom();uiZoom()}pdown.lastTap=now;if(ZM.z>1)PAN={x:px,y:py}}
 function startValid(){VALID=null;if(R.phase!=='plan')return;VALID=new Uint8Array(COLS*ROWS);const was=DRAG.from==='board'?DRAG.h:null;if(was){R.board.splice(R.board.indexOf(was),1);rebuildBlk()}
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)VALID[r*COLS+c]=canPlace(c,r)?1:0;if(was){R.board.push(was);rebuildBlk()}}
-function pmove(e){if(!DRAG)return;DRAG.x=e.clientX;DRAG.y=e.clientY;DRAG.moved=DRAG.moved||Math.hypot(DRAG.x-DRAG.sx,DRAG.y-DRAG.sy)>8;DRAG.over=cellAt(DRAG.x,DRAG.y+ss(T*.2));DRAG.overBench=benchAt(DRAG.x,DRAG.y);DRAG.sell=!DRAG.stone&&DRAG.stone!==0&&overShop(DRAG.x,DRAG.y);uiSellHint(DRAG.sell&&DRAG.h?sellValue(DRAG.h):0)}
+function pmove(e){if(!DRAG)return;DRAG.x=e.clientX;DRAG.y=e.clientY;DRAG.moved=DRAG.moved||Math.hypot(DRAG.x-DRAG.sx,DRAG.y-DRAG.sy)>8;DRAG.over=cellAt(DRAG.x,DRAG.y+ss(T*.2));DRAG.overBench=benchAt(DRAG.x,DRAG.y);DRAG.sell=!!DRAG.h&&overShop(DRAG.x,DRAG.y);if(DRAG.item!=null)DRAG.tgt=itemTarget(DRAG.x,DRAG.y);uiSellHint(DRAG.sell&&DRAG.h?sellValue(DRAG.h):0)}
 function pup(e){if(!DRAG)return;const d=DRAG;DRAG=null;uiSellHint(0);pmove({clientX:d.x,clientY:d.y});
+  if(d.item!=null){if(!d.moved){uiItem(R.items[d.item]);return}const h=itemTarget(d.x,d.y);if(h){if(equipFrom(d.item,h)){calcTraits();if(SEL===h)uiInfo(h)}}else toast('Drop items on a hero');uiRefresh();if(R.phase==='plan')saveRun();return}
   if(!d.moved){if(d.h){SEL=d.h;uiInfo(d.h)}VALID=null;return}
   if(d.stone!=null){const c=cellAt(d.x,d.y+ss(T*.2));if(!c||!placeStone(d.stone,c.c,c.r))toast('Drop rune stones on an empty tile');VALID=null;uiRefresh();return}
   const h=d.h,over=cellAt(d.x,d.y+ss(T*.2)),bi=benchAt(d.x,d.y);
@@ -31,7 +33,8 @@ function drawPlacement(){
       const s=heroStats(DRAG.h);ctx.strokeStyle='rgba(255,255,255,.4)';ctx.setLineDash([6,6]);ctx.beginPath();ctx.ellipse(sx((o.c+.5)*T),sy((o.r+.5)*T),ss(s.rng*T),ss(s.rng*T)*VY,0,0,6.283);ctx.stroke();ctx.setLineDash([])}}
   if(DRAG&&DRAG.stone!=null&&DRAG.moved){const o=cellAt(DRAG.x,DRAG.y+ss(T*.2));if(o){ctx.strokeStyle='#9cc4ff';ctx.lineWidth=2.5;ctx.strokeRect(sx(o.c*T)+2,sy(o.r*T)+2,ss(T)-4,ss(T)*VY-4)}}
   if(SEL&&R.board.includes(SEL)&&!DRAG){const s=heroStats(SEL);ctx.strokeStyle='rgba(255,230,160,.55)';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.ellipse(sx((SEL.c+.5)*T),sy((SEL.r+.5)*T),ss(s.rng*T),ss(s.rng*T)*VY,0,0,6.283);ctx.stroke();ctx.setLineDash([])}}
-function drawDrag(){if(!DRAG||!DRAG.moved)return;if(DRAG.h)drawHeroAt(DRAG.h,DRAG.x,DRAG.y+ss(T*.4),ss(T*1.5),1);else if(DRAG.stone!=null){const v=R.stones[DRAG.stone],s=Math.max(16,ss(T*.38));ctx.fillStyle='#2a3a6a';ctx.strokeStyle='#9cc4ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(DRAG.x,DRAG.y,s*.6,0,6.283);ctx.fill();ctx.stroke();ctx.font=`900 ${s*.6}px Cinzel,serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText('×'+v,DRAG.x,DRAG.y)}}
+function itemTarget(px,py){const h=heroUnder(px,py+ss(T*.2))||heroUnder(px,py);if(h)return h;const bi=benchAt(px,py);return bi>=0?R.bench[bi]:null}
+function drawDrag(){if(!DRAG||!DRAG.moved)return;if(DRAG.item!=null){const s=Math.max(22,ss(T*.5)),t=DRAG.tgt;if(t){let x,y;if(t.c>=0){x=sx((t.c+.5)*T);y=sy((t.r+.5)*T)}else{const b=benchSlot(R.bench.indexOf(t));x=b.x;y=b.y}ctx.strokeStyle=canTake(t,R.items[DRAG.item])?'#ffd76a':'#ff5a5a';ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(x,y,ss(T*.45),ss(T*.45)*VY,0,0,6.283);ctx.stroke()}drawItemIcon(R.items[DRAG.item],DRAG.x,DRAG.y-s*.4,s);return}if(DRAG.h)drawHeroAt(DRAG.h,DRAG.x,DRAG.y+ss(T*.4),ss(T*1.5),1);else if(DRAG.stone!=null){const v=R.stones[DRAG.stone],s=Math.max(16,ss(T*.38));ctx.fillStyle='#2a3a6a';ctx.strokeStyle='#9cc4ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(DRAG.x,DRAG.y,s*.6,0,6.283);ctx.fill();ctx.stroke();ctx.font=`900 ${s*.6}px Cinzel,serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText('×'+v,DRAG.x,DRAG.y)}}
 // two fingers pinch to zoom and pan; one finger pans an empty spot while zoomed; the mouse wheel zooms
 let PAN=null,PINCH=null;const PTR=new Map();
 const mid=()=>{const v=[...PTR.values()];return{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2,d:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y)||1}};

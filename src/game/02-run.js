@@ -2,26 +2,34 @@
 const SPAWN_ROWS=[3,4],KEEP_ROWS=[3,4];
 let R=null,UID=1;
 const has=id=>R&&R.relics.includes(id);
+// gameplay randomness: seeded during a daily challenge so everyone gets the same shops, waves, map and field
+function rng(){if(!R||!R.daily)return Math.random();let t=R.rs=(R.rs+0x6D2B79F5)|0;t=Math.imul(t^t>>>15,1|t);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+const rndS=a=>a[(rng()*a.length)|0];
+const asc=n=>R&&(R.asc||0)>=n;
+const unlocked=k=>!UNLOCK[k]||!!(META.unl&&META.unl[k]);
+const dayKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const relicN=id=>R?R.relics.filter(r=>r===id).length:0;
-function newRun(){
-  R={act:0,wave:1,gold:8+2*rank('gold'),lvl:2,xp:0,hp:100+10*rank('keep'),hpMax:100+10*rank('keep'),bench:new Array(8+rank('bench')).fill(null),board:[],
+function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),hp=100+10*rank('keep')-(A>=5?20:0);
+  R={act:0,wave:1,gold:8+2*rank('gold')-(A>=3?3:0),lvl:2,xp:0,hp,hpMax:hp,bench:new Array(8+rank('bench')).fill(null),board:[],items:[],
     shop:[],relics:[],stones:rank('stone')?[2]:[],streak:0,phase:'plan',rerolls:0,freeRoll:0,portalGold:0,goldFrac:0,egg:-1,pool:{},picks:[],leakAct:0,
-    stats:{kills:0,dmg:0,leaks:0,maxMaze:0},endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0};
-  for(const k of HKEYS)R.pool[k]=POOL[HEROES[k].c];
-  genField();rollShop(true);
+    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0},endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null};
+  if(R.daily){let h=7;for(const ch of R.daily)h=Math.imul(h^ch.charCodeAt(0),2654435761);R.rs=h|0;R.seed=h>>>0}
+  for(const k of HKEYS)R.pool[k]=unlocked(k)||R.daily?POOL[HEROES[k].c]:0;
+  genField();genMap();autoNode();rollShop(true);
   // a free starter so the first wave is never empty
-  const starters=HKEYS.filter(k=>HEROES[k].c===1);addHero(rnd(starters),1,true);
-  R.freeRoll=rank('reroll');R.nextQ=waveList(1);
+  const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);
+  if(R.daily){const r2=RELICS.filter(r=>r.t===2&&!['egg','recruit'].includes(r.id));const id=rndS(r2).id;R.relics.push(id);applyRelic(id);R.dailyRelic=id}
+  R.freeRoll=rank('reroll');R.nextQ=nodeQ(waveList(1));
 }
 // obstacles, runes and portals are re-dealt every act
 function genField(){
   const F=R.field={blk:new Uint8Array(COLS*ROWS),obs:[],runes:[],portals:[]};
   const free=(c,r)=>!F.blk[r*COLS+c]&&!F.runes.some(q=>q.c===c&&q.r===r)&&!F.portals.some(q=>q.c===c&&q.r===r)&&!(c<=1&&SPAWN_ROWS.includes(r))&&!(c>=COLS-2&&KEEP_ROWS.includes(r));
-  const kinds=[[0,0,1,3,4],[0,1,1,5,3],[2,2,3,4,4]][R.act];
-  for(let i=0,n=6+R.act*2,tries=0;i<n&&tries<200;tries++){const c=1+((Math.random()*(COLS-2))|0),r=(Math.random()*ROWS)|0;if(!free(c,r))continue;F.blk[r*COLS+c]=2;
-    if(!flow(F.blk)){F.blk[r*COLS+c]=0;continue}F.obs.push({c,r,k:rnd(kinds)});i++}
+  const kinds=[[0,0,1,2,3,4,5],[0,1,2,3,3,4,5],[0,1,2,3,4,5,5]][R.act];
+  for(let i=0,n=6+R.act*2,tries=0;i<n&&tries<200;tries++){const c=1+((rng()*(COLS-2))|0),r=(rng()*ROWS)|0;if(!free(c,r))continue;F.blk[r*COLS+c]=2;
+    if(!flow(F.blk)){F.blk[r*COLS+c]=0;continue}F.obs.push({c,r,k:rndS(kinds),a:R.act});i++}
   // runes sit in the middle of the field; portals are off to the side so you choose whether to route monsters through them
-  const put=(arr,v,cmin,cmax,rows)=>{for(let t=0;t<80;t++){const c=cmin+((Math.random()*(cmax-cmin+1))|0),r=rnd(rows);if(free(c,r)){arr.push({c,r,v,ph:Math.random()*6});return}}};
+  const put=(arr,v,cmin,cmax,rows)=>{for(let t=0;t<80;t++){const c=cmin+((rng()*(cmax-cmin+1))|0),r=rndS(rows);if(free(c,r)){arr.push({c,r,v,ph:rng()*6});return}}};
   put(F.runes,2,4,6,[2,3,4,5]);put(F.runes,2,7,10,[1,2,5,6]);if(R.act>=1)put(F.runes,3,5,9,[0,7]);
   put(F.portals,2,3,6,[0,1,6,7]);if(R.act>=1)put(F.portals,2,8,11,[0,1,6,7]);if(R.act>=2)put(F.portals,3,5,9,[3,4]);
   // heroes left on blocked tiles go back to the bench
@@ -49,7 +57,7 @@ const portalMul=q=>q.v+(has('riftlord')?1:0);
 // ---------- heroes: bench, field, merging ----------
 const boardMax=()=>R.lvl+(has('recruit')?1:0)+(has('kingmaker')?2:0);
 function heroAt(c,r){return R.board.find(h=>h.c===c&&h.r===r)}
-function mkHero(k,star){return{uid:UID++,k,star,mana:0,cd:Math.random()*.5,atk:0,face:1,hits:0,buffT:0,c:-1,r:-1}}
+function mkHero(k,star){return{uid:UID++,k,star,mana:0,cd:Math.random()*.5,atk:0,face:1,hits:0,buffT:0,c:-1,r:-1,it:[]}}
 function addHero(k,star,free){
   const slot=R.bench.indexOf(null);
   // a third copy merges even with a full bench
@@ -63,7 +71,7 @@ function merge(h){
   const same=allHeroes().filter(x=>x.k===h.k&&x.star===h.star);if(h.tmp&&!same.includes(h))same.push(h);
   if(same.length<3||h.star>=3){if(h.tmp)delete h.tmp;return}
   const keep=same.find(x=>R.board.includes(x))||same.find(x=>!x.tmp)||same[0];
-  for(const x of same.slice(0,3)){if(x===keep)continue;removeHero(x)}
+  for(const x of same.slice(0,3)){if(x===keep)continue;removeHero(x);for(const it of x.it||[])giveItem(keep,it)}
   delete keep.tmp;keep.star++;keep.mana=0;fxStar(keep);if(keep.star===3){award('star3');if(keep.k==='wyrm')award('h_dragon');if(R.board.filter(x=>x.star===3).length>=3)award('h_three')}
   merge(keep)}
 function removeHero(h){const i=R.board.indexOf(h);if(i>=0){R.board.splice(i,1);rebuildBlk()}const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null}
@@ -72,7 +80,7 @@ function placeHero(h,c,r){if(!canPlace(c,r))return false;const onBoard=R.board.i
   if(onBoard){R.board.splice(R.board.indexOf(h),1);rebuildBlk();if(!canPlace(c,r)){R.board.push(h);rebuildBlk();return false}}
   const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null;h.c=c;h.r=r;R.board.push(h);rebuildBlk();META.seen[h.k]=1;if(HKEYS.every(k=>META.seen[k]))award('all18');return true}
 const sellValue=h=>HEROES[h.k].c*Math.pow(3,h.star-1)-(h.star>1&&HEROES[h.k].c>1?1:0);
-function sellHero(h){R.gold+=sellValue(h);R.pool[h.k]+=Math.pow(3,h.star-1);removeHero(h);sfx('coin',.5)}
+function sellHero(h){R.gold+=sellValue(h);R.pool[h.k]+=Math.pow(3,h.star-1);removeHero(h);for(const it of h.it||[])stashItem(it);h.it=[];sfx('coin',.5)}
 // ---------- traits and hero stats ----------
 let SYN={};
 function calcTraits(){const seen={},cnt={};for(const h of R.board){if(seen[h.k])continue;seen[h.k]=1;for(const t of HEROES[h.k].tr)cnt[t]=(cnt[t]||0)+1}
@@ -89,4 +97,10 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
   if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
   if(h.buffT>0)s.as*=h.buffAs||2;
+  // items
+  const I=itemStats(h);s.dmg*=1+I.dmg;s.as*=1+I.as;s.spell*=1+I.sp;s.crit=1-(1-s.crit)*(1-I.crit);s.rng+=I.rng||0;
+  if(hasIt(h,'edge'))s.cm+=.5;if(hasIt(h,'titan'))s.dmg*=1+Math.min(.8,.04*(h.stk||0));if(hasIt(h,'rage'))s.as*=1+Math.min(2,.04*(h.stk||0));
+  if(h.chillT>0)s.as*=.7;
   return s}
+// hero health: bigger heroes, stars and Guardians are tougher; it refills every wave
+function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(1+itemStats(h).hp))}
