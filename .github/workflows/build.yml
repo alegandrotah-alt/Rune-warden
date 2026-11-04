@@ -81,6 +81,22 @@ jobs:
             echo "Signing key loaded"
           fi
 
+      - name: Check the signing key alias (falls back to the key that is actually in the keystore)
+        if: ${{ env.KEYSTORE_FILE != '' }}
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          WANT: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          ALIASES=$(keytool -list -keystore "$KEYSTORE_FILE" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | grep PrivateKeyEntry | cut -d, -f1 || true)
+          if [ -z "$ALIASES" ] || echo "$ALIASES" | grep -qxF "$WANT"; then
+            echo "KEY_ALIAS_USE=$WANT" >> "$GITHUB_ENV"
+          else
+            A=$(echo "$ALIASES" | head -1)
+            echo "::add-mask::$A"
+            echo "::warning::The ANDROID_KEY_ALIAS secret doesn't match the keystore, so the key that is in it was used."
+            echo "KEY_ALIAS_USE=$A" >> "$GITHUB_ENV"
+          fi
+
       - name: Generate and customise the Android project
         run: |
           npx cap add android
@@ -93,7 +109,7 @@ jobs:
           ANDROID_HOME: /usr/local/lib/android/sdk
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_ALIAS: ${{ env.KEY_ALIAS_USE || secrets.ANDROID_KEY_ALIAS }}
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           chmod +x gradlew
