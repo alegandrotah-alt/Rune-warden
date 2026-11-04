@@ -1,11 +1,12 @@
 // ---------- rooms without monsters, spoils after fights, potions ----------
 // R.room = {t, ...}: the oracle at the start, a campfire, the merchant, a chest or an event.
 // roomView() describes it (title, text, options) so the same logic drives the screen and the test bot.
-const potionCap=()=>2+(has('belt')?1:0);
+const potionCap=()=>2+(has('belt')?1:0)+(rank('potion')>=2?1:0);
 function gainPotion(id){if(has('sozu'))return false;if(R.potions.length>=potionCap()){toast('Potion slots are full');return false}R.potions.push(id||rndS(POTKEYS));if(DOM)uiPots();return true}
+const canAdd=k=>R.bench.includes(null)||allHeroes().filter(h=>h.k===k&&h.star===1).length>=2;
 function trainable(){return allHeroes().filter(h=>(h.vet||0)<2)}
 function train(h){h.vet=(h.vet||0)+1;fxStar(h);sfx('level',.6);toast(`${HEROES[h.k].n} is now a veteran${h.vet>1?' (rank 2)':''}: +25% damage and health`);if(h.vet>=2)award('vet2')}
-const cost=n=>Math.max(1,Math.round(n*(has('membership')?.7:1)));
+const cost=n=>Math.max(1,Math.round(n*(has('membership')?.7:1)*(1-.15*rank('merchant'))));
 function relicPool(t){const own=new Set(R.relics);return RELICS.filter(r=>r.t===t&&!own.has(r.id)&&!(t<4&&r.id==='belt'&&has('sozu')))}
 function randomRelic(t){const p=relicPool(t);return p.length?rndS(p).id:null}
 function gainRelic(id){if(!id)return;R.relics.push(id);applyRelic(id);calcTraits();toast('Relic: '+RELIC[id].n);if(R.relics.filter(r=>RELIC[r].t===4).length>=2)award('boss4')}
@@ -29,7 +30,7 @@ function roomView(){const o=R.room;if(!o)return null;const done=()=>leaveRoom(),
     V.opts=o.opts.map(k=>({n:ORACLE[k].n,d:ORACLE[k].d,risk:ORACLE[k].risk,act:()=>{oracleGift(k);done()}}))}
   else if(o.t==='rest'){Object.assign(V,{ic:'♨',t:'Campfire',d:'The fire crackles. The night is short: choose one.'});
     if(o.step==='train'){V.d='Who trains tonight? A veteran deals 25% more damage and has 25% more health (two ranks at most).';V.opts=trainable().map(h=>({n:heroLine(h),d:`Rank ${(h.vet||0)+1}`,hero:h.k,act:()=>{train(h);done()}}));V.opts.push({n:'Back',d:'',act:()=>{o.step=null}})}
-    else{const heal=Math.max(0,Math.min(R.hpMax-R.hp,Math.round(R.hpMax*.3)));
+    else{const heal=Math.max(0,Math.min(R.hpMax-R.hp,Math.round(R.hpMax*(rank('hearth')?.45:.3))));
       V.opts=[{n:'Rest',d:has('coffee')?'The Coffee Dripper keeps you awake.':heal?`Repair ${heal} keep health.`:'The keep is already whole.',dis:has('coffee')||!heal,act:()=>{R.hp+=heal;sfx('taken',.5);done()}},
         {n:'Train',d:has('fusion')?'The Fusion Hammer forbids it.':'A hero becomes a veteran: +25% damage and health.',dis:has('fusion')||!trainable().length,act:()=>{o.step='train'}}];
       if(has('shovel'))V.opts.push({n:'Dig',d:'Dig up a random relic.',act:()=>{gainRelic(randomRelic(rng()<.3?2:1));done()}})}}
@@ -40,10 +41,13 @@ function roomView(){const o=R.room;if(!o)return null;const done=()=>leaveRoom(),
       if(s.k==='train')V.opts.push({n:'Training',d:'A hero becomes a veteran.',cost:s.c,sold:s.sold||!trainable().length,act:()=>{o.back='merchant';o.step='train'}})}
     if(o.step==='train'){V.shop=0;V.d='Who gets the lessons?';V.opts=trainable().map(h=>({n:heroLine(h),d:`Rank ${(h.vet||0)+1}`,hero:h.k,act:()=>{const s=o.stock.find(q=>q.k==='train');R.gold-=s.c;s.sold=1;train(h);o.step=null}}));V.opts.push({n:'Back',d:'',act:()=>{o.step=null}})}
     else V.opts.push({n:'Leave',d:'',leave:1,act:done})}
+  else if(o.t==='gate'){Object.assign(V,{ic:'◉',t:'The Rift Opens',d:'The Ember Dragon is dead, and the realm is saved. But beneath the Wastes something vast wakes up hungry: the Rune Devourer. Almost nothing can hurt it. Face it now, or go home a hero.'});
+    V.opts=[{n:'Face the Devourer',d:'A final fight against a nearly unkillable boss. Your victory is already counted, win or lose.',risk:1,act:()=>{R.final=1;R.node='final';award('gate');R.nextQ=[{k:'devourer'}].concat(Array.from({length:14},(_,i)=>({k:rndS(ACTS[2].roster),elite:i%7===6?1:0})));R.room=null;if(DOM)$('ovRoom').hidden=true;enterPlan()}},
+      {n:'Return home victorious',d:'End the run as a victory.',act:()=>{R.room=null;if(DOM)$('ovRoom').hidden=true;runOver(true)}}]}
   else if(o.t==='treasure'){Object.assign(V,{ic:'◆',t:'Treasure',d:`An old chest, unguarded. Inside: ${o.gold} gold and two relics. You can only carry one.`});
     V.opts=o.relics.map(id=>({n:RELIC[id].n,d:RELIC[id].d,relic:id,act:()=>{R.gold+=o.gold;gainRelic(id);done()}}));if(!V.opts.length)V.opts=[{n:'Take the gold',d:'',act:()=>{R.gold+=o.gold;done()}}]}
   else if(o.t==='event'){const E=EVENTS[o.id];Object.assign(V,{ic:E.ic||'?',t:E.t,d:o.say||E.d});
-    if(o.step==='heroes'){V.opts=o.pick.map(k=>({n:HEROES[k].n,d:HEROES[k].tr.map(t=>TRAITS[t].n).join(' · ')+` · ${HEROES[k].c} gold`,hero:k,act:()=>{if(!addHero(k,1)){toast('Your bench is full');return}done()}}));V.opts.push({n:'Take nothing',d:'',act:done})}
+    if(o.step==='heroes'){V.opts=o.pick.map(k=>({n:HEROES[k].n,d:canAdd(k)?HEROES[k].tr.map(t=>TRAITS[t].n).join(' · ')+` · ${HEROES[k].c} gold`:'Your bench is full',dis:!canAdd(k),hero:k,act:()=>{if(!addHero(k,1)){toast('Your bench is full');return}done()}}));V.opts.push({n:'Take nothing',d:'',act:done})}
     else V.opts=E.opts(o).map(q=>Object.assign({},q,{act:()=>{const r=q.run(o);if(r!=='stay')done()}}))}
   return V}
 function roomAct(i){const V=roomView();const q=V&&V.opts[i];if(!q||q.dis||q.sold||q.cost>R.gold||q.ok&&!q.ok())return false;q.act();calcTraits();if(R.room){saveRun();showRoom()}uiRefresh();return true}
@@ -74,7 +78,7 @@ function rollRecruits(n,bonus){const out=[];for(let i=0;i<n;i++){const lv=Math.m
     let opts=[];for(;t>=1;t--){opts=HKEYS.filter(k=>HEROES[k].c===t&&(R.pool[k]>0)&&!out.includes(k));if(opts.length)break}if(opts.length)out.push(rndS(opts))}return out}
 function makeSpoils(node,won,gold){const S={node,won,lines:gold?[['gold',`+${gold} gold`]]:[],heroes:[]};
   const elite=node==='elite',boss=node==='boss';
-  S.heroes=rollRecruits(3+(has('prayer')&&node==='battle'?1:0),elite||boss||has('prayer')&&rng()<.35?1:0);
+  S.heroes=rollRecruits(3+(rank('recruit')?1:0)+(has('prayer')&&node==='battle'?1:0),elite||boss||has('prayer')&&rng()<.35?1:0);
   if(elite){const c=rndS(COMPS);dropItem(c);R.gold+=3;S.lines.push(['item',`${ITEMS[c].n} and 3 gold from the elite`]);R.stats.elites=(R.stats.elites||0)+1;if(R.stats.elites>=5)award('elite5')}
   if((elite||boss)&&has('toolbox')){const c=rndS(COMPS);dropItem(c);S.lines.push(['item',`${ITEMS[c].n} from the Toolbox`])}
   if(!has('sozu')&&rng()<(elite?.6:boss?0:.4)&&R.potions.length<potionCap()){const p=rndS(POTKEYS);gainPotion(p);S.lines.push(['potion',`${POTIONS[p].n} found`])}
@@ -87,6 +91,7 @@ function advance(){const q=R.queue||[];const s=q.shift();if(!s){enterPlan();retu
   if(s==='spoils'){R.phase='reward';saveRun();showSpoils();return}
   if(s==='relic'){offerRelics(rng()<.6?1:2,'elite');return}
   if(s==='boss'){offerRelics(4,'boss');return}
+  if(s==='gate'){R.room={t:'gate'};R.phase='room';saveRun();showRoom();return}
   if(s==='endless'){offerRelics(rng()<.3?3:2,'endless');return}
   advance()}
 // ---------- potions ----------

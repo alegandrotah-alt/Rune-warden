@@ -9,15 +9,19 @@ const asc=n=>R&&(R.asc||0)>=n;
 const unlocked=k=>!UNLOCK[k]||!!(META.unl&&META.unl[k]);
 const dayKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const relicN=id=>R?R.relics.filter(r=>r===id).length:0;
+const isFront=k=>HEROES[k].rng<2;
 function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),hp=100+10*rank('keep')-(A>=5?20:0);
   R={act:0,wave:1,gold:8+2*rank('gold')-(A>=3?3:0),lvl:2,xp:0,hp,hpMax:hp,bench:new Array(8+rank('bench')).fill(null),board:[],items:[],
     shop:[],relics:[],stones:rank('stone')?[2]:[],streak:0,phase:'plan',rerolls:0,freeRoll:0,portalGold:0,goldFrac:0,egg:-1,pool:{},picks:[],leakAct:0,
     stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null};
+  R.guards=o.daily?[{k:'archers',l:1,t:1}]:guardLoadout();const ban=R.guards.find(g=>g.k==='banner');if(ban){R.hpMax+=10*ban.l;R.hp=R.hpMax}
+  if(rank('promo'))R.lvl=3;if(rank('potion'))R.potions.push(rnd(POTKEYS));for(let i=0;i<rank('item');i++)R.items.push(rnd(COMPS));
   if(R.daily){let h=7;for(const ch of R.daily)h=Math.imul(h^ch.charCodeAt(0),2654435761);R.rs=h|0;R.seed=h>>>0}
   for(const k of HKEYS)R.pool[k]=unlocked(k)||R.daily?POOL[HEROES[k].c]:0;
   genField();genMap();autoNode();rollShop(true);
   // a free starter so the first wave is never empty
-  const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);
+  const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);if(rank('vet')&&allHeroes()[0])allHeroes()[0].vet=1;
+  if(rank('relic')&&!R.daily){const r=randomRelic(1);if(r){R.relics.push(r);applyRelic(r)}}
   if(R.daily){const r2=RELICS.filter(r=>r.t===2&&!['egg','recruit'].includes(r.id));const id=rndS(r2).id;R.relics.push(id);applyRelic(id);R.dailyRelic=id}
   R.freeRoll=rank('reroll');R.nextQ=nodeQ(waveList(1));
   // the oracle offers three plain gifts and one with a price
@@ -54,7 +58,7 @@ function traceRoute(){const d=R.field.dist;if(!d)return[];let r=SPAWN_ROWS.filte
   for(let i=0;i<COLS*ROWS;i++){const n=nextCell(c,r);if(!n)break;[c,r]=n;out.push([c,r])}const L=out.length;if(R.stats&&L>R.stats.maxMaze){R.stats.maxMaze=L;if(L>=40)award('maze40');if(L>=70)award('h_maze')}return out}
 const runeAt=(c,r)=>R.field.runes.find(q=>q.c===c&&q.r===r);
 const portalAt=(c,r)=>R.field.portals.find(q=>q.c===c&&q.r===r);
-const runeMul=q=>q.v+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0);
+const runeMul=q=>q.v+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0)+(hasGuard('oracle')?1:0);
 const portalMul=q=>q.v+(has('riftlord')?1:0);
 // ---------- heroes: bench, field, merging ----------
 const boardMax=()=>R.lvl+(has('recruit')?1:0)+(has('kingmaker')?2:0)+['crown','ecto','sozu','coffee','fusion'].filter(has).length;
@@ -87,6 +91,11 @@ function sellHero(h){R.gold+=sellValue(h);R.pool[h.k]+=Math.pow(3,h.star-1);remo
 let SYN={};
 function calcTraits(){const seen={},cnt={};for(const h of R.board){if(seen[h.k])continue;seen[h.k]=1;for(const t of HEROES[h.k].tr)cnt[t]=(cnt[t]||0)+1}
   for(const r of R.relics){const em=RELIC[r].em;if(em)cnt[em]=(cnt[em]||0)+1}
+  for(const g of R.guards||[])for(const t of GUARDS[g.k].tr)cnt[t]=(cnt[t]||0)+1;
+  // frontline auras: a melee hero buffs the heroes on the hexes touching it
+  for(const h of R.board)h.au={as:0,dmg:0,dr:0,hp:0,heal:0};
+  for(const h of R.board){const F=HEROES[h.k].fl;if(!F)continue;const A={rally:['as',.15],howl:['as',.2],warcry:['dmg',.15],ward:['dr',.2],tend:['heal',.03],bulwark:['hp',.3]}[F.k];if(!A)continue;
+    for(const [c,r] of nbrs(h.c,h.r)){const o=heroAt(c,r);if(o&&o!==h){o.au[A[0]]+=A[1];if(F.k==='ward')o.au.heal+=.02}}}
   SYN={};for(const t of TRAIT_ORDER){const n=cnt[t]||0,bp=TRAITS[t].bp;let tier=-1;bp.forEach((b,i)=>{if(n>=b)tier=i});SYN[t]={n,tier};if(tier===bp.length-1&&bp.length>1)award('trait6')}
   return SYN}
 const tier=t=>SYN[t]?SYN[t].tier:-1;
@@ -99,11 +108,11 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
   if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
   if(h.buffT>0)s.as*=h.buffAs||2;
-  if(h.vet)s.dmg*=1+.25*h.vet;if(has('philo'))s.dmg*=1.3;if(R.b&&R.b.rageT>0)s.as*=1.6;
+  if(h.vet)s.dmg*=1+.25*h.vet;if(h.au){s.as*=1+h.au.as;s.dmg*=1+h.au.dmg}if(h.hoard)s.dmg*=1+.005*h.hoard;if(has('philo'))s.dmg*=1.3;if(R.b&&R.b.rageT>0)s.as*=1.6;
   // items
   const I=itemStats(h);s.dmg*=1+I.dmg;s.as*=1+I.as;s.spell*=1+I.sp;s.crit=1-(1-s.crit)*(1-I.crit);s.rng+=I.rng||0;
   if(hasIt(h,'edge'))s.cm+=.5;if(hasIt(h,'titan'))s.dmg*=1+Math.min(.8,.04*(h.stk||0));if(hasIt(h,'rage'))s.as*=1+Math.min(2,.04*(h.stk||0));
   if(h.chillT>0)s.as*=.7;
   return s}
 // hero health: bigger heroes, stars and Guardians are tougher; it refills every wave
-function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0)))}
+function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(isFront(h.k)?1.35:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0))*(1+(h.au?h.au.hp:0)))}

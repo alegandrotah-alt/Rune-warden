@@ -10,6 +10,7 @@ function pdown(e){if(!R||R.phase==='over'||R.phase==='pick')return;ensureAudio()
   for(let i=0;i<R.stones.length;i++){const p=stoneSlot(i);if(Math.hypot(px-p.x,py-p.y)<p.s*.8){DRAG={stone:i,x:px,y:py,sx:px,sy:py};return}}
   const bi=benchAt(px,py);if(bi>=0&&R.bench[bi]){DRAG={h:R.bench[bi],from:'bench',bi,x:px,y:py,sx:px,sy:py};startValid();return}
   const h=heroUnder(px,py);if(h){DRAG={h,from:'board',x:px,y:py,sx:px,sy:py,locked:R.phase!=='plan'};startValid();return}
+  {const K=keepPos();if(Math.abs(px-sx(K.x))<ss(T*.9)&&py<sy(K.y)+ss(T*.6)&&py>sy(K.y)-ss(T*2.4)){SEL=null;uiKeep();return}}
   if(R.b){const w=toWorld(px,py+ss(T*.3));let best=null,bd=T*.7;for(const m of R.b.mons){if(m.hp<=0)continue;const d=Math.hypot(m.x-w.x,(m.y-w.y))-(m.boss?T*.4:0);if(d<bd){bd=d;best=m}}if(best){SEL=null;uiMon(best);return}}
   SEL=null;uiInfo(null);const now=performance.now();if(now-(pdown.lastTap||0)<320&&ZM.z>1){ZM.z=1;applyZoom();uiZoom()}pdown.lastTap=now;if(ZM.z>1)PAN={x:px,y:py}}
 function startValid(){VALID=null;if(R.phase!=='plan')return;VALID=new Uint8Array(COLS*ROWS);const was=DRAG.from==='board'?DRAG.h:null;if(was){R.board.splice(R.board.indexOf(was),1);rebuildBlk()}
@@ -30,10 +31,21 @@ function pup(e){if(!DRAG)return;const d=DRAG;DRAG=null;uiSellHint(0);pmove({clie
   VALID=null;calcTraits();uiRefresh();if(R.phase==='plan')saveRun()}
 function drawPlacement(){
   if(DRAG&&VALID&&DRAG.h&&DRAG.moved){for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){if(heroAt(c,r))continue;hexPath(ctx,c,r,.9);ctx.fillStyle=VALID[r*COLS+c]?'rgba(140,255,140,.13)':'rgba(255,60,60,.12)';ctx.fill()}
-    if(DRAG.over){const o=DRAG.over,ok=VALID[o.r*COLS+o.c]||heroAt(o.c,o.r);ctx.strokeStyle=ok?'#9dff8a':'#ff5a5a';ctx.lineWidth=2.5;hexPath(ctx,o.c,o.r,.92);ctx.stroke();
-      const s=heroStats(DRAG.h);ctx.strokeStyle='rgba(255,255,255,.4)';ctx.setLineDash([6,6]);ctx.beginPath();ctx.ellipse(sx(hx(o.c,o.r)),sy(hy(o.r)),ss(s.rng*T),ss(s.rng*T)*VY,0,0,6.283);ctx.stroke();ctx.setLineDash([])}}
+    if(DRAG.over){const o=DRAG.over,ok=VALID[o.r*COLS+o.c]||heroAt(o.c,o.r);drawRange(DRAG.h,o.c,o.r);ctx.strokeStyle=ok?'#9dff8a':'#ff5a5a';ctx.lineWidth=2.5;hexPath(ctx,o.c,o.r,.92);ctx.stroke()}}
   if(DRAG&&DRAG.stone!=null&&DRAG.moved){const o=cellAt(DRAG.x,DRAG.y+ss(T*.2));if(o){ctx.strokeStyle='#9cc4ff';ctx.lineWidth=2.5;hexPath(ctx,o.c,o.r,.92);ctx.stroke()}}
-  if(SEL&&R.board.includes(SEL)&&!DRAG){const s=heroStats(SEL);ctx.strokeStyle='rgba(255,230,160,.55)';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.ellipse(sx(hx(SEL.c,SEL.r)),sy(hy(SEL.r)),ss(s.rng*T),ss(s.rng*T)*VY,0,0,6.283);ctx.stroke();ctx.setLineDash([])}}
+  if(SEL&&R.board.includes(SEL)&&!DRAG)drawRange(SEL,SEL.c,SEL.r);
+  if(R.phase==='plan'&&!DRAG)drawAuras()}
+// the hexes a hero reaches from (c,r): orange for frontline heroes, blue for backline; road hexes in reach glow brighter
+function drawRange(h,c,r){const s=heroStats(h),front=isFront(h.k),x0=hx(c,r),y0=hy(r),rt=R.field.route||[],onRoad=new Set(rt.map(([a,b])=>a+','+b));let cov=0;ctx.save();
+  for(let rr=0;rr<ROWS;rr++)for(let cc=0;cc<COLS;cc++){const d=Math.hypot(hx(cc,rr)-x0,hy(rr)-y0);if(d>s.rng*T+T*.3||cc===c&&rr===r)continue;const road=onRoad.has(cc+','+rr);if(road)cov++;
+    hexPath(ctx,cc,rr,.88);ctx.fillStyle=front?(road?'rgba(255,150,60,.34)':'rgba(255,150,60,.13)'):(road?'rgba(90,170,255,.34)':'rgba(90,170,255,.12)');ctx.fill()}
+  const F=HEROES[h.k].fl;if(F&&['rally','howl','warcry','ward','tend','bulwark'].includes(F.k))for(const [cc,rr] of nbrs(c,r)){hexPath(ctx,cc,rr,.8);ctx.strokeStyle='rgba(255,215,106,.85)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([])}
+  if(F&&['dread','thirst','taunt'].includes(F.k)||h.k==='templar'){const rad=h.k==='templar'?2.1:1.5;ctx.strokeStyle=h.k==='templar'?'rgba(255,230,140,.8)':'rgba(255,110,90,.8)';ctx.lineWidth=2;ctx.setLineDash([6,5]);ctx.beginPath();ctx.ellipse(sx(x0),sy(y0),ss(rad*T),ss(rad*T)*VY,0,0,6.283);ctx.stroke();ctx.setLineDash([])}
+  const lab=`${front?'⚔ Frontline':'➶ Backline'} · reaches ${cov} road hex${cov===1?'':'es'}`+(F?` · ${F.n}`:'');const tx=sx(x0),ty=sy(y0)-ss(T*1.45);
+  ctx.font=`800 ${Math.max(11,ss(13))}px "Barlow Condensed",sans-serif`;ctx.textAlign='center';ctx.textBaseline='bottom';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.strokeText(lab,tx,ty);ctx.fillStyle=front?'#ffc08a':'#a8d4ff';ctx.fillText(lab,tx,ty);ctx.restore()}
+// between waves, thin gold links show which heroes are buffed by a frontline aura, and the Templar's holy ground glows
+function drawAuras(){ctx.save();for(const h of R.board){const F=HEROES[h.k].fl;if(h.k==='templar'){for(let rr=0;rr<ROWS;rr++)for(let cc=0;cc<COLS;cc++){if(Math.hypot(hx(cc,rr)-hx(h.c,h.r),hy(rr)-hy(h.r))<T*2.1){hexPath(ctx,cc,rr,.9);ctx.fillStyle='rgba(255,230,140,.08)';ctx.fill()}}}
+    if(!F||!['rally','howl','warcry','ward','tend','bulwark'].includes(F.k))continue;for(const [c,r] of nbrs(h.c,h.r)){if(!heroAt(c,r))continue;ctx.strokeStyle='rgba(255,215,106,.55)';ctx.lineWidth=2;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(sx(hx(h.c,h.r)),sy(hy(h.r)));ctx.lineTo(sx(hx(c,r)),sy(hy(r)));ctx.stroke();ctx.setLineDash([])}}ctx.restore()}
 function itemTarget(px,py){const h=heroUnder(px,py+ss(T*.2))||heroUnder(px,py);if(h)return h;const bi=benchAt(px,py);return bi>=0?R.bench[bi]:null}
 function drawDrag(){if(!DRAG||!DRAG.moved)return;if(DRAG.item!=null){const s=Math.max(22,ss(T*.5)),t=DRAG.tgt;if(t){let x,y;if(t.c>=0){x=sx(hx(t.c,t.r));y=sy(hy(t.r))-ss(T*.17)}else{const b=benchSlot(R.bench.indexOf(t));x=b.x;y=b.y}ctx.strokeStyle=canTake(t,R.items[DRAG.item])?'#ffd76a':'#ff5a5a';ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(x,y,ss(T*.45),ss(T*.45)*VY,0,0,6.283);ctx.stroke()}drawItemIcon(R.items[DRAG.item],DRAG.x,DRAG.y-s*.4,s);return}if(DRAG.h)drawHeroAt(DRAG.h,DRAG.x,DRAG.y+ss(T*.4),ss(T*1.5),1);else if(DRAG.stone!=null){const v=R.stones[DRAG.stone],s=Math.max(16,ss(T*.38));ctx.fillStyle='#2a3a6a';ctx.strokeStyle='#9cc4ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(DRAG.x,DRAG.y,s*.6,0,6.283);ctx.fill();ctx.stroke();ctx.font=`900 ${s*.6}px Cinzel,serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText('×'+v,DRAG.x,DRAG.y)}}
 // two fingers pinch to zoom and pan; one finger pans an empty spot while zoomed; the mouse wheel zooms

@@ -9,6 +9,7 @@
 - Music in `www/music/` (one track per act plus menu and boss, see CREDITS.txt); sound effects (`sp_*` spell sounds, `m_*` monster hits) and particle textures are embedded from `src/assets/`.
 - The board is pointy-top hexes in offset rows: use `hx(c,r)`/`hy(r)` for centres, `cellOf(x,y)` for the hex under a point, `nbrs(c,r)` for neighbours and `hexPath()` to draw one. Never assume square tiles.
 - Run flow: every floor is one auto-battler round. Map rooms (`05b-map.js`) are fights (`NODES[t].fight`: battle, elite, boss) or rooms without monsters (`05c-rooms.js`: rest, merchant, treasure, event, plus the oracle at the start). Phases: plan, wave, reward (recruit pick), pick (relics), room, over; after a fight `R.queue` plays the screens in order via `advance()`. `roomView()` describes a room for both the screen and the sim bot.
+- Keep guardians live in `04c-keep.js` (`GUARDS` data in `01-data.js`, `META.gl` levels, `META.geq` stationed); frontline auras are computed in `calcTraits()` into `h.au`, and monster-side zones use `R.b.fl` built every battle tick.
 - Gameplay randomness that must repeat in a daily challenge (shops, waves, map, field, relic offers, events) goes through `rng()`/`rndS()`, not `Math.random`.
 - Bump the cache name in `www/sw.js` when files in `www/gfx` or `www/music` are renamed or replaced.
 - Pushing to `main` releases: Android APK on Releases (version = run number) and the web version on GitHub Pages.

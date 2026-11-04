@@ -2,6 +2,7 @@
 const STONE_AT={5:1,15:1,25:1};
 function endWave(){
   const B=R.b,won=B.leaked===0,w=R.wave,node=R.node||'battle',boss=w%10===0&&w<=30;
+  if(R.final){R.b=null;award('devourer');R.trueWin=1;META.trueWins=(META.trueWins||0)+1;saveMeta();runOver(true);return}
   R.lastDmg={wave:w,rows:R.board.map(h=>({k:h.k,star:h.star,d:h.wd||0,uid:h.uid})).sort((a,b)=>b.d-a.d)};
   R.streak=won?(R.streak>=0?R.streak+1:1):(R.streak<=0?R.streak-1:-1);
   const inc=income(won);gainXP(2+(has('scholar')?3:0)+rank('xp'));
@@ -16,13 +17,13 @@ function endWave(){
   // act boss down
   if(boss){const a=w/10;if(R.leakAct===0)award('perfect');R.leakAct=0;R.calm=0;
     if(a===1){award('act1');if(R.rerolls===0)award('h_miser')}if(a===2)award('act2');
-    if(a===3){award('win');META.wins=(META.wins||0)+1;R.wave++;saveMeta();runOver(true);return}
-    R.act=a;genField();banner(`ACT ${['I','II','III'][a]}: ${ACTS[a].n.toUpperCase()}`,'#ffd76a');bgDirty=1}
+    if(a===3){award('win');META.wins=(META.wins||0)+1;R.won=1;saveMeta();banner('THE EMBER DRAGON FALLS','#ffd76a')}
+    else{R.act=a;genField();if(guardLv('oracle')>=3)R.stones.push(2);banner(`ACT ${['I','II','III'][a]}: ${ACTS[a].n.toUpperCase()}`,'#ffd76a');bgDirty=1}}
   R.wave++;if(R.endless&&R.wave>=40)award('endless40');
-  rollShop(true);R.node=null;if(boss)genMap();R.nextQ=waveList(R.wave);autoNode();
+  rollShop(true);R.node=null;if(boss)genMap();if(R.won&&!R.endless)R.map=null;R.nextQ=waveList(R.wave);autoNode();
   R.queue=[];
   if(R.endless){if((w%5)===0)R.queue.push('endless')}
-  else{R.spoils=makeSpoils(node,won,inc.base+inc.int+inc.st+inc.ex);R.queue.push('spoils');if(node==='elite')R.queue.push('relic');if(boss)R.queue.push('boss')}
+  else{R.spoils=makeSpoils(node,won,inc.base+inc.int+inc.st+inc.ex);R.queue.push('spoils');if(node==='elite')R.queue.push('relic');if(boss)R.queue.push('boss');if(boss&&w===30)R.queue.push('gate')}
   advance();uiRefresh();
 }
 function offerRelics(t,src){
@@ -47,13 +48,13 @@ function placeStone(i,c,r){const F=R.field;if(c<0||r<0||c>=COLS||r>=ROWS||F.blk[
   F.runes.push({c,r,v:R.stones[i],ph:0,flash:.6,mine:1});R.stones.splice(i,1);sfx('level',.5);return true}
 function award(id){if(!META.ach||META.ach[id])return;META.ach[id]=1;const a=ACHN[id];if(!a)return;META.gems+=a.g;saveMeta();toast(`${a.hidden?'Secret achievement':'Achievement'}: ${a.n}  +${a.g} gems`)}
 function runOver(win){
-  if(R.phase==='over')return;R.phase='over';const waves=R.wave-1,gems=Math.round((waves*1.5+Math.floor(Math.min(30,waves)/10)*10+(win?40:0))*(1+.15*(R.asc||0)));
+  if(R.phase==='over')return;if(R.won)win=true;R.phase='over';const waves=R.wave-1,gems=Math.round((waves*1.5+Math.floor(Math.min(30,waves)/10)*10+(win?40:0)+(R.trueWin?150:0))*(1+.15*(R.asc||0))*(1+.1*rank('gems')));
   META.gems+=gems;META.runs++;META.best=Math.max(META.best,waves);if(R.endless)META.bestEndless=Math.max(META.bestEndless||0,waves);
   if(win&&!R.endless&&!R.daily){const a=R.asc||0;if(a>=1)award('asc1');if(a>=5)award('asc5');if(a>=10)award('asc10');META.asc=Math.max(META.asc||0,Math.min(10,a+1));R.ascUp=META.asc>a}
   if(R.daily){award('daily');const D=META.daily&&META.daily.d===R.daily?META.daily:{d:R.daily,best:0,tries:0};D.tries++;R.dailyNew=waves>D.best;D.best=Math.max(D.best,waves);META.daily=D}
   saveMeta();clearRun();
   R.endGems=gems;R.win=win;showEnd(win)}
-function goEndless(){R.endless=true;R.phase='plan';R.act=2;R.map=null;R.node='battle';R.room=null;R.queue=null;genField();rollShop(true);R.nextQ=waveList(R.wave);hideEnd();saveRun();uiRefresh()}
+function goEndless(){R.endless=true;R.final=0;R.won=0;R.phase='plan';R.act=2;R.map=null;R.node='battle';R.room=null;R.queue=null;genField();rollShop(true);R.nextQ=waveList(R.wave);hideEnd();saveRun();uiRefresh()}
 // ---------- saving a run in progress (between waves) ----------
 function saveRun(){if(!R||R.phase==='over')return;try{const o=Object.assign({},R,{b:null,field:{obs:R.field.obs,runes:R.field.runes,portals:R.field.portals,blk:Array.from(R.field.blk).map(v=>v===2?2:0)}});localStorage.setItem('runewarden-run',JSON.stringify(o))}catch(e){}}
 function loadRun(){try{const o=JSON.parse(localStorage.getItem('runewarden-run')||'null');if(!o||!o.field)return false;R=o;R.field.blk=Uint8Array.from(o.field.blk);R.b=null;if(R.phase==='wave')R.phase='plan';

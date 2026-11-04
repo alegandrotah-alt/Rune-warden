@@ -5,7 +5,7 @@ function toast(t){if(!DOM)return;const el=$('toast');el.textContent=t;el.hidden=
 function portrait(k,size){const c=mk(size*2,size*2);if(!c)return c;const g=c.getContext('2d');const f=frame('h_'+k,160,0,size*2);if(f&&g&&g.drawImage)g.drawImage(f,-size*.15,-size*.1,size*2.3,size*2.3);return c}
 function onSheet(name){if(DOM&&name.startsWith('h_')){renderShop();if(!$('ovStart').hidden){clearTimeout(onSheet.t);onSheet.t=setTimeout(renderCol,200)}}if(/^props|^keep/.test(name))bgDirty=1}
 function uiRefresh(){if(!DOM||!R)return;calcTraits();
-  $('waveT').textContent=R.endless?`Wave ${R.wave} · Endless`:`Floor ${R.wave} / 30`;uiPots();$('actT').textContent=`Act ${['I','II','III'][R.act]} · ${ACTS[R.act].n}`;
+  $('waveT').textContent=R.final?'The Rift · Final':R.endless?`Wave ${R.wave} · Endless`:`Floor ${R.wave} / 30`;uiPots();$('actT').textContent=`Act ${['I','II','III'][R.act]} · ${ACTS[R.act].n}`;
   $('goldT').textContent=R.gold;$('lvlT').textContent='Lv '+R.lvl;const need=XPNEED[R.lvl]||0;$('xpF').style.width=(R.lvl>=10?100:100*R.xp/need)+'%';$('xpT').textContent=R.lvl>=10?'max':`${R.xp}/${need}`;
   $('fieldT').textContent=`${R.board.length}/${boardMax()} heroes`;$('fieldT').style.color=R.board.length<boardMax()&&R.bench.some(Boolean)?'#ffd76a':'';
   $('hpT').textContent='♥ '+Math.ceil(R.hp);
@@ -19,7 +19,7 @@ function renderShop(force){if(!DOM||!R)return;const owned={};for(const h of allH
   const sig=R.shop.join()+'|'+R.gold+'|'+JSON.stringify(owned)+'|'+Object.keys(SPR.img).filter(k=>SPR.st[k]===1).length;if(sig===SHOPSIG&&!force)return;SHOPSIG=sig;const box=$('cards');box.innerHTML='';
   R.shop.forEach((k,i)=>{const b=document.createElement('button');b.type='button';if(!k){b.className='hc empty';b.disabled=true;box.appendChild(b);return}
     const D=HEROES[k];b.className='hc'+(R.gold<D.c?' poor':'')+(owned[k]===2?' pair':'');b.style.setProperty('--c',TIERCOL[D.c]);
-    b.innerHTML=`<span class="cost">${D.c}g</span>${owned[k]?`<span class="own">${'★'.repeat(1)}×${owned[k]}</span>`:''}<span class="nm"><b>${D.n}</b><small>${D.tr.map(t=>TRAITS[t].ic+' '+TRAITS[t].n).join(' · ')}</small></span>`;
+    b.innerHTML=`<span class="cost">${D.c}g</span>${owned[k]?`<span class="own">${'★'.repeat(1)}×${owned[k]}</span>`:''}<span class="nm"><b>${D.n}</b><small>${D.tr.map(t=>TRAITS[t].ic+' '+TRAITS[t].n).join(' · ')}</small></span><span class="role ${isFront(k)?'f':'b'}">${isFront(k)?'⚔':'➶'}</span>${D.c===5?'<span class="leg">LEGEND</span>':''}`;
     const p=portrait(k,38);if(p)b.prepend(p);b.addEventListener('click',()=>{if(buy(i)){uiRefresh()}else if(R.gold<D.c)toast('Not enough gold');else toast('Your bench is full')});
     b.addEventListener('contextmenu',e=>{e.preventDefault();uiInfo({k,star:1,preview:1})});box.appendChild(b)})}
 let TRSIG='';
@@ -36,7 +36,8 @@ function uiItem(id){if(!DOM||!id)return;const el=$('info'),I=ITEMS[id];let rec='
 function uiInfo(h){if(!DOM)return;const el=$('info');if(!h){el.hidden=true;return}const D=HEROES[h.k],s=h.preview?{dmg:D.dmg,as:D.as,rng:D.rng,crit:0}:heroStats(h);
   el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>${D.n} ${'★'.repeat(h.star)}${h.vet?` <span class="vet">${'❯'.repeat(h.vet)} veteran</span>`:''}</h3><div class="tags"><span style="color:${TIERCOL[D.c]}">${D.c} gold</span>${D.tr.map(t=>`<span style="color:${TRAITS[t].col}">${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join('')}</div>
    <div class="st"><div><small>Damage</small>${fmt(s.dmg)}</div><div><small>Speed</small>${s.as.toFixed(2)}</div><div><small>Range</small>${s.rng.toFixed(1)}</div><div><small>${D.dt==='m'?'Magic':'Physical'}</small>${s.crit?Math.round(s.crit*100)+'% crit':'—'}</div></div>
-   <div class="ab"><b>${D.ab.n}</b> (${D.mana} mana): ${D.d}</div>${h.preview?'':`<div class="its">${(h.it||[]).map(id=>`<div><b style="color:${ITEMS[id].col}">${ITEMS[id].ic} ${ITEMS[id].n}</b><small>${ITEMS[id].d}</small></div>`).join('')||'<small>No items. Drag items from beside the bench onto a hero.</small>'}</div>
+   <div class="ab"><b>${D.ab.n}</b> (${D.mana} mana): ${D.d}</div>
+   <div class="ab rl2"><b style="color:${isFront(h.k)?'#ffc08a':'#a8d4ff'}">${isFront(h.k)?'⚔ Frontline':'➶ Backline'}</b>: ${isFront(h.k)?'tough (+35% health), slows monsters near it by 15%.':'deals the damage from behind the line.'}${D.fl?` <b>${D.fl.n}</b>: ${D.fl.d}`:''}</div>${D.lg?`<div class="ab lg"><b>Legend · ${D.lg.n}</b>: ${D.lg.d}${h.hoard?` (${h.hoard} stacks)`:''}</div>`:''}${h.preview?'':`<div class="its">${(h.it||[]).map(id=>`<div><b style="color:${ITEMS[id].col}">${ITEMS[id].ic} ${ITEMS[id].n}</b><small>${ITEMS[id].d}</small></div>`).join('')||'<small>No items. Drag items from beside the bench onto a hero.</small>'}</div>
    <p class="sub" style="text-align:left;margin:6px 0 0">Health ${h.hpMax&&R.phase==='wave'?fmt(h.hp)+' / ':''}${fmt(heroMaxHp(h))}. Sells for ${sellValue(h)} gold: drag onto the shop.</p>`}`;
   el.querySelector('.x').addEventListener('click',()=>{SEL=null;el.hidden=true});el.hidden=false}
 function uiMon(m){if(!DOM)return;const D=MON[m.k],el=$('info'),A=D.atk,tags=MTAGS(m.k).map(t=>t[0]);
@@ -53,15 +54,15 @@ function showPick(){if(!DOM)return;const box=$('pickList');box.innerHTML='';cons
   for(const id of R.picks){const r=RELIC[id],col=['','#cfd8e0','#ffcf6a','#e6a8ff','#ff8a6a'][r.t],b=document.createElement('button');b.type='button';b.className='relic';b.style.setProperty('--c',col);
     b.innerHTML=`<span class="gem">${r.em?TRAITS[r.em].ic:RIC[id]||r.n[0]}</span><b>${r.n}</b><span>${r.d}</span>`;b.addEventListener('click',()=>{$('ovPick').hidden=true;takeRelic(id)});box.appendChild(b)}
   $('ovPick').hidden=false}
-function showEnd(win){if(!DOM)return;$('endT').textContent=win?'Victory!':'The keep has fallen';
-  $('endS').textContent=(win?'The Ember Dragon is slain. The realm is safe, for now.':`You held out until wave ${R.wave}.`)+(R.ascUp?` Ascension ${META.asc} unlocked!`:'')+(R.daily?` Daily best: wave ${META.daily.best}${R.dailyNew?' (new best!)':''}.`:'');
+function showEnd(win){if(!DOM)return;$('endT').textContent=R.trueWin?'True Victory!':win?'Victory!':'The keep has fallen';
+  $('endS').textContent=(R.trueWin?'The Rune Devourer is unmade. Bards will sing of this for a thousand years.':R.final?'The Devourer could not be stopped, but the realm was already saved.':win?'The Ember Dragon is slain. The realm is safe, for now.':`You held out until wave ${R.wave}.`)+(R.ascUp?` Ascension ${META.asc} unlocked!`:'')+(R.daily?` Daily best: wave ${META.daily.best}${R.dailyNew?' (new best!)':''}.`:'');
   $('endStats').innerHTML=[['Waves',R.wave-1],['Monsters slain',fmt(R.stats.kills)],['Damage dealt',fmt(R.stats.dmg)],['Longest road',R.stats.maxMaze+' tiles'],['Portal gold',Math.floor(R.portalGold)],['Gems earned','+'+R.endGems]].map(([a,b])=>`<div><b>${b}</b><small>${a}</small></div>`).join('');
   $('endlessB').hidden=!win;$('ovEnd').hidden=false;sfx(win?'level':'lose',.7)}
 function hideEnd(){if(DOM)$('ovEnd').hidden=true}
 let PAUSED=false;
 function togglePause(on){if(!DOM||!R||R.phase==='over')return;PAUSED=on??!PAUSED;$('ovPause').hidden=!PAUSED;if(PAUSED){$('pauseS').textContent=`Wave ${R.wave} · ${R.stats.kills} monsters slain`;$('pauseRelics').innerHTML=R.relics.map(id=>{const r=RELIC[id];return`<span style="--c:${['','#cfd8e0','#ffcf6a','#e6a8ff'][r.t]}" title="${r.d}">${r.n}</span>`}).join('')||'<span style="--c:#555">No relics yet</span>'}}
 // ---------- start screen ----------
-function showStart(){if(!DOM)return;$('ovStart').hidden=false;$('contB').hidden=!hasSavedRun();$('bestT').textContent=META.best?`Best: wave ${META.best}${META.wins?` · ${META.wins} win${META.wins>1?'s':''}`:''}`:'';renderAsc();renderRes();renderRec();renderCol();renderSettings();MUSMODE='menu'}
+function showStart(){if(!DOM)return;$('ovStart').hidden=false;$('contB').hidden=!hasSavedRun();$('bestT').textContent=META.best?`Best: wave ${META.best}${META.wins?` · ${META.wins} win${META.wins>1?'s':''}`:''}`:'';renderAsc();renderRes();renderKeep();renderRec();renderCol();renderSettings();MUSMODE='menu'}
 // ascension picker and the daily challenge on the Play tab
 let ASCSEL=null;
 function renderAsc(){if(!DOM)return;const mx=META.asc||0;if(ASCSEL==null)ASCSEL=mx;ASCSEL=clamp(ASCSEL,0,mx);const box=$('ascBox');box.hidden=mx<1;
@@ -74,10 +75,23 @@ function renderCol(){if(!DOM)return;$('gemsT2').textContent=META.gems;const box=
     if(lk)d.addEventListener('click',()=>{if(META.gems<UNLOCK[k])return;META.gems-=UNLOCK[k];META.unl=META.unl||{};META.unl[k]=1;saveMeta();sfx('level',.6);toast(D.n+' joins the shop pool');renderCol();renderRes()});box.appendChild(d)}
   const sb=$('skinList');sb.innerHTML='';for(const S of SKINS){const ok=!S.ach||META.ach[S.ach],b=document.createElement('button');b.type='button';b.className='skin'+((SET.skin||'blue')===S.id?' on':'')+(ok?'':' lk');b.disabled=!ok;
     b.innerHTML=`<img alt="" src="gfx/${S.sh}.png"><b>${S.n}</b><small>${ok?(SET.skin||'blue')===S.id?'In use':'Tap to use':'Unlock: '+ACHN[S.ach].n}</small>`;b.addEventListener('click',()=>{SET.skin=S.id;saveSet();bgDirty=1;renderCol()});sb.appendChild(b)}}
-function renderRes(){if(!DOM)return;$('gemsT').textContent=META.gems;if($('gemsT2'))$('gemsT2').textContent=META.gems;const box=$('resList');box.innerHTML='';
-  for(const r of RES){const l=rank(r.id),max=l>=r.max,cost=r.cost[l],b=document.createElement('button');b.type='button';b.className='node'+(max?' max':'');b.disabled=max||META.gems<cost;
+function renderRes(){if(!DOM)return;$('gemsT').textContent=META.gems;if($('gemsT2'))$('gemsT2').textContent=META.gems;if($('gemsT3'))$('gemsT3').textContent=META.gems;const box=$('resList');box.innerHTML='';let cat='';
+  for(const r of RES){if(r.cat!==cat){cat=r.cat;const h=document.createElement('h4');h.className='rcat';h.textContent=cat;box.appendChild(h)}const l=rank(r.id),max=l>=r.max,cost=r.cost[l],b=document.createElement('button');b.type='button';b.className='node'+(max?' max':'');b.disabled=max||META.gems<cost;
     b.innerHTML=`<b>${r.n} ${'●'.repeat(l)}${'○'.repeat(r.max-l)}</b><small>${r.d(Math.max(1,max?l:l+1))}</small><small>${max?'Maxed':cost+' gems'}</small>`;
-    b.addEventListener('click',()=>{if(b.disabled)return;META.gems-=cost;META.res[r.id]=l+1;saveMeta();sfx('pick',.6);renderRes()});box.appendChild(b)}}
+    b.addEventListener('click',()=>{if(b.disabled)return;META.gems-=cost;META.res[r.id]=l+1;saveMeta();sfx('pick',.6);renderRes();renderKeep()});box.appendChild(b)}}
+// ---------- the Keep tab: guardians to unlock, station and train ----------
+function renderKeep(){if(!DOM)return;const box=$('guardList');if(!box)return;box.innerHTML='';$('gemsT3').textContent=META.gems;META.geq=META.geq||['archers'];const slots=gSlots();
+  $('slotT').textContent=`Stationed: ${META.geq.length}/${slots}${slots<2?' (research Second Banner for another slot)':''}.`;
+  for(const k of GKEYS){const G=GUARDS[k],l=gLevel(k),on=META.geq.includes(k),d=document.createElement('div');d.className='gcard'+(l?'':' lk')+(on?' on':'');d.style.setProperty('--c',G.col);
+    const prog=!l&&!G.un.gems?gProgress(k):'';
+    d.innerHTML=`<div class="gh"><span class="gic">${G.ic}</span><div><b>${G.n}</b><small>${l?'Level '+l+' / 5':'Locked'}${G.tr.length?' · '+G.tr.map(t=>TRAITS[t].ic+' '+TRAITS[t].n).join(' '):''}</small></div></div><p>${G.d(Math.max(1,l))}</p>${l?'':`<p class="req">Unlock: ${G.un.d}${prog?` (${prog})`:''}</p>`}<div class="gb"></div>`;
+    const gb=d.querySelector('.gb'),btn=(t,dis,f)=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.disabled=dis;b.addEventListener('click',f);gb.appendChild(b)};
+    if(!l&&G.un.gems)btn(`Unlock · ${G.un.gems} gems`,META.gems<G.un.gems,()=>{META.gems-=G.un.gems;META.gl[k]=1;saveMeta();sfx('level',.6);renderKeep()});
+    if(l){btn(on?'Stand down':'Station',false,()=>{if(on)META.geq=META.geq.filter(q=>q!==k);else{if(META.geq.length>=slots)META.geq.shift();META.geq.push(k)}if(!META.geq.length)META.geq=['archers'];saveMeta();renderKeep()});
+      if(l<5)btn(`Train to ${l+1} · ${GCOST[l]} gems`,META.gems<GCOST[l],()=>{META.gems-=GCOST[l];META.gl[k]=l+1;if(l+1>=5)award('guard5');saveMeta();sfx('level',.6);renderKeep();renderRes()});else btn('Max level',true,()=>{})}
+    box.appendChild(d)}}
+function uiKeep(){if(!DOM||!R)return;const el=$('info');el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>The Keep</h3><p class="sub" style="text-align:left;margin:2px 0 6px">${Math.ceil(R.hp)} / ${R.hpMax} health. If it falls, the run ends.</p>`+
+    (R.guards||[]).map(g=>{const G=GUARDS[g.k];return`<div class="ab" style="margin-top:4px"><b style="color:${G.col}">${G.ic} ${G.n} · level ${g.l}</b>: ${G.d(g.l)}</div>`}).join('');el.querySelector('.x').addEventListener('click',()=>{el.hidden=true});el.hidden=false}
 function renderRec(){if(!DOM)return;$('recStats').innerHTML=[['Runs',META.runs],['Best wave',META.best],['Wins',META.wins||0],['Best endless',META.bestEndless||0],['Monsters slain',fmt(META.kills||0)],['Heroes fielded',Object.keys(META.seen).length+'/'+HKEYS.length],['Ascension',META.asc||0],['Today\'s daily',META.daily&&META.daily.d===dayKey()?'wave '+META.daily.best:'not played']].map(([a,b])=>`<div><b>${b}</b><small>${a}</small></div>`).join('');
   const box=$('achList');box.innerHTML='';for(const a of ACH){const got=!!META.ach[a.id],d=document.createElement('div');d.className='ach'+(got?' got':'')+(a.hidden?' hid':'');d.innerHTML=`<b>${a.hidden&&!got?'??? Secret':a.n}</b><small>${a.hidden&&!got?a.hidden:a.d}</small><small>${got?'Earned':'+'+a.g+' gems'}</small>`;box.appendChild(d)}}
 function renderSettings(){if(!DOM)return;const box=$('setList');box.innerHTML='';const row=(label,ctl)=>{const d=document.createElement('div');d.className='set';d.innerHTML=`<b>${label}</b>`;d.appendChild(ctl);box.appendChild(d)};

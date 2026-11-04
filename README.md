@@ -8,7 +8,9 @@ A fantasy roguelite tower defense played in landscape. Monsters pour out of a po
 - 25 heroes and 8 traits (including Plaguebringer poison stacks); monsters fight back and can knock heroes out.
 - Items: six components; two on one hero forge one of 21 finished items. They wait in the ITEMS rack beside the bench.
 - A Slay the Spire style layer: branching act maps with battles, elites (with affixes), campfires (rest or train veterans), a merchant, treasure chests and 13 events; a free recruit after every fight; potions; boss relics with drawbacks; an oracle's blessing at the start.
-- Three acts, three bosses, then endless mode. Ten ascension levels, a seeded daily challenge, hero unlocks and keep skins.
+- Frontline (⚔) and backline (➶) roles: frontliners tank, slow, taunt, sleep and buff neighbours; backliners deal damage. Range lights up on the hexes while you drag. 5-cost Legends each have a unique power.
+- Monsters that hunt heroes, rush the keep or phase out; nine keep guardians unlocked through deeds or gems and trained to level 5; an expanded research tree.
+- Three acts, three bosses, an optional nearly unkillable final boss (the Rune Devourer), then endless mode. Ten ascension levels, a seeded daily challenge, hero unlocks and keep skins.
 
 - **Play in the browser / iPhone / PC:** the GitHub Pages site of this repo (on iPhone: Safari → Share → Add to Home Screen).
 - **Android:** download the latest `RuneWarden-N.apk` from Releases.
