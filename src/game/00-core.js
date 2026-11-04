@@ -8,7 +8,7 @@ const hexA=(h,a)=>{const n=parseInt(h.slice(1),16);return `rgba(${n>>16&255},${n
 // field: COLS x ROWS tiles of T world units. Monsters enter on the left and walk to the keep on the right.
 const COLS=14,ROWS=8,T=64,FW=COLS*T,FH=ROWS*T,VY=.62;
 const cv=$('cv'),ctx=cv&&cv.getContext?cv.getContext('2d'):null;
-let W=0,H=0,DPR=1,VIEW={s:1,ox:0,oy:0};
+let W=0,H=0,DPR=1,VIEW={s:1,ox:0,oy:0},VB={s:1,ox:0,oy:0},ZM={z:1,x:0,y:0};
 let SET={music:.6,sfx:.7,shake:1,nums:1,quality:'auto',speedPref:1};
 try{const m=JSON.parse(localStorage.getItem('runewarden-settings')||'null');if(m)Object.assign(SET,m)}catch(e){}
 const saveSet=()=>{try{localStorage.setItem('runewarden-settings',JSON.stringify(SET))}catch(e){}};
@@ -21,9 +21,18 @@ const PERF={low:false,acc:0,n:0};
 function resize(){if(!cv)return;W=cv.clientWidth||innerWidth;H=cv.clientHeight||innerHeight;DPR=Math.min(LQ()?1:2,window.devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
   // fit the field (plus room for the keep, the spawn portal and the bench strip) between the top bar and the shop
   const short=H<=430,top=short?38:46,bot=(UI.shopH||120)+4,side=short||W<700?62:176,availW=W-side-16,availH=H-top-bot-4;
-  const nw=FW+T*3,nh=FH*VY+T*1.55,s=Math.min(availW/nw,availH/nh);VIEW.s=s;VIEW.ox=side+8+(availW-nw*s)/2+T*1.15*s;VIEW.oy=top+(availH-nh*s)/2+T*.5*s;
+  const nw=FW+T*3,nh=FH*VY+T*1.55,s=Math.min(availW/nw,availH/nh);VB.s=s;VB.ox=side+8+(availW-nw*s)/2+T*1.15*s;VB.oy=top+(availH-nh*s)/2+T*.5*s;applyZoom();
   if(typeof bgDirty!=='undefined')bgDirty=1}
 const sx=x=>VIEW.ox+x*VIEW.s,sy=y=>VIEW.oy+y*VIEW.s*VY,ss=v=>v*VIEW.s;
+// camera zoom (pinch, wheel): the field zooms, the bench and stones stay put
+const bsx=x=>VB.ox+x*VB.s,bsy=y=>VB.oy+y*VB.s*VY,bss=v=>v*VB.s;
+function applyZoom(){const z=ZM.z;if(z<=1.001){ZM.z=1;ZM.x=ZM.y=0}
+  VIEW.s=VB.s*ZM.z;VIEW.ox=VB.ox+ZM.x;VIEW.oy=VB.oy+ZM.y;
+  // keep the middle of the screen on the field
+  const cx=W/2,cy=H/2;if(sx(0)>cx){ZM.x-=sx(0)-cx}if(sx(FW)<cx){ZM.x+=cx-sx(FW)}if(sy(0)>cy){ZM.y-=sy(0)-cy}if(sy(FH)<cy){ZM.y+=cy-sy(FH)}
+  VIEW.ox=VB.ox+ZM.x;VIEW.oy=VB.oy+ZM.y;if(typeof bgDirty!=='undefined')bgDirty=1}
+function zoomAt(mx,my,z){const wx=(mx-VIEW.ox)/VIEW.s,wy=(my-VIEW.oy)/(VIEW.s*VY);ZM.z=clamp(z,1,2.4);const s=VB.s*ZM.z;ZM.x=mx-VB.ox-wx*s;ZM.y=my-VB.oy-wy*s*VY;applyZoom()}
+function panBy(dx,dy){if(ZM.z<=1)return;ZM.x+=dx;ZM.y+=dy;applyZoom()}
 const UI={shopH:150};
 // ---------- sprite sheets rendered offline from CC0 3D models (gfx/) ----------
 const SPR={img:{},st:{},cache:{}};

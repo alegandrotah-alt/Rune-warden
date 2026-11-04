@@ -33,6 +33,7 @@ function serve() {
   await page.screenshot({ path: path.join(OUT, '1-menu.png') });
   // 1. a real first wave: buy from the shop, drag the starter onto the field, fight
   await page.click('#playB'); await page.waitForTimeout(800);
+  const tut = await page.evaluate(() => !document.getElementById('coach').hidden);
   await page.click('#cards .hc:not(.empty)');
   const drag = await page.evaluate(() => { const R = window.__RW.R, h = R.bench.find(Boolean); return h ? true : false; });
   const placed = await page.evaluate(() => { const G = window.__RW, R = G.R; for (const h of R.bench.filter(Boolean)) { for (let c = 3; c < 12; c++) { if (G.placeHero(h, c, 2)) break; } } G.uiRefresh(); return R.board.length; });
@@ -40,7 +41,7 @@ function serve() {
   await page.click('#fightB'); await page.waitForTimeout(5000);
   await page.screenshot({ path: path.join(OUT, '3-wave1.png') });
   // 2. a busy late wave, CPU slowed 4x, frame times measured
-  await page.evaluate(() => { const G = window.__RW, R = G.R; R.phase = 'plan'; R.b = null; R.wave = 24; R.act = 2; G.genField(); R.lvl = 9; R.gold = 999;
+  await page.evaluate(() => { const G = window.__RW, R = G.R; R.phase = 'plan'; R.b = null; R.wave = 24; R.nextQ = null; R.act = 2; G.genField(); R.lvl = 9; R.gold = 999;
     const ks = ['templar', 'wyrm', 'tiefling', 'druid', 'archer', 'ninja', 'blackknight', 'vampire', 'scout']; for (const k of ks) { G.addHero(k, 2, true); }
     let i = 0; for (const h of R.bench.filter(Boolean)) { const spots = [[2, 1], [4, 6], [6, 1], [8, 6], [10, 1], [3, 3], [7, 4], [11, 5], [5, 2]]; G.placeHero(h, ...spots[i++ % spots.length]); }
     G.startWave(); G.speed = 2; G.uiRefresh(); });
@@ -56,11 +57,11 @@ function serve() {
   await browser.close(); srv.close();
   const d = ft.slice(1).map((t, i) => t - ft[i]).sort((a, b) => a - b);
   const avg = d.reduce((a, b) => a + b, 0) / Math.max(1, d.length), p95 = d[Math.floor(d.length * .95)] || 0;
-  let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- First wave: bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
+  let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
     `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
     `  (CI has no GPU, so real phones run far faster; compare this number between builds)\n- Screenshots are attached to the run as **browser-check-screens**.\n`;
   if (errors.length) md += '\n```\n' + errors.slice(0, 10).join('\n') + '\n```\n';
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');
-  process.exit(errors.length || !drag || !placed ? 1 : 0);
+  process.exit(errors.length || !drag || !placed || !tut ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

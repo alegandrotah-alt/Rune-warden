@@ -11,7 +11,7 @@ function newRun(){
   genField();rollShop(true);
   // a free starter so the first wave is never empty
   const starters=HKEYS.filter(k=>HEROES[k].c===1);addHero(rnd(starters),1,true);
-  R.freeRoll=rank('reroll');
+  R.freeRoll=rank('reroll');R.nextQ=waveList(1);
 }
 // obstacles, runes and portals are re-dealt every act
 function genField(){

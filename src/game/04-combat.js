@@ -13,8 +13,8 @@ function waveList(w){
   return out}
 function startWave(){
   if(R.phase!=='plan'||!R.board.length&&!R.bench.some(Boolean))return false;
-  R.phase='wave';R.b={mons:[],projs:[],fx:[],traps:[],q:waveList(R.wave),qT:.3,t:0,leaked:0,kills:0,big:0};
-  for(const h of R.board){h.mana=0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0}
+  R.phase='wave';R.b={mons:[],projs:[],fx:[],traps:[],q:(R.nextQ&&R.nextQ.length?R.nextQ:waveList(R.wave)).map(e=>Object.assign({},e)),qT:.3,t:0,leaked:0,kills:0,big:0};
+  for(const h of R.board){h.mana=0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0}
   calcTraits();if(R.wave%10===0&&R.wave<=30){sfx('elite',.8);banner(MON[ACTS[actOf(R.wave)].boss].n.toUpperCase(),'#ff6a5a')}else sfx('ready',.5);
   return true}
 function spawnMon(k,elite,x,y,hpFrac){
@@ -29,7 +29,7 @@ function progress(m){if(m.fly)return FW-m.x;if(m.x<0)return 999+(-m.x);const c=c
 function monTick(m,dt){
   const B=R.b;m.wob+=dt*6;if(m.hitT>0)m.hitT-=dt;
   // damage over time
-  if(m.dots.length){let d=0;for(const o of m.dots){d+=o.dps*Math.min(dt,o.t);o.t-=dt}m.dots=m.dots.filter(o=>o.t>0);if(d>0)dealRaw(m,d,null,1)}
+  if(m.dots.length){for(const o of m.dots){const d=o.dps*Math.min(dt,o.t);o.t-=dt;if(d>0&&m.hp>0)dealRaw(m,d,o.src,1)}m.dots=m.dots.filter(o=>o.t>0)}
   if(m.hp<=0)return;
   if(m.stunT>0){m.stunT-=dt;return}if(m.rootT>0){m.rootT-=dt;return}
   if(m.slowT>0)m.slowT-=dt;else m.slowP=1;
@@ -65,7 +65,7 @@ function hit(m,amt,src,opt){
   const red=(opt.dt||(D&&D.dt))==='m'?m.mr:m.ar;amt*=1-red;
   return dealRaw(m,amt,src,0,opt)}
 function dealRaw(m,amt,src,dot,opt){
-  if(m.hp<=0||!(amt>0))return 0;const d=Math.min(m.hp,amt);m.hp-=amt;R.stats.dmg+=d;m.hitT=.12;
+  if(m.hp<=0||!(amt>0))return 0;const d=Math.min(m.hp,amt);if(src)src.wd=(src.wd||0)+d;m.hp-=amt;R.stats.dmg+=d;m.hitT=.12;
   if(!dot&&SET.nums&&TXT.length<18&&(opt&&(opt.crit||opt.mult>1)||opt&&opt.big&&Math.random()<.5||Math.random()<.06))floatText(m.x,m.y-T*.6,fmt(amt),opt&&opt.crit?'#ffd76a':opt&&opt.mult>1?'#c9a8ff':'#ffffff',opt&&opt.crit||opt&&opt.mult>1?1.15:.85);
   if(m.hp>0&&has('reaper')&&!m.boss&&m.hp<m.max*.12)m.hp=0;
   if(m.hp<=0&&!m.dead)kill(m,src,opt);return d}
@@ -75,6 +75,7 @@ function kill(m,src,opt){
   if(g>0){R.goldFrac+=g;const w=Math.floor(R.goldFrac);if(w>0){R.goldFrac-=w;R.gold+=w;floatText(m.x,m.y-T*.9,'+'+w+'g','#ffcf2e',1);sfx('coin',.35,1+Math.random()*.2)}}
   if(m.boss){R.stones.push(2);banner('BOSS DEFEATED','#ffd76a');shake(16);sfx('boomBig',.8)}
   const D=MON[m.k];if(D.split&&!m.child)for(let i=0;i<D.split;i++){const c=spawnMon(m.k,0,m.x+(i?8:-8),m.y+(i?6:-6));c.max=m.max*.4;c.hp=c.max;c.child=1;c.portals=m.portals;c.bounty=0;c.c=m.c;c.r=m.r;c.sz=.65}
+  fx({k:'corpse',x:m.x,y:m.y,mk:m.k,face:m.face,sz:m.sz||MON[m.k].sz,fly:m.fly,boss:m.boss,dur:m.boss?1.2:.5});
   fx({k:'die',x:m.x,y:m.y,dur:.45,col:m.boss?'#ffcf6a':'#d8d0c0',r:T*(MON[m.k].sz||1)*.6});
   if(m.boss||m.elite||m.big)sfx('crunch',.45,.9+Math.random()*.2);
 }
@@ -111,10 +112,10 @@ function projTick(q,dt){
 function lineMult(x0,y0,x1,y1){let m=1,mask=0;const n=Math.ceil(Math.hypot(x1-x0,y1-y0)/(T/4));for(let i=0;i<=n;i++){const x=lerp(x0,x1,i/n),y=lerp(y0,y1,i/n),c=Math.floor(x/T),r=Math.floor(y/T);if(c<0||r<0||c>=COLS||r>=ROWS)continue;const ru=runeAt(c,r);if(ru){const k=R.field.runes.indexOf(ru);if(!(mask>>k&1)){mask|=1<<k;m*=runeMul(ru);ru.flash=.3}}}return m}
 function cast(h,s,tg){
   const D=HEROES[h.k],A=D.ab,p=heroPos(h),B=R.b,pw=s.dmg*A.m*s.spell,o={spell:1,dt:D.dt,big:1};
-  h.atk=.6;fx({k:'cast',x:p.x,y:p.y,dur:.5,col:TRAITS[D.tr[1]].col});sfx('zap',.3,.9+Math.random()*.2);
+  h.atk=.6;fx({k:'cast',x:p.x,y:p.y,dur:.5,col:TRAITS[D.tr[1]].col});if(TXT.filter(t=>t.cast).length<3){floatText(p.x,p.y-T*.75,D.ab.n+'!',TRAITS[D.tr[1]].col,.9);TXT[TXT.length-1].cast=1}sfx('zap',.3,.9+Math.random()*.2);
   const inR=(x,y,r)=>B.mons.filter(m=>m.hp>0&&Math.hypot(m.x-x,m.y-y)<r);
   if(A.k==='nova'){const cx=A.self?p.x:tg.x,cy=A.self?p.y:tg.y,r=A.r*T;
-    for(const m of inR(cx,cy,r)){if(A.m>0)hit(m,A.dot?pw*.3:pw,h,o);if(A.stun)m.stunT=Math.max(m.stunT,A.stun);if(A.root)m.rootT=Math.max(m.rootT,A.root);if(A.burn)m.dots.push({dps:pw*.5/3*(1-m.mr),t:3});if(A.dot)m.dots.push({dps:s.dmg*A.dot*s.spell/4*(1-m.mr),t:4})}
+    for(const m of inR(cx,cy,r)){if(A.m>0)hit(m,A.dot?pw*.3:pw,h,o);if(A.stun)m.stunT=Math.max(m.stunT,A.stun);if(A.root)m.rootT=Math.max(m.rootT,A.root);if(A.burn)m.dots.push({dps:pw*.5/3*(1-m.mr),t:3,src:h});if(A.dot)m.dots.push({dps:s.dmg*A.dot*s.spell/4*(1-m.mr),t:4,src:h})}
     if(A.heal){R.hp=Math.min(R.hpMax,R.hp+A.heal);floatText(FW+T*.2,FH/2-T,'+'+A.heal,'#7dff9a',1)}
     fx({k:A.root?'roots':A.burn?'fire':A.dot?'hex':'nova',x:cx,y:cy,r,dur:.55,col:TRAITS[D.tr[1]].col});shake(2)}
   else if(A.k==='fan'){const ts=B.mons.filter(m=>m.hp>0&&Math.hypot(m.x-p.x,m.y-p.y)<s.rng*T+T*.3).sort((a,b)=>progress(a)-progress(b));for(let i=0;i<A.shots;i++){const m=ts[i%Math.max(1,ts.length)]||tg;shoot(h,p,m,s.dmg*A.m*s.spell,{kind:D.proj==='melee'?'star':D.proj,spell:1,crit:Math.random()<s.crit})}}
@@ -126,7 +127,7 @@ function cast(h,s,tg){
   else if(A.k==='trap'){let tx=tg.x,ty=tg.y;if(!tg.fly&&tg.c>=0&&tg.c<COLS){const n=nextCell(tg.c,tg.r);if(n){tx=(n[0]+.5)*T;ty=(n[1]+.5)*T}}B.traps.push({x:tx,y:ty,root:A.root,dmg:pw,uses:3,t:9,src:h,hit:new Set()});shoot(h,p,tg,s.dmg,{kind:'bolt'})}
   else if(A.k==='buff'){h.buffT=A.t;h.buffAs=A.as;fx({k:'nova',x:p.x,y:p.y,r:T*.8,dur:.4,col:'#ff6a8a'})}
   else if(A.k==='beam'){const y=tg.y,mm=lineMult(0,y,FW,y);for(const m of B.mons)if(m.hp>0&&Math.abs(m.y-y)<T*.55)hit(m,pw*mm,h,{spell:1,dt:D.dt,mult:mm,big:1});fx({k:'beam',x:0,y,x1:FW,y1:y,dur:.5,col:'#ffe9a0',mult:mm});shake(5)}
-  else if(A.k==='cone'){const a=Math.atan2(tg.y-p.y,tg.x-p.x),r=A.r*T;for(const m of B.mons){if(m.hp<=0)continue;const dx=m.x-p.x,dy=m.y-p.y,d=Math.hypot(dx,dy);if(d>r)continue;let da=Math.atan2(dy,dx)-a;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)<.65){hit(m,pw,h,o);if(A.burn)m.dots.push({dps:pw*.4/3*(1-m.mr),t:3})}}fx({k:'cone',x:p.x,y:p.y,a,r,dur:.5,col:'#ff7a2a'});shake(3)}
+  else if(A.k==='cone'){const a=Math.atan2(tg.y-p.y,tg.x-p.x),r=A.r*T;for(const m of B.mons){if(m.hp<=0)continue;const dx=m.x-p.x,dy=m.y-p.y,d=Math.hypot(dx,dy);if(d>r)continue;let da=Math.atan2(dy,dx)-a;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)<.65){hit(m,pw,h,o);if(A.burn)m.dots.push({dps:pw*.4/3*(1-m.mr),t:3,src:h})}}fx({k:'cone',x:p.x,y:p.y,a,r,dur:.5,col:'#ff7a2a'});shake(3)}
 }
 // echoes run on the game clock so they respect pause and speed
 const LATER=[];function setTimeoutSafe(f,ms){LATER.push({f,t:ms/1000})}

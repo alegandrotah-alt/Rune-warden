@@ -9,7 +9,7 @@ function pdown(e){if(!R||R.phase==='over'||R.phase==='pick')return;ensureAudio()
   for(let i=0;i<R.stones.length;i++){const p=stoneSlot(i);if(Math.hypot(px-p.x,py-p.y)<p.s*.8){DRAG={stone:i,x:px,y:py,sx:px,sy:py};return}}
   const bi=benchAt(px,py);if(bi>=0&&R.bench[bi]){DRAG={h:R.bench[bi],from:'bench',bi,x:px,y:py,sx:px,sy:py};startValid();return}
   const h=heroUnder(px,py);if(h){DRAG={h,from:'board',x:px,y:py,sx:px,sy:py,locked:R.phase!=='plan'};startValid();return}
-  SEL=null;uiInfo(null)}
+  SEL=null;uiInfo(null);const now=performance.now();if(now-(pdown.lastTap||0)<320&&ZM.z>1){ZM.z=1;applyZoom();uiZoom()}pdown.lastTap=now;if(ZM.z>1)PAN={x:px,y:py}}
 function startValid(){VALID=null;if(R.phase!=='plan')return;VALID=new Uint8Array(COLS*ROWS);const was=DRAG.from==='board'?DRAG.h:null;if(was){R.board.splice(R.board.indexOf(was),1);rebuildBlk()}
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)VALID[r*COLS+c]=canPlace(c,r)?1:0;if(was){R.board.push(was);rebuildBlk()}}
 function pmove(e){if(!DRAG)return;DRAG.x=e.clientX;DRAG.y=e.clientY;DRAG.moved=DRAG.moved||Math.hypot(DRAG.x-DRAG.sx,DRAG.y-DRAG.sy)>8;DRAG.over=cellAt(DRAG.x,DRAG.y+ss(T*.2));DRAG.overBench=benchAt(DRAG.x,DRAG.y);DRAG.sell=!DRAG.stone&&DRAG.stone!==0&&overShop(DRAG.x,DRAG.y);uiSellHint(DRAG.sell&&DRAG.h?sellValue(DRAG.h):0)}
@@ -32,6 +32,18 @@ function drawPlacement(){
   if(DRAG&&DRAG.stone!=null&&DRAG.moved){const o=cellAt(DRAG.x,DRAG.y+ss(T*.2));if(o){ctx.strokeStyle='#9cc4ff';ctx.lineWidth=2.5;ctx.strokeRect(sx(o.c*T)+2,sy(o.r*T)+2,ss(T)-4,ss(T)*VY-4)}}
   if(SEL&&R.board.includes(SEL)&&!DRAG){const s=heroStats(SEL);ctx.strokeStyle='rgba(255,230,160,.55)';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.ellipse(sx((SEL.c+.5)*T),sy((SEL.r+.5)*T),ss(s.rng*T),ss(s.rng*T)*VY,0,0,6.283);ctx.stroke();ctx.setLineDash([])}}
 function drawDrag(){if(!DRAG||!DRAG.moved)return;if(DRAG.h)drawHeroAt(DRAG.h,DRAG.x,DRAG.y+ss(T*.4),ss(T*1.5),1);else if(DRAG.stone!=null){const v=R.stones[DRAG.stone],s=Math.max(16,ss(T*.38));ctx.fillStyle='#2a3a6a';ctx.strokeStyle='#9cc4ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(DRAG.x,DRAG.y,s*.6,0,6.283);ctx.fill();ctx.stroke();ctx.font=`900 ${s*.6}px Cinzel,serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText('×'+v,DRAG.x,DRAG.y)}}
-if(cv&&cv.addEventListener){cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catch(_){}pdown(e)});cv.addEventListener('pointermove',pmove);cv.addEventListener('pointerup',pup);cv.addEventListener('pointercancel',()=>{DRAG=null;VALID=null})}
+// two fingers pinch to zoom and pan; one finger pans an empty spot while zoomed; the mouse wheel zooms
+let PAN=null,PINCH=null;const PTR=new Map();
+const mid=()=>{const v=[...PTR.values()];return{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2,d:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y)||1}};
+function uiZoom(){const b=$('zoomB');if(b)b.hidden=ZM.z<=1}
+if(cv&&cv.addEventListener){
+  cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catch(_){}PTR.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(PTR.size===2){DRAG=null;VALID=null;PAN=null;uiSellHint(0);const m=mid();PINCH={d0:m.d,z0:ZM.z,x:m.x,y:m.y};return}if(PTR.size>2)return;pdown(e)});
+  cv.addEventListener('pointermove',e=>{if(PTR.has(e.pointerId))PTR.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(PINCH&&PTR.size===2){const m=mid();zoomAt(m.x,m.y,PINCH.z0*m.d/PINCH.d0);panBy(m.x-PINCH.x,m.y-PINCH.y);PINCH.x=m.x;PINCH.y=m.y;uiZoom();return}
+    if(PAN){panBy(e.clientX-PAN.x,e.clientY-PAN.y);PAN.x=e.clientX;PAN.y=e.clientY;return}pmove(e)});
+  const up=e=>{PTR.delete(e.pointerId);if(PINCH){if(PTR.size<2)PINCH=null;return}if(PAN){PAN=null;return}if(e.type==='pointercancel'){DRAG=null;VALID=null;return}pup(e)};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,ZM.z*(e.deltaY<0?1.12:1/1.12));uiZoom()},{passive:false})}
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('keydown',e=>{if(!R||document.activeElement&&document.activeElement.tagName==='INPUT')return;
   if(e.key===' '){e.preventDefault();if(R.phase==='plan')fight();else if(R.phase==='wave')cycleSpeed()}else if(e.key==='d'||e.key==='D'){reroll();uiRefresh()}else if(e.key==='f'||e.key==='F'){buyXP();uiRefresh()}else if(e.key==='Escape'||e.key==='p')togglePause()});

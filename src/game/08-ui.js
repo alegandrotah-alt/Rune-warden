@@ -12,7 +12,7 @@ function uiRefresh(){if(!DOM||!R)return;calcTraits();
   const st=$('streakT');st.hidden=Math.abs(R.streak)<2;st.textContent=R.streak>0?`🔥 ${R.streak} win streak`:`❄ ${-R.streak} loss streak`;
   $('xpB').disabled=R.gold<4||R.lvl>=10;$('rollB').disabled=R.gold<rerollCost();$('rollC').textContent=rerollCost()?rerollCost()+' gold':'free';
   const fb=$('fightB');if(R.phase==='wave'){fb.classList.add('speed');fb.innerHTML=`<b>×${R.speed}</b><small>speed</small>`}else{fb.classList.remove('speed');fb.innerHTML=`<b>FIGHT!</b><small>${R.wave%10===0&&R.wave<=30?'Boss wave':'Space'}</small>`}
-  renderShop();renderTraits()}
+  renderShop();renderTraits();uiDmg();uiWave();uiZoom()}
 let SHOPSIG='';
 function renderShop(force){if(!DOM||!R)return;const owned={};for(const h of allHeroes())if(h.star===1)owned[h.k]=(owned[h.k]||0)+1;
   const sig=R.shop.join()+'|'+R.gold+'|'+JSON.stringify(owned)+'|'+Object.keys(SPR.img).filter(k=>SPR.st[k]===1).length;if(sig===SHOPSIG&&!force)return;SHOPSIG=sig;const box=$('cards');box.innerHTML='';
@@ -26,14 +26,14 @@ function renderTraits(){if(!DOM)return;const sig=JSON.stringify(SYN);if(sig===TR
   const list=TRAIT_ORDER.filter(t=>SYN[t]&&SYN[t].n>0).sort((a,b)=>(SYN[b].tier-SYN[a].tier)||(SYN[b].n-SYN[a].n));
   for(const t of list){const T_=TRAITS[t],s=SYN[t],d=document.createElement('div');d.className='tr8 '+(s.tier>=0?'on':'off');const next=T_.bp.find(b=>b>s.n);
     d.innerHTML=`<span class="ic" style="${s.tier>=0?`background:${T_.col}`:''}">${T_.ic}</span><span class="nm">${T_.n}</span><span class="bp">${T_.bp.map((b,i)=>i<=s.tier?`<b>${b}</b>`:b).join(' › ')} <i>(${s.n})</i></span><span class="cnt">${s.n}</span>`;
-    d.title=T_.d(Math.max(0,s.tier));d.addEventListener('click',()=>toast(`${T_.n}: ${T_.d(Math.max(0,s.tier))}${next?` Next at ${next}.`:''}`));box.appendChild(d)}}
+    d.title=T_.d(Math.max(0,s.tier));d.addEventListener('click',()=>openTrait(t));box.appendChild(d)}}
 function uiInfo(h){if(!DOM)return;const el=$('info');if(!h){el.hidden=true;return}const D=HEROES[h.k],s=h.preview?{dmg:D.dmg,as:D.as,rng:D.rng,crit:0}:heroStats(h);
   el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>${D.n} ${'★'.repeat(h.star)}</h3><div class="tags"><span style="color:${TIERCOL[D.c]}">${D.c} gold</span>${D.tr.map(t=>`<span style="color:${TRAITS[t].col}">${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join('')}</div>
    <div class="st"><div><small>Damage</small>${fmt(s.dmg)}</div><div><small>Speed</small>${s.as.toFixed(2)}</div><div><small>Range</small>${s.rng.toFixed(1)}</div><div><small>${D.dt==='m'?'Magic':'Physical'}</small>${s.crit?Math.round(s.crit*100)+'% crit':'—'}</div></div>
    <div class="ab"><b>${D.ab.n}</b> (${D.mana} mana): ${D.d}</div>${h.preview?'':`<p class="sub" style="text-align:left;margin:6px 0 0">Sells for ${sellValue(h)} gold. Drag onto the shop to sell.</p>`}`;
   el.querySelector('.x').addEventListener('click',()=>{SEL=null;el.hidden=true});el.hidden=false}
 function uiSellHint(v){if(!DOM)return;const el=$('sellHint');el.hidden=!v;if(v)el.textContent=`Sell for ${v} gold`}
-function fight(){if(!R||R.phase!=='plan')return;if(!R.board.length){toast('Drag a hero from your bench onto the field first');return}if(startWave()){uiRefresh()}}
+function fight(){if(!R||R.phase!=='plan')return;$('traitP').hidden=true;if(!R.board.length){toast('Drag a hero from your bench onto the field first');return}if(startWave()){uiRefresh()}}
 function cycleSpeed(){R.speed=R.speed>=3?1:R.speed+1;SET.speedPref=R.speed;saveSet();uiRefresh()}
 const RIC={stones:'ᚱ',tithe:'⛀',scholar:'✎',haste:'⚡',masons:'⛫',mire:'≈',eagle:'◉',arcana:'✧',runesmith:'⚒',baron:'⌾',richer:'⚖',recruit:'⚑',cheap:'↻',crit:'⚔',collector:'❖',egg:'◒',reaper:'☠',heart:'❤',kingmaker:'♛',treasury:'⛁',ascend:'★',riftlord:'✺',echo:'❂'};
 function showPick(){if(!DOM)return;const box=$('pickList');box.innerHTML='';const t=RELIC[R.picks[0]]?RELIC[R.picks[0]].t:1;$('pickSub').textContent=['','Silver relics','Gold relics','Prismatic relics'][t]+'. Relics last the whole run.';
@@ -58,17 +58,17 @@ function renderRec(){if(!DOM)return;$('recStats').innerHTML=[['Runs',META.runs],
 function renderSettings(){if(!DOM)return;const box=$('setList');box.innerHTML='';const row=(label,ctl)=>{const d=document.createElement('div');d.className='set';d.innerHTML=`<b>${label}</b>`;d.appendChild(ctl);box.appendChild(d)};
   const slider=k=>{const i=document.createElement('input');i.type='range';i.min=0;i.max=1;i.step=.05;i.value=SET[k];i.addEventListener('input',()=>{SET[k]=+i.value;saveSet()});return i};
   const seg=(k,opts)=>{const d=document.createElement('div');d.className='seg';for(const [v,l] of opts){const b=document.createElement('button');b.type='button';b.textContent=l;b.className=SET[k]===v?'on':'';b.addEventListener('click',()=>{SET[k]=v;saveSet();renderSettings();if(k==='quality')resize()});d.appendChild(b)}return d};
-  row('Music',slider('music'));row('Sound effects',slider('sfx'));row('Screen shake',seg('shake',[[1,'On'],[.4,'Low'],[0,'Off']]));row('Damage numbers',seg('nums',[[1,'On'],[0,'Off']]));row('Graphics',seg('quality',[['auto','Auto'],['high','High'],['low','Low']]))}
-function bindUI(){if(!DOM)return;
+  row('Music',slider('music'));row('Sound effects',slider('sfx'));row('Screen shake',seg('shake',[[1,'On'],[.4,'Low'],[0,'Off']]));row('Damage numbers',seg('nums',[[1,'On'],[0,'Off']]));row('Graphics',seg('quality',[['auto','Auto'],['high','High'],['low','Low']]));{const b=document.createElement('button');b.type='button';b.textContent=META.tut?'Replay':'On';b.className='seg';b.style.cssText='border:1px solid rgba(255,207,106,.3);background:rgba(0,0,0,.25);border-radius:8px;padding:4px 10px';b.addEventListener('click',()=>{META.tut=0;saveMeta();toast('The tutorial will play on your next new run');renderSettings()});row('Tutorial',b)}}
+function bindUI(){if(!DOM)return;bindPanels();bindTut();
   $('xpB').addEventListener('click',()=>{if(buyXP())uiRefresh()});$('rollB').addEventListener('click',()=>{if(reroll())uiRefresh()});
   $('fightB').addEventListener('click',()=>{if(R.phase==='plan')fight();else if(R.phase==='wave')cycleSpeed()});
   $('pauseB').addEventListener('click',()=>togglePause());$('resumeB').addEventListener('click',()=>togglePause(false));
   $('quitB').addEventListener('click',()=>{togglePause(false);runOver(false)});
-  $('playB').addEventListener('click',()=>{clearRun();newRun();$('ovStart').hidden=true;MUSMODE='game';bgDirty=1;uiRefresh()});
+  $('playB').addEventListener('click',()=>{clearRun();newRun();$('ovStart').hidden=true;MUSMODE='game';bgDirty=1;uiRefresh();tutStart()});
   $('contB').addEventListener('click',()=>{if(loadRun()){$('ovStart').hidden=true;MUSMODE='game';bgDirty=1;uiRefresh();if(R.phase==='pick')showPick()}});
-  $('againB').addEventListener('click',()=>{hideEnd();newRun();MUSMODE='game';bgDirty=1;uiRefresh()});
+  $('againB').addEventListener('click',()=>{hideEnd();newRun();MUSMODE='game';bgDirty=1;uiRefresh();tutStart()});
   $('menuB').addEventListener('click',()=>{hideEnd();showStart()});$('endlessB').addEventListener('click',()=>{goEndless();MUSMODE='game'});
   document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('#ovStart .tab').forEach(t=>t.hidden=t.id!==b.dataset.tab);ensureAudio()}));
   document.addEventListener('pointerdown',e=>{const b=e.target&&e.target.closest&&e.target.closest('button');if(b&&!b.disabled){ensureAudio();sfx('click',.3)}},true);
   window.addEventListener('resize',()=>{measure();resize()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&R&&R.phase==='wave')togglePause(true)})}
-function measure(){if(!DOM)return;const s=$('shop');if(s&&s.getBoundingClientRect)UI.shopH=s.getBoundingClientRect().height}
+function measure(){if(!DOM)return;const s=$('shop');if(s&&s.getBoundingClientRect)UI.shopH=s.getBoundingClientRect().height;document.documentElement.style.setProperty('--shopH',UI.shopH+'px')}
