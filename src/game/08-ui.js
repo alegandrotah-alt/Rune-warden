@@ -20,8 +20,10 @@ function renderShop(force){if(!DOM||!R)return;const owned={};for(const h of allH
   R.shop.forEach((k,i)=>{const b=document.createElement('button');b.type='button';if(!k){b.className='hc empty';b.disabled=true;box.appendChild(b);return}
     const D=HEROES[k];b.className='hc'+(R.gold<D.c?' poor':'')+(owned[k]===2?' pair':'');b.style.setProperty('--c',TIERCOL[D.c]);
     b.innerHTML=`<span class="cost">${D.c}g</span>${owned[k]?`<span class="own">${'★'.repeat(1)}×${owned[k]}</span>`:''}<span class="nm"><b>${D.n}</b><small>${D.tr.map(t=>TRAITS[t].ic+' '+TRAITS[t].n).join(' · ')}</small></span><span class="role ${isFront(k)?'f':'b'}">${icon(isFront(k)?'sword':'bow')}</span>${D.c===5?'<span class="leg">LEGEND</span>':''}`;
-    const p=portrait(k,38);if(p)b.prepend(p);b.addEventListener('click',()=>{if(buy(i)){uiRefresh()}else if(R.gold<D.c)toast('Not enough gold');else toast('Your bench is full')});
-    b.addEventListener('contextmenu',e=>{e.preventDefault();uiInfo({k,star:1,preview:1})});box.appendChild(b)})}
+    const p=portrait(k,38);if(p)b.prepend(p);b.addEventListener('click',()=>shopTap(i));
+    b.addEventListener('contextmenu',e=>{e.preventDefault();shopTap(i)});box.appendChild(b)});
+  // the shop changed under a selected card: drop the selection
+  const key=R.shop.join();if(SHOPSEL>=0&&(!R.shop[SHOPSEL]||key!==renderShop.key)){SHOPSEL=-1;if(!$('info').hidden)$('info').hidden=true}renderShop.key=key;markShopSel()}
 let TRSIG='';
 function renderTraits(){if(!DOM)return;const sig=JSON.stringify(SYN);if(sig===TRSIG)return;TRSIG=sig;const box=$('traits');box.innerHTML='';
   const list=TRAIT_ORDER.filter(t=>SYN[t]&&SYN[t].n>0).sort((a,b)=>(SYN[b].tier-SYN[a].tier)||(SYN[b].n-SYN[a].n));
@@ -33,13 +35,25 @@ function uiItem(id){if(!DOM||!id)return;const el=$('info'),I=ITEMS[id];let rec='
   else rec=`<p class="sub" style="text-align:left;margin:6px 0 0">Made from ${ITEMS[I.c[0]].n} + ${ITEMS[I.c[1]].n}.</p>`;
   el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3><span style="color:${I.col}">${I.ic}</span> ${I.n}</h3><div class="ab">${I.d}</div>${rec}<p class="sub" style="text-align:left;margin:6px 0 0">Drag it onto a hero. Two components on one hero combine. Three items per hero.</p>`;
   el.querySelector('.x').addEventListener('click',()=>{el.hidden=true});el.hidden=false}
-function uiInfo(h){if(!DOM)return;const el=$('info');if(!h){el.hidden=true;return}const D=HEROES[h.k],s=h.preview?{dmg:D.dmg,as:D.as,rng:D.rng,crit:0}:heroStats(h);
+// what a hero does: stats, ability, role, items (with what each does), traits it feeds. A shop card shows the same, plus a Buy button.
+function uiInfo(h){if(!DOM)return;const el=$('info');if(!h){el.hidden=true;if(SHOPSEL>=0){SHOPSEL=-1;markShopSel()}return}const D=HEROES[h.k],s=h.preview?{dmg:D.dmg,as:D.as,rng:D.rng,crit:0}:heroStats(h);
+  if(h.shop==null&&SHOPSEL>=0){SHOPSEL=-1;markShopSel()}
+  const items=h.preview?'':`<div class="its">${(h.it||[]).map(id=>{const I=ITEMS[id];return`<div class="it" style="--c:${I.col}"><span class="ii">${I.ic}</span><div><b style="color:${I.col}">${I.n}</b><small>${I.d}</small></div></div>`}).join('')||'<small>No items yet. Drag items from the ITEMS rack onto a hero; it holds up to three.</small>'}</div>`;
+  const owned=allHeroes().filter(x=>x.k===h.k&&x.star===1).length,fielded=new Set(R.board.map(x=>x.k));
+  const trn=`<div class="trn">${D.tr.map(t=>{const T_=TRAITS[t],n=(SYN[t]?SYN[t].n:0)+(h.preview&&!fielded.has(h.k)?1:0),nx=T_.bp.find(b=>b>n);return`<div><b style="color:${T_.col}">${T_.ic} ${T_.n}</b> <span>${h.preview&&!fielded.has(h.k)?'would make '+n:n+' fielded'}${nx?`, next bonus at ${nx}`:', full bonus'}</span></div>`}).join('')}</div>`;
+  const buy=h.shop!=null?`<div class="buy"><button type="button" class="primary" ${R.gold<D.c?'disabled':''}>Buy ${D.c}g</button><small>${R.gold<D.c?'Not enough gold.':owned===2?'You have two: buying makes a ★2!':owned?`You have ${owned}. Three make a ★2.`:'Or tap the card again to buy.'}</small></div>`:'';
   el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>${D.n} ${'★'.repeat(h.star)}${h.vet?` <span class="vet">${'❯'.repeat(h.vet)} veteran</span>`:''}</h3><div class="tags"><span style="color:${TIERCOL[D.c]}">${D.c} gold</span>${D.tr.map(t=>`<span style="color:${TRAITS[t].col}">${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join('')}</div>
-   <div class="st"><div><small>Damage</small>${fmt(s.dmg)}</div><div><small>Speed</small>${s.as.toFixed(2)}</div><div><small>Range</small>${s.rng.toFixed(1)}</div><div><small>${D.dt==='m'?'Magic':'Physical'}</small>${s.crit?Math.round(s.crit*100)+'% crit':'—'}</div></div>
+   <div class="st"><div><small>Damage</small>${fmt(s.dmg)}</div><div><small>Speed</small>${s.as.toFixed(2)}</div><div><small>Range</small>${s.rng.toFixed(1)}</div><div><small>${D.dt==='m'?'Magic':'Physical'}</small>${s.crit?Math.round(s.crit*100)+'% crit':'—'}</div></div>${buy}${items}
    <div class="ab"><b>${D.ab.n}</b> (${D.mana} mana): ${D.d}</div>
-   <div class="ab rl2"><b style="color:${isFront(h.k)?'#ffc08a':'#a8d4ff'}">${icon(isFront(h.k)?'sword':'bow')} ${isFront(h.k)?'Frontline':'Backline'}</b>: ${isFront(h.k)?'tough (+35% health), slows monsters near it by 15%.':'deals the damage from behind the line.'}${D.fl?` <b>${D.fl.n}</b>: ${D.fl.d}`:''}</div>${D.lg?`<div class="ab lg"><b>Legend · ${D.lg.n}</b>: ${D.lg.d}${h.hoard?` (${h.hoard} stacks)`:''}</div>`:''}${h.preview?'':`<div class="its">${(h.it||[]).map(id=>`<div><b style="color:${ITEMS[id].col}">${ITEMS[id].ic} ${ITEMS[id].n}</b><small>${ITEMS[id].d}</small></div>`).join('')||'<small>No items. Drag items from beside the bench onto a hero.</small>'}</div>
-   <p class="sub" style="text-align:left;margin:6px 0 0">Health ${h.hpMax&&R.phase==='wave'?fmt(h.hp)+' / ':''}${fmt(heroMaxHp(h))}. Sells for ${sellValue(h)} gold: drag onto the shop.</p>`}`;
-  el.querySelector('.x').addEventListener('click',()=>{SEL=null;el.hidden=true});el.hidden=false}
+   <div class="ab rl2"><b style="color:${isFront(h.k)?'#ffc08a':'#a8d4ff'}">${icon(isFront(h.k)?'sword':'bow')} ${isFront(h.k)?'Frontline':'Backline'}</b>: ${isFront(h.k)?'tough (+35% health), slows monsters near it by 15%.':'deals the damage from behind the line.'}${D.fl?` <b>${D.fl.n}</b>: ${D.fl.d}`:''}</div>${D.lg?`<div class="ab lg"><b>Legend · ${D.lg.n}</b>: ${D.lg.d}${h.hoard?` (${h.hoard} stacks)`:''}</div>`:''}${trn}
+   ${h.preview?'':`<p class="sub" style="text-align:left;margin:6px 0 0">Health ${h.hpMax&&R.phase==='wave'?fmt(h.hp)+' / ':''}${fmt(heroMaxHp(h))}. Sells for ${sellValue(h)} gold: drag onto the shop.</p>`}`;
+  el.scrollTop=0;el.querySelector('.x').addEventListener('click',()=>{SEL=null;el.hidden=true;if(SHOPSEL>=0){SHOPSEL=-1;markShopSel()}});
+  const bb=el.querySelector('.buy button');if(bb)bb.addEventListener('click',()=>shopBuy(h.shop));el.hidden=false}
+// shop cards: the first tap shows the hero, a second tap (or Buy) buys it
+let SHOPSEL=-1;
+function markShopSel(){const box=$('cards');if(!box)return;[...box.children].forEach((b,i)=>{b.classList.toggle('sel',i===SHOPSEL);const t=b.querySelector('.tapb');if(i===SHOPSEL&&!t){const s=document.createElement('span');s.className='tapb';s.textContent='Tap to buy';b.appendChild(s)}else if(i!==SHOPSEL&&t)t.remove()})}
+function shopBuy(i){const k=R.shop[i];if(!k)return;const D=HEROES[k];if(buy(i)){SHOPSEL=-1;$('info').hidden=true;uiRefresh()}else if(R.gold<D.c)toast('Not enough gold');else toast('Your bench is full')}
+function shopTap(i){if(SHOPSEL===i){shopBuy(i);return}SHOPSEL=i;markShopSel();uiInfo({k:R.shop[i],star:1,preview:1,shop:i});sfx('click',.3)}
 function uiMon(m){if(!DOM)return;const D=MON[m.k],el=$('info'),A=D.atk,tags=MTAGS(m.k).map(t=>t[0]);
   const atk=!A?'Does not attack heroes.':A.k==='melee'?'Swings at heroes next to the road.':A.k==='bolt'?`Throws bolts at heroes up to ${A.r} hexes away${A.chill?' and chills them (slower attacks)':''}.`:A.k==='slam'?'Slams the ground, hitting every hero close by.':'Breathes fire in a cone.';
   el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>${m.elite?'Elite ':''}${D.n}</h3><div class="tags">${m.aff?`<span style="color:${AFFIX[m.aff].col}">${AFFIX[m.aff].n}: ${AFFIX[m.aff].d}</span>`:''}${tags.map(t=>`<span>${t}</span>`).join('')}</div>

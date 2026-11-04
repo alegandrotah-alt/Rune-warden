@@ -5,7 +5,7 @@ const fieldRect=()=>fieldBox();
 const tileRect=(c,r)=>{const [X,Y]=scr(hx(c,r),hy(r)),h=ss(T)*.5;return{l:X-h-4,t:Y-h*VY-ss(T)*.55,r:X+h+4,b:Y+h*VY+4}};
 function tutTile(){const rt=R.field.route||[];for(let i=Math.floor(rt.length*.35);i<rt.length;i++){const [c,r]=rt[i];for(const [cc,rr] of nbrs(c,r)){if(rr!==r&&canPlace(cc,rr)&&!heroAt(cc,rr))return[cc,rr]}}return[5,2]}
 const TUTS=[
-  {id:'buy',txt:'Welcome, Warden! Monsters will march from the portal to your castle. First, <b>tap a hero card</b> in the shop to buy it. It goes to your bench under the field.',tg:()=>rectOf('cards'),done:()=>allHeroes().length>=2},
+  {id:'buy',txt:'Welcome, Warden! Monsters will march from the portal to your castle. First, <b>tap a hero card</b> in the shop to see what it does, then <b>tap it again</b> (or press Buy) to buy it. It goes to your bench under the field.',tg:()=>rectOf('cards'),done:()=>allHeroes().length>=2},
   {id:'place',txt:'Now <b>drag a hero from your bench onto the field</b>. At level 2 you can field 2 heroes, so place both.',tg:()=>{const i=R.bench.findIndex(Boolean);if(i<0)return fieldRect();const b=benchSlot(i);return{l:b.x-b.w*.5,t:b.y-b.w*.6,r:b.x+b.w*.5,b:b.y+b.w*.5}},hand:1,done:()=>R.board.length>=Math.min(2,boardMax())||!R.bench.some(Boolean)},
   {id:'road',txt:'Heroes block their tile, so <b>your heroes are the maze</b>. The dashed line is the road monsters will take: bend it so they walk past your heroes for longer. You can never close it completely.',tg:fieldRect,ok:1},
   {id:'fight',txt:'Ready? Press <b>FIGHT!</b> to send the first wave. Use the same button to speed the battle up.',tg:()=>rectOf('fightB'),done:()=>R.phase==='wave'},

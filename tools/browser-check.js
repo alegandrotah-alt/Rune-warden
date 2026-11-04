@@ -34,7 +34,8 @@ function serve() {
   // 1. a real first wave: buy from the shop, drag the starter onto the field, fight
   await page.click('#playB'); await page.waitForTimeout(800);
   const tut = await page.evaluate(() => !document.getElementById('coach').hidden);
-  await page.click('#cards .hc:not(.empty)');
+  // first tap shows the hero (with a Buy button), the second tap buys it
+  await page.click('#cards .hc:not(.empty)'); await page.waitForTimeout(150); const shopInfo = await page.evaluate(() => !document.getElementById('info').hidden && !!document.querySelector('#info .buy button')); await page.click('#cards .hc.sel');
   const drag = await page.evaluate(() => { const R = window.__RW.R, h = R.bench.find(Boolean); return h ? true : false; });
   const placed = await page.evaluate(() => { const G = window.__RW, R = G.R; for (const h of R.bench.filter(Boolean)) { for (let c = 3; c < 12; c++) { if (G.placeHero(h, c, 2)) break; } } G.uiRefresh(); return R.board.length; });
   await page.screenshot({ path: path.join(OUT, '2-plan.png') });
@@ -55,6 +56,11 @@ function serve() {
   await page.screenshot({ path: path.join(OUT, '4-busy-wave.png') });
   const busy = await page.evaluate(() => { const B = window.__RW.R.b; return B ? { mons: B.mons.length, projs: B.projs.length, ko: B.ko } : { mons: 0, projs: 0, ko: 0 }; });
   // 3. items combine on a hero, the act map and a mystery event open
+  // tapping a hero's head (not its hex) opens its panel, which lists what its equipped items do
+  const head = await page.evaluate(() => { const G = window.__RW, R = G.R; R.b = null; R.phase = 'plan'; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; }); document.getElementById('info').hidden = true;
+    const h = R.board[0]; h.it = []; R.items.length = 0; G.dropItem('sword'); G.dropItem('bow'); G.equipFrom(0, h); G.equipFrom(0, h); G.uiRefresh(); const p = G.tileXY(h.c, h.r); return { x: p.x, y: p.y - 0.75 * G.tileSize() }; });
+  await page.waitForTimeout(200); await page.mouse.click(head.x, head.y); await page.waitForTimeout(250);
+  const heroItems = await page.evaluate(() => !document.getElementById('info').hidden && /Rune Arrows/.test(document.getElementById('info').textContent));
   const extra = await page.evaluate(() => { const G = window.__RW, R = G.R; R.b = null; R.phase = 'plan'; R.room = null; R.queue = null; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; });
     R.items.length = 0; const h = R.board[0]; h.it = []; G.dropItem('sword'); G.dropItem('bow'); G.equipFrom(0, h); G.equipFrom(0, h); const item = h.it.join();
     R.wave = 12; R.act = 1; G.genMap(); const opts = G.mapOptions().length; G.showMap(); const mapOk = opts > 0 && !document.getElementById('ovMap').hidden && document.querySelectorAll('#mapGrid .mn.can').length === opts;
@@ -89,13 +95,13 @@ function serve() {
   await browser.close(); srv.close();
   const d = ft.slice(1).map((t, i) => t - ft[i]).sort((a, b) => a - b);
   const avg = d.reduce((a, b) => a + b, 0) / Math.max(1, d.length), p95 = d[Math.floor(d.length * .95)] || 0;
-  let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
+  let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: tapping a shop card showed the hero with a Buy button: ${shopInfo ? 'yes' : '**no**'}; bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
     `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles, ${busy.ko} heroes knocked out), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
     `- Save, reload and continue restored the same run on the same screen: ${resumeOk ? 'yes' : '**no** ' + JSON.stringify(resumed)}\n- Smallest phone (568×320) fits without spilling off screen: ${fit ? 'yes' : '**no**'}\n- Portrait phone (375×667): spawn on top and keep below, fits, bench clear of the shop, turning sideways and back switches layouts: ${portOk ? 'yes' : '**no** ' + JSON.stringify({ portrait, turned, back })}\n` +
-    `- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item, closed, and left no stale map behind: ${extra.evOk ? 'yes' : '**no**'}\n` +
+    `- Tapping a hero's head shows its items and what they do: ${heroItems ? 'yes' : '**no**'}\n- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item, closed, and left no stale map behind: ${extra.evOk ? 'yes' : '**no**'}\n` +
     `  (CI has no GPU, so real phones run far faster; compare this number between builds)\n- Screenshots are attached to the run as **browser-check-screens**.\n`;
   if (errors.length) md += '\n```\n' + errors.slice(0, 10).join('\n') + '\n```\n';
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');
-  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk || !resumeOk || !fit || !portOk ? 1 : 0);
+  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk || !resumeOk || !fit || !portOk || !shopInfo || !heroItems ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

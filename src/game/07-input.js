@@ -3,7 +3,11 @@ let DRAG=null,SEL=null,VALID=null;
 const toWorld=(px,py)=>unscr(px,py);
 const cellAt=(px,py)=>{const w=toWorld(px,py),cl=cellOf(w.x,w.y);return cl?{c:cl[0],r:cl[1]}:null};
 function benchAt(px,py){for(let i=0;i<R.bench.length;i++){const b=benchSlot(i);if(Math.abs(px-b.x)<b.w*.5&&Math.abs(py-b.y-b.w*.05)<b.w*.45)return i}return -1}
-function heroUnder(px,py){for(const dy of [ss(T*.35),ss(T*.15),0]){const c=cellAt(px,py+dy);if(c){const h=heroAt(c.c,c.r);if(h)return h}}return null}
+// the hero under a tap: the frontmost standing sprite that covers the point (heads stick up over the hexes behind),
+// otherwise whoever stands on the tapped hex
+function heroUnder(px,py){let best=null,by=-1e9;for(const h of R.board){const [x,y]=scr(hx(h.c,h.r),hy(h.r)),sz=ss(T*1.62*(HEROES[h.k].sz||1)),top=y-ss(T*.17)-sz*.8;
+    if(Math.abs(px-x)>Math.max(sz*.3,ss(T*.42))||py<top||py>y+ss(T*.3))continue;if(y>by){by=y;best=h}}
+  if(best)return best;const c=cellAt(px,py);return c?heroAt(c.c,c.r)||null:null}
 function overShop(px,py){const el=$('shop');if(!el||!el.getBoundingClientRect)return false;const r=el.getBoundingClientRect();return py>=r.top-6&&px>=r.left&&px<=r.right}
 function pdown(e){if(!R||R.phase==='over'||R.phase==='pick')return;ensureAudio();const px=e.clientX,py=e.clientY;
   const ii=itemAt(px,py);if(ii>=0){DRAG={item:ii,x:px,y:py,sx:px,sy:py};return}
