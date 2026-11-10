@@ -4,7 +4,7 @@ function endWave(){
   const B=R.b,won=B.leaked===0,w=R.wave,node=R.node||'battle',boss=w%10===0&&w<=30;
   if(R.final){R.b=null;award('devourer');R.trueWin=1;META.trueWins=(META.trueWins||0)+1;saveMeta();runOver(true);return}
   R.lastDmg={wave:w,rows:R.board.map(h=>({k:h.k,star:h.star,d:h.wd||0,uid:h.uid})).sort((a,b)=>b.d-a.d)};
-  R.streak=won?(R.streak>=0?R.streak+1:1):(R.streak<=0?R.streak-1:-1);
+  R.streak=won?(R.streak>=0?R.streak+1:1):(R.streak<=0?R.streak-1:-1);if(won&&B.gs&&new Set(B.gs.map(e=>e.g)).size>=4)award('gates4');if(R.seal>0)R.seal--;
   const inc=income(won);gainXP(2+(has('scholar')?3:0)+rank('xp'));
   for(const h of R.board){h.ko=0;h.chillT=0;h.tauntT=0}R.ink=0;R.hoard=0;R.calm=R.calm||0;
   if(R.egg>0){R.egg--;if(R.egg===0){R.gold+=35;banner('THE GOLDEN EGG HATCHES  +35g','#ffcf2e');R.egg=-1}}

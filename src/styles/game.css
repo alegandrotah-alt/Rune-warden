@@ -202,3 +202,7 @@ body.port .picks{grid-template-columns:1fr}
 .hc .tapb{position:absolute;left:0;right:0;top:24px;z-index:2;text-align:center;font-family:var(--display);font-size:13px;color:#1a0d04;background:linear-gradient(180deg,#ffd88a,#e8a63a);padding:2px 0;pointer-events:none}
 body.port #info{max-height:calc(100% - var(--topH,100px) - var(--shopH,160px) - 12px)}
 body.port #toast{top:auto;bottom:calc(var(--shopH,160px) + 10px)}
+/* bestiary */
+.mgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.mgrid .rcat{grid-column:1/-1;margin:8px 0 0}
+.mcol{position:relative;min-height:54px;padding:6px 8px 6px 58px;border-radius:10px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.12);text-align:left}.mcol canvas{position:absolute;left:4px;top:3px;width:48px;height:48px}
+.mcol b{display:block;font-family:var(--display);font-size:13px;color:var(--bone)}.mcol small{display:block;color:var(--muted);font-size:11px;line-height:1.25}.mcol.lk{opacity:.5;padding-left:10px}.mcol.boss{border-color:rgba(255,207,106,.5);grid-column:span 2}.mcol .sig{color:#ffe9b0;margin-top:2px}.mcol .sig b{display:inline;font-size:11px;color:#ffd76a}

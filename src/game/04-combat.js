@@ -2,7 +2,7 @@
 // Monster health grows steeply wave after wave, just like Gate Rush keeps; your answer is stars, traits, items, relics and × runes.
 // steep through act I, a little gentler after, so hero power (stars, items, runes) can keep up; endless gets brutal again
 const hpBase=w=>24*Math.pow(1.19,Math.min(w,10)-1)*Math.pow(HPG,Math.max(0,Math.min(w,30)-10))*(w>30?Math.pow(1.19,w-30)*Math.pow(1.07,Math.pow(w-30,1.25)):1);
-let HPG=1.14;
+let HPG=1.128;
 // what a monster hit does to a hero: grows slower than monster health, so stars and items keep up
 const mDmgBase=w=>14*Math.pow(1.105,w-1)*(w>30?Math.pow(1.04,w-30):1);
 const actOf=w=>Math.min(2,Math.floor((w-1)/10));
@@ -25,7 +25,7 @@ function startWave(){
   for(const h of R.board){const I=itemStats(h);h.mana=I.mana||0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0;h.stk=0;h.ac=0;h.ko=0;h.chillT=0;h.tauntT=0;h.hurtT=0;h.seizT=0;h.hpMax=heroMaxHp(h);h.hp=h.hpMax;if(R.hymn)h.mana=HEROES[h.k].mana}R.hymn=0;
   calcTraits();guardWave();if(R.final||R.wave%10===0&&R.wave<=30)sfx('elite',.8);else sfx('ready',.5);
   return true}
-function spawnMon(k,elite,x,y,hpFrac,gi){
+function spawnMon(k,elite,x,y,hpFrac,gi){if(!(META.ms||(META.ms={}))[k])META.ms[k]=1;
   const D=MON[k],B=R.b,hp=D.hp*hpBase(R.wave)*(elite?6:1)*(R.wave>30&&D.boss&&!D.final?3:1)*(asc(1)?1.15:1)*(asc(9)?1.15:1)*(D.boss&&asc(7)?1.35:1)*(has('philo')?1.2:1);
   const row=rnd(SPAWN_ROWS.filter(r=>R.field.dist&&R.field.dist[r*COLS]>=0)),G=x==null&&gi&&R.field.gates?R.field.gates[gi]:null,gc=G&&G.k!=='west'&&R.field.dist[G.r*COLS+G.c]>=0;
   const m={id:UID++,k,x:x??(gc?hx(G.c,G.r)+(Math.random()-.5)*T*.2:-T*.6),y:y??(gc?hy(G.r)+(Math.random()-.5)*T*.2:hy(row)+(Math.random()-.5)*T*.3),max:hp,hp:hp*(hpFrac||1),sp:D.sp*(elite?.85:1)*(asc(4)?1.08:1),ar:D.ar,mr:D.mr,w:D.w*(elite?3:1),fly:!!D.fly,boss:!!D.boss,big:!!D.big,elite:!!elite,
@@ -47,7 +47,8 @@ function monTick(m,dt){
   if(m.hp<=0)return;
   const D=MON[m.k];
   if(D.final)finalTick(m,dt);
-  else if(m.boss&&!m.rifted&&m.hp<m.max*.5&&R.wave<=30){m.rifted=1;openRift(1+R.act,R.act>=2?1:0);banner(D.n.toUpperCase()+' TEARS A BREACH','#d6a8ff')}
+  else if(m.boss&&D.sig)bossTick(m,dt,D.sig);
+  if(!D.final&&m.boss&&!m.rifted&&m.hp<m.max*.5&&R.wave<=30){m.rifted=1;openRift(1+R.act,R.act>=2?1:0);banner(D.n.toUpperCase()+' TEARS A BREACH','#d6a8ff')}
   if(D.beh==='phase'){m.phT-=dt;if(m.phT<=0){m.phased=!m.phased;m.phT=m.phased?1.2:3.5}}
   if(m.dreadT>0)m.dreadT-=dt;
   if(m.sleepT>0){m.sleepT-=dt;return}
@@ -64,7 +65,8 @@ function monTick(m,dt){
   if(m.slowT>0)m.slowT-=dt;else m.slowP=1;
   let sp=m.sp*T*(rush?Math.max(m.slowP,.75):m.slowP)*(has('mire')?.9:1)*zs;
   if(tier('guardian')>=0&&!m.fly&&!rush)for(const h of R.board){if(h.ko||!HEROES[h.k].tr.includes('guardian'))continue;const p=heroPos(h);if(Math.abs(p.x-m.x)<T*1.5&&Math.abs(p.y-m.y)<T*1.5){sp*=1-[.2,.4][tier('guardian')];break}}
-  if(!m.fly&&m.c>=0&&R.field.ter){const t=R.field.ter[m.r*COLS+m.c];if(t===2)sp*=rush?.8:.65;else if(t===3){dealRaw(m,m.max*(m.boss?.002:.014)*dt,null,1);if(Math.random()<dt*2)fx({k:'thorn',x:m.x,y:m.y,dur:.35})}}
+  if(!m.fly&&m.c>=0&&R.field.ter){const t=R.field.ter[m.r*COLS+m.c];if(t===2)sp*=has('quagmire')?(rush?.65:.4):(rush?.8:.65);else if(t===3){dealRaw(m,m.max*(m.boss?.002:.014)*(has('bramble')?3:1)*dt,null,1);if(Math.random()<dt*2)fx({k:'thorn',x:m.x,y:m.y,dur:.35})}}
+  if(m.gale>0){m.gale-=dt;sp*=1.5}
   let tx,ty;
   if(m.fly){tx=FW+T;ty=FH/2}
   else{const cl=m.x<T*.15?null:cellOf(m.x,m.y);
@@ -116,21 +118,23 @@ function hit(m,amt,src,opt){
   if(src&&!opt.spell&&tr.includes('guardian')&&tier('guardian')>=0){src.hits++;if(src.hits%3===0)m.stunT=Math.max(m.stunT,[.4,.8][tier('guardian')])}
   if(src&&!opt.spell&&!opt.chainHit&&tr.includes('plague')&&tier('plague')>=0)poison(m,src,1);
   if(src&&opt.spell&&hasIt(src,'censer'))poison(m,src,2);
-  if(src&&!opt.spell){let kb=tr.includes('bruiser')&&tier('bruiser')>=0?[.25,.5][tier('bruiser')]:0;if(D.fl&&D.fl.k==='gore')kb+=.5;if(kb)knock(m,kb)}
-  if(src&&!opt.spell&&tr.includes('beast')&&tier('beast')>=1)healHero(src,src.hpMax*.02);
+  if(src&&!opt.spell){let kb=tr.includes('bruiser')&&tier('bruiser')>=0?[.25,.5,.75][tier('bruiser')]:0;if(D.fl&&D.fl.k==='gore')kb+=.5;if(kb)knock(m,kb)}
+  if(src&&!opt.spell&&tr.includes('beast')&&tier('beast')>=1)healHero(src,src.hpMax*(tier('beast')>=2?.04:.02));
+  if(src&&src.k==='fenrir'&&m.hp>0&&m.dots.length<6)m.dots.push({dps:m.max*.02*(m.boss?.2:1),t:4,src});
   const red=src&&hasIt(src,'veil')?0:(opt.dt||(D&&D.dt))==='m'?m.mr:m.ar;amt*=1-red;
   const d=dealRaw(m,amt,src,0,opt);
   if(src&&opt.spell&&hasIt(src,'soulreaver'))healHero(src,d*.3);if(src&&src.k==='vampire')healHero(src,d*.15);
   if(src&&m.aff==='thorns'&&!opt.spell&&d>0&&R.b)hurtHero(src,Math.min(d*.1,mDmg(m)*.6),null);
   return d}
 function dealRaw(m,amt,src,dot,opt){
-  if(m.hp<=0||!(amt>0))return 0;if(m.dreadT>0)amt*=1.2;if(m.shellT>0){if(!m.capMsg){m.capMsg=.6;floatText(m.x,m.y-T*1.6,'IMMUNE','#c07aff',1)}return 0}if(m.cap){const a=Math.min(amt,m.capLeft);if(a<amt&&!m.capMsg){m.capMsg=.6;floatText(m.x,m.y-T*1.6,'INVINCIBLE','#c07aff',1)}amt=a;m.capLeft-=a;if(!(amt>0))return 0}
+  if(m.hp<=0||!(amt>0))return 0;if(m.dreadT>0)amt*=1.2;if(m.gate&&has('wardstone'))amt*=1.2;if(m.shellT>0){if(!m.capMsg){m.capMsg=.6;floatText(m.x,m.y-T*1.6,'IMMUNE','#c07aff',1)}return 0}if(m.cap){const a=Math.min(amt,m.capLeft);if(a<amt&&!m.capMsg){m.capMsg=.6;floatText(m.x,m.y-T*1.6,'INVINCIBLE','#c07aff',1)}amt=a;m.capLeft-=a;if(!(amt>0))return 0}
   if(m.sleepT>0&&m.sleepHp-m.hp+amt>m.max*.1)m.sleepT=0;if(m.sh>0){const a=Math.min(m.sh,amt);m.sh-=a;amt-=a;if(!(amt>0))return 0}const d=Math.min(m.hp,amt);if(src)src.wd=(src.wd||0)+d;m.hp-=amt;R.stats.dmg+=d;if(!dot)m.hitT=.12;
   if(!dot&&SET.nums&&TXT.length<18&&(opt&&(opt.crit||opt.mult>1)||opt&&opt.big&&Math.random()<.5||Math.random()<.06))floatText(m.x,m.y-T*.6,fmt(amt),opt&&opt.crit?'#ffd76a':opt&&opt.mult>1?'#c9a8ff':'#ffffff',opt&&opt.crit||opt&&opt.mult>1?1.15:.85);
   if(m.hp>0&&has('reaper')&&!m.boss&&m.hp<m.max*.12)m.hp=0;
   if(m.hp<=0&&!m.dead)kill(m,src,opt);return d}
 function kill(m,src,opt){
-  m.dead=1;R.stats.kills++;R.b.kills++;META.kills=(META.kills||0)+1;if(m.elite)META.elk=(META.elk||0)+1;if(m.boss){META.bk=META.bk||{};const bk=BOSSEQ[m.k]||m.k;META.bk[bk]=(META.bk[bk]||0)+1}
+  m.dead=1;R.stats.kills++;R.b.kills++;META.kills=(META.kills||0)+1;if(m.elite)META.elk=(META.elk||0)+1;if(m.boss){const ba={sporemother:'b_bog',colossus:'b_frost',skyking:'b_dunes'}[m.k];if(ba)award(ba);META.bk=META.bk||{};const bk=BOSSEQ[m.k]||m.k;META.bk[bk]=(META.bk[bk]||0)+1}
+  if(src&&HEROES[src.k]&&HEROES[src.k].tr.includes('beast')&&R.board.some(h=>h.k==='fenrir'&&heroUp(h))){R.b.moon=Math.min(25,(R.b.moon||0)+1);if(R.b.moon===25)award('moon')}
   if(src&&src.k==='wyrm'){src.hoard=Math.min(200,(src.hoard||0)+1);if(src.hoard>=60)award('hoard60')}if(opt&&opt.charm)award('charm');
   let g=m.bounty+(m.boss?12:0);if(opt&&opt.gold)g+=1;if(src&&hasIt(src,'thief')&&Math.random()<.4)g+=1;if(m.portals>0)R.portalGold+=m.bounty;if(R.portalGold>=50)award('portal50');
   if(g>0){R.goldFrac+=g;const w=Math.floor(R.goldFrac);if(w>0){R.goldFrac-=w;R.gold+=w;floatText(m.x,m.y-T*.9,'+'+w+'g','#ffcf2e',1);sfx('coin',.35,1+Math.random()*.2)}}
@@ -188,13 +192,14 @@ function cast(h,s,tg){
   if(A.k==='nova'){const cx=A.self?p.x:tg.x,cy=A.self?p.y:tg.y,r=A.r*T;
     for(const m of inR(cx,cy,r)){if(A.m>0)hit(m,A.dot?pw*.3:pw,h,o);if(A.stun)m.stunT=Math.max(m.stunT,A.stun);if(A.kb)knock(m,A.kb);if(A.root)m.rootT=Math.max(m.rootT,A.root);if(A.burn)m.dots.push({dps:pw*.5/3*(1-m.mr),t:3,src:h});if(A.dot)m.dots.push({dps:s.dmg*A.dot*s.spell/4*(1-m.mr),t:4,src:h});
       if(A.psn)poison(m,h,A.psn,s);if(A.slow){m.slowT=Math.max(m.slowT,3+(A.stun||0));m.slowP=Math.min(m.slowP,1-A.slow)}}
+    if(A.mend){for(const x of R.board){const q=heroPos(x);if(Math.hypot(q.x-p.x,q.y-p.y)<=T*2.1)healHero(x,x.hpMax*A.mend)}fx({k:'ring',x:p.x,y:p.y,r:T*2,col:'#cfe4ff',dur:.6})}
     if(A.heal){R.hp=Math.min(R.hpMax,R.hp+A.heal);floatText(FW+T*.2,FH/2-T,'+'+A.heal,'#7dff9a',1);
       if(h.k==='paladin')for(const x of R.board){const q=heroPos(x);if(Math.hypot(q.x-p.x,q.y-p.y)<=r+T*.5)healHero(x,x.hpMax*.15)}else healHero(h,h.hpMax*.3)}
     if(h.k==='vampire'){const c=inR(p.x,p.y,s.rng*T+T*.4).filter(m=>!m.boss&&!(m.charmT>0)).sort((a,b)=>b.hp-a.hp)[0];if(c){c.charmT=6;c.charmBy=h;fx({k:'ring',x:c.x,y:c.y,r:T*.6,col:'#ff4a8a',dur:.6});floatText(c.x,c.y-T,'Charmed!','#ff8ab0',1)}}
     if(A.taunt){h.tauntT=A.taunt;fx({k:'ring',x:p.x,y:p.y,r:T*2.2,col:'#ff5a3a',dur:.6})}
     fx({k:A.ice?'ice':A.psn?'poison':A.root?'roots':A.burn?'fire':A.dot?'hex':'nova',x:cx,y:cy,r,dur:.55,col:TRAITS[D.tr[1]].col});shake(A.taunt?6:2)}
   else if(A.k==='fan'){const ts=B.mons.filter(m=>m.hp>0&&Math.hypot(m.x-p.x,m.y-p.y)<s.rng*T+T*.3).sort((a,b)=>progress(a)-progress(b));for(let i=0;i<A.shots;i++){const m=ts[i%Math.max(1,ts.length)]||tg;shoot(h,p,m,s.dmg*A.m*s.spell,{kind:D.proj==='melee'?'star':D.proj,spell:1,crit:Math.random()<s.crit})}}
-  else if(A.k==='execute'){const ts=inR(p.x,p.y,s.rng*T+T*.3);const m=A.strong?ts.sort((a,b)=>b.hp-a.hp)[0]:ts.sort((a,b)=>a.hp-b.hp)[0];if(m){hit(m,pw,h,{spell:1,dt:D.dt,big:1,gold:A.gold,crit:1});if(A.kb)knock(m,A.kb);if(A.stun)m.stunT=Math.max(m.stunT,A.stun*(m.boss?.4:1));fx({k:'slash',x:m.x,y:m.y,dur:.3,col:'#ff4a6a',face:h.face,big:1});shake(3)}if(A.heal)healHero(h,h.hpMax*A.heal)}
+  else if(A.k==='execute'){const ts=inR(p.x,p.y,s.rng*T+T*.3);const m=A.strong?ts.sort((a,b)=>b.hp-a.hp)[0]:ts.sort((a,b)=>a.hp-b.hp)[0];if(m){if(h.k==='fenrir'&&!m.boss&&m.hp<m.max*.2){floatText(m.x,m.y-T,'DEVOURED','#ff6a6a',1);dealRaw(m,m.hp*50,h,1)}else hit(m,pw,h,{spell:1,dt:D.dt,big:1,gold:A.gold,crit:1});if(A.kb)knock(m,A.kb);if(A.stun)m.stunT=Math.max(m.stunT,A.stun*(m.boss?.4:1));fx({k:'slash',x:m.x,y:m.y,dur:.3,col:'#ff4a6a',face:h.face,big:1});shake(3)}if(A.heal)healHero(h,h.hpMax*A.heal)}
   else if(A.k==='pierce'){const a=Math.atan2(tg.y-p.y,tg.x-p.x),L=s.rng*T*1.7,x1=p.x+Math.cos(a)*L,y1=p.y+Math.sin(a)*L,mm=lineMult(p.x,p.y,x1,y1,hasIt(h,'runearrow')?1:0)*(hasIt(h,'runearrow')?1.5:1);
     for(const m of B.mons){if(m.hp<=0)continue;const t=clamp(((m.x-p.x)*Math.cos(a)+(m.y-p.y)*Math.sin(a))/L,0,1),qx=p.x+Math.cos(a)*L*t,qy=p.y+Math.sin(a)*L*t;if(Math.hypot(m.x-qx,m.y-qy)<T*.4)hit(m,pw*mm,h,{spell:1,dt:D.dt,mult:mm,big:1})}
     fx({k:'line',x:p.x,y:p.y,x1,y1,dur:.3,col:'#ffd76a',mult:mm})}
@@ -235,11 +240,20 @@ function charmTick(m,dt){m.charmT-=dt;const B=R.b;let tx=m.x-T,ty=m.y;
   m.catk=(m.catk||0)-dt;if(m.catk<=0){let o=null,od=T*1.6;for(const q of B.mons){if(q===m||q.hp<=0||q.charmT>0)continue;const d=Math.hypot(q.x-m.x,q.y-m.y);if(d<od){od=d;o=q}}
     if(o){m.catk=1;m.lunge=.25;dealRaw(o,Math.max(mDmg(m)*4,o.max*.06),m.charmBy||null,0,{charm:1});fx({k:'mslash',x:o.x,y:o.y,dur:.25,face:m.face})}}}
 // knockback: shove a walker back up the road (towards higher distance from the keep), in hexes
-function knock(m,hexes){if(m.hp<=0||m.fly||MON[m.k].final||m.c<0)return;m.kb=Math.min(T*2.2,(m.kb||0)+hexes*T*(m.boss?.33:m.big?.6:1))}
+function knock(m,hexes){if(m.hp<=0||m.fly||MON[m.k].final||m.c<0)return;R.stats.kb=(R.stats.kb||0)+1;if(R.stats.kb>=200)award('kb200');if(has('ram'))m.stunT=Math.max(m.stunT,m.boss?.15:.4);m.kb=Math.min(T*2.2,(m.kb||0)+hexes*T*(m.boss?.33:m.big?.6:1))}
 function kbTick(m,dt){const d=R.field.dist;if(!d||m.c<0){m.kb=0;return}const cur=d[m.r*COLS+m.c];let best=null,bd=cur;
   for(const [c,r] of nbrs(m.c,m.r)){const v=d[r*COLS+c];if(v>bd){bd=v;best=[c,r]}}if(!best){m.kb=0;return}
   const tx=hx(best[0],best[1]),ty=hy(best[1]),dx=tx-m.x,dy=ty-m.y,dd=Math.hypot(dx,dy)||1,st=Math.min(m.kb,T*7*dt,dd);m.x+=dx/dd*st;m.y+=dy/dd*st;m.kb-=st;
   if(dd-st<T*.1){m.c=best[0];m.r=best[1]}if(st<.01)m.kb=0}
+// every act boss has a signature move on a timer
+function bossTick(m,dt,S){if(m.x<T*.5)return;m.sigT=(m.sigT??5)-dt;if(m.gale>0)m.gale-=dt;if(m.sigT>0)return;const B=R.b,up=R.board.filter(heroUp),near=(h)=>{const p=heroPos(h);return Math.hypot(p.x-m.x,p.y-m.y)};
+  const say=()=>{floatText(m.x,m.y-T*1.7,S.n,'#ffd76a',1.2);sfx('zap',.4,.7)};
+  if(S.k==='curse'){m.sigT=8;const t=up.filter(h=>!(h.seizT>0)).sort((a,b)=>(b.wd||0)-(a.wd||0))[0];if(t){t.seizT=3;const p=heroPos(t);fx({k:'mbolt',x:m.x,y:m.y-T,x1:p.x,y1:p.y,dur:.5,col:'#b08aff'});floatText(p.x,p.y-T,'Silenced','#c9a8ff',1);say()}}
+  else if(S.k==='spores'){m.sigT=9;for(const o of B.mons)if(o.hp>0&&o!==m&&Math.hypot(o.x-m.x,o.y-m.y)<T*2.6)o.hp=Math.min(o.max,o.hp+o.max*.08);for(const h of up)if(near(h)<T*2.1){h.seizT=Math.max(h.seizT||0,1.2);const p=heroPos(h);fx({k:'zz',x:p.x,y:p.y,dur:1.2})}fx({k:'poison',x:m.x,y:m.y,r:T*2.4,dur:.8,col:'#9be36a'});say()}
+  else if(S.k==='firestorm'){m.sigT=9;const pool=up.slice();for(let i=0;i<3&&pool.length;i++){const h=pool.splice((Math.random()*pool.length)|0,1)[0],p=heroPos(h);hurtHero(h,h.hpMax*.25,m);fx({k:'pillar',x:p.x,y:p.y,dur:.6,col:'#ff7a2a'});fx({k:'fire',x:p.x,y:p.y,r:T*.7,dur:.6,col:'#ff7a2a'})}shake(5);say()}
+  else if(S.k==='bloom'){m.sigT=10;m.sh=(m.sh||0)+m.max*.06;for(let i=0;i<3;i++){const s=spawnMon('mushnub',0,m.x+(Math.random()-.5)*T,m.y+(Math.random()-.5)*T);s.c=m.c;s.r=m.r;s.portals=-1}fx({k:'ring',x:m.x,y:m.y,r:T*1.3,col:'#ff9ad0',dur:.6});say()}
+  else if(S.k==='freeze'){m.sigT=9;up.sort((a,b)=>near(a)-near(b));up.forEach((h,i)=>{const p=heroPos(h);if(i<2){h.seizT=Math.max(h.seizT||0,2);fx({k:'ice',x:p.x,y:p.y,r:T*.7,dur:.8,col:'#bfe6ff'});floatText(p.x,p.y-T,'Frozen','#bfe6ff',1)}else h.chillT=Math.max(h.chillT||0,4)});shake(6);say()}
+  else if(S.k==='gale'){m.sigT=9;for(const o of B.mons)if(o.hp>0)o.gale=3;fx({k:'ring',x:m.x,y:m.y,r:FW*.6,col:'#e8f4ff',dur:.7});say()}}
 // a breach tears open on a free hex of the road and spills monsters
 function openRift(n,elite){const F=R.field,d=F.dist;if(!d)return;const opts=[];for(let r=0;r<ROWS;r++)for(let c=2;c<COLS-2;c++){const v=d[r*COLS+c];if(v>=6&&v<=22&&!F.blk[r*COLS+c])opts.push([c,r])}if(!opts.length)return;
   const [c,r]=rnd(opts),x=hx(c,r),y=hy(r);fx({k:'breach',x,y,dur:2.4});fx({k:'ring',x,y,r:T*1.1,col:'#c07aff',dur:.6});sfx('zap',.4,.6);

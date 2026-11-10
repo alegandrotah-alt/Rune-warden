@@ -99,11 +99,11 @@ function traceRoute(g){const d=R.field.dist;if(!d)return[];let c,r;
   for(let i=0;i<COLS*ROWS;i++){const n=nextCell(c,r);if(!n)break;[c,r]=n;out.push([c,r])}const L=out.length;if(!g&&R.stats&&L>R.stats.maxMaze){R.stats.maxMaze=L;if(L>=40)award('maze40');if(L>=70)award('h_maze')}return out}
 // which gates a wave uses: early floors come only from the west, later ones split between several gates
 function gatePlan(w){const F=R.field,G=F&&F.gates||[{k:'west',id:0}];if(G.length<2)return[0];const wi=((w-1)%10)+1,boss=wi===10;
-  let n=boss?Math.min(G.length,R.act+2):Math.min(G.length-(wi<5&&G.some(g=>g.k==='breach')?1:0),(R.act===0?(wi>=(stage()<1?5:3)?2:1):R.act===1?(wi>=3?2:1)+(wi>=7?1:0):2+(wi>=6?1:0))+(R.endless?1:0));
+  let n=boss?Math.min(G.length,R.act+2):Math.min(G.length-(wi<5&&G.some(g=>g.k==='breach')?1:0),(R.act===0?(wi>=(stage()<1?5:3)?2:1):R.act===1?(wi>=3?2:1)+(wi>=7?1:0):(wi>=3?2:1)+(wi>=6?1:0)+(wi>=8?1:0))+(R.endless?1:0));
   // a breach in the middle of the field only opens once the act has warmed up
   const others=G.slice(1).filter(g=>g.k!=='breach'||wi>=5).map(g=>g.id);const out=[0];while(out.length<n&&others.length)out.push(others.splice((rng()*others.length)|0,1)[0]);
   // sometimes the west gate stays shut and every monster comes from the others
-  if(out.length>2&&rng()<.3)out.shift();return out}
+  if(out.length>2&&rng()<.3)out.shift();if((has('sealstone')?1:0)+(R.seal>0?1:0)){for(let k=(has('sealstone')?1:0)+(R.seal>0?1:0);k>0&&out.length>1;k--)out.pop()}return out}
 // hand out the wave's monsters to its gates in runs of a few, so each gate sends a little pack
 function tagGates(q,w){const P=gatePlan(w);let gi=0,run=0;for(const e of q){if(MON[e.k]&&MON[e.k].boss){e.g=P.includes(0)?0:P[0];continue}if(run<=0){gi=P[(rng()*P.length)|0];run=2+((rng()*4)|0)}e.g=gi;run--}return q}
 const runeAt=(c,r)=>R.field.runes.find(q=>q.c===c&&q.r===r);
@@ -134,7 +134,7 @@ function removeHero(h){const i=R.board.indexOf(h);if(i>=0){R.board.splice(i,1);r
 function toBench(h){const j=R.bench.indexOf(null);if(j<0)return false;const i=R.board.indexOf(h);if(i>=0)R.board.splice(i,1);R.bench[j]=h;h.c=h.r=-1;rebuildBlk();return true}
 function placeHero(h,c,r){if(!canPlace(c,r))return false;const onBoard=R.board.includes(h);if(!onBoard&&R.board.length>=boardMax())return false;
   if(onBoard){R.board.splice(R.board.indexOf(h),1);rebuildBlk();if(!canPlace(c,r)){R.board.push(h);rebuildBlk();return false}}
-  const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null;h.c=c;h.r=r;R.board.push(h);rebuildBlk();if(HEROES[h.k].c===5&&!onBoard&&typeof fx==='function'){fx({k:'pillar',x:hx(c,r),y:hy(r),dur:.9});sfx('sp_holy',.5,.8)}META.seen[h.k]=1;if(HKEYS.every(k=>META.seen[k]))award('all18');return true}
+  const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null;h.c=c;h.r=r;R.board.push(h);rebuildBlk();if(R.field.ter&&R.board.filter(x=>R.field.ter[x.r*COLS+x.c]===1).length>=3)award('hill3');if(HEROES[h.k].c===5&&!onBoard&&typeof fx==='function'){fx({k:'pillar',x:hx(c,r),y:hy(r),dur:.9});sfx('sp_holy',.5,.8)}META.seen[h.k]=1;if(HKEYS.every(k=>META.seen[k]))award('all18');return true}
 const sellValue=h=>HEROES[h.k].c*Math.pow(3,h.star-1)-(h.star>1&&HEROES[h.k].c>1?1:0);
 function sellHero(h){R.gold+=sellValue(h);R.pool[h.k]+=Math.pow(3,h.star-1);removeHero(h);for(const it of h.it||[])stashItem(it);h.it=[];sfx('coin',.5)}
 // ---------- traits and hero stats ----------
@@ -144,7 +144,7 @@ function calcTraits(){const seen={},cnt={};for(const h of R.board){if(seen[h.k])
   for(const g of R.guards||[])for(const t of GUARDS[g.k].tr)cnt[t]=(cnt[t]||0)+1;
   // frontline auras: a melee hero buffs the heroes on the hexes touching it
   for(const h of R.board)h.au={as:0,dmg:0,dr:0,hp:0,heal:0};
-  for(const h of R.board){const F=HEROES[h.k].fl;if(!F)continue;const A={rally:['as',.15],howl:['as',.2],warcry:['dmg',.15],ward:['dr',.2],tend:['heal',.03],bulwark:['hp',.3],coat:['dr',.12],antler:['hp',.2]}[F.k];if(!A)continue;
+  for(const h of R.board){const F=HEROES[h.k].fl;if(!F)continue;const A={rally:['as',.15],howl:['as',.2],warcry:['dmg',.15],ward:['dr',.2],tend:['heal',.03],bulwark:['hp',.3],coat:['dr',.12],antler:['hp',.2],mount:['dmg',.12]}[F.k];if(!A)continue;
     for(const [c,r] of nbrs(h.c,h.r)){const o=heroAt(c,r);if(o&&o!==h){o.au[A[0]]+=A[1];if(F.k==='ward')o.au.heal+=.02}}}
   // Beasts count the Beasts on touching hexes
   for(const h of R.board)if(HEROES[h.k].tr.includes('beast'))h.pack=nbrs(h.c,h.r).filter(([c,r])=>{const o=heroAt(c,r);return o&&o!==h&&HEROES[o.k].tr.includes('beast')}).length;
@@ -157,9 +157,11 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(tr.includes('assassin')&&tier('assassin')>=0){s.crit=[.2,.4][tier('assassin')];s.cm=[2,2.5][tier('assassin')]}
   if(tr.includes('sorcerer')&&tier('sorcerer')>=0)s.spell=1+[.3,.7,1.4][tier('sorcerer')];
   if(tr.includes('wildwood')&&tier('wildwood')>=2)s.dmg*=1.4;
-  if(tr.includes('beast')&&tier('beast')>=0){const t=tier('beast');s.dmg*=1+[.1,.2][t]+[.15,.3][t]*(h.pack||0)}
+  if(tr.includes('beast')&&tier('beast')>=0){const t=tier('beast');s.dmg*=1+[.1,.2,.35][t]+[.15,.3,.45][t]*(h.pack||0)}
+  if(tr.includes('beast')&&R.b&&R.b.moon)s.as*=1+.04*R.b.moon;
   if(h.k==='orcraider'&&R.b&&h.c>=0){const p=heroPos(h);let n=0;for(const m of R.b.mons)if(m.hp>0&&!m.fly&&Math.hypot(m.x-p.x,m.y-p.y)<T*1.5)n++;s.as*=1+Math.min(.48,.06*n)}
-  if(h.c>=0&&R.field&&R.field.ter&&R.field.ter[h.r*COLS+h.c]===1){if(isFront(h.k))s.dmg*=1.2;else s.rng+=1}
+  if(h.c>=0&&R.field&&R.field.ter&&R.field.ter[h.r*COLS+h.c]===1){if(isFront(h.k))s.dmg*=has('surveyor')?1.4:1.2;else s.rng+=has('surveyor')?2:1}
+  if(has('warhorn')&&R.b&&R.b.t<6)s.as*=1.4;
   if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
   if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
   if(h.buffT>0)s.as*=h.buffAs||2;
@@ -170,4 +172,4 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(h.chillT>0)s.as*=.7;
   return s}
 // hero health: bigger heroes, stars and Guardians are tougher; it refills every wave
-function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(D.tr.includes('bruiser')&&tier('bruiser')>=0?[1.25,1.5][tier('bruiser')]:1)*(isFront(h.k)?1.35:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0))*(1+(h.au?h.au.hp:0)))}
+function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(D.tr.includes('bruiser')&&tier('bruiser')>=0?[1.25,1.5,1.8][tier('bruiser')]:1)*(isFront(h.k)?1.35:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0))*(1+(h.au?h.au.hp:0)))}

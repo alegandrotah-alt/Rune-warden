@@ -74,6 +74,16 @@ const EVENTS={
   mirror:{ic:'◐',t:'A cursed mirror',d:'Your reflection is a little late, and it is holding someone else.',opts:()=>[{n:'Reach through',d:'Lose 10 keep health. Copy a random hero you own (★1).',ok:()=>R.hp>10&&allHeroes().length>0,run:()=>{R.hp-=10;const h=rndS(allHeroes());if(!addHero(h.k,1,true))toast('Your bench is full')}},{n:'Smash it',d:'Gain 6 gold from the silver frame.',run:()=>{R.gold+=6}}]},
   merchant2:{ic:'⚖',t:'A peddler with one cart',d:'"Only one thing left, friend. Fair price."',mk:()=>({it:randomFinished()}),opts:e=>[{n:'Buy the '+ITEMS[e.it].n,d:ITEMS[e.it].d+' (12 gold)',item:e.it,ok:()=>R.gold>=12,run:()=>{R.gold-=12;dropItem(e.it)}},{n:'Leave',d:'',run:()=>{}}]},
 };
+Object.assign(EVENTS,{
+  beastmaster:{ic:'ᛒ',t:'A beastmaster\'s camp',d:'Cages, straw and a great many eyes in the dark. "They only bite monsters. Mostly."',mk:()=>({k:rndS(HKEYS.filter(k=>HEROES[k].tr.includes('beast')&&HEROES[k].c<=3))}),opts:e=>[{n:'Take the '+HEROES[e.k].n,d:'It joins your bench. '+HEROES[e.k].d,ok:()=>canAdd(e.k),run:()=>addHero(e.k,1,true)},{n:'Watch them train',d:'Gain 5 XP.',run:()=>gainXP(5)}]},
+  surveyor:{ic:'▲',t:'A royal surveyor',d:'"Give me a morning and a few coins and I will move the earth for you."',opts:()=>[{n:'Raise the ground',d:'Pay 6 gold: three empty hexes become high ground.',ok:()=>R.gold>=6,run:()=>{R.gold-=6;terraform(1,3)}},{n:'Plant brambles',d:'Three hexes of the road grow thorns.',run:()=>terraform(3,3,1)},{n:'Send him away',d:'Nothing happens.',run:()=>{}}]},
+  sealedgate:{ic:'ᚱ',t:'A half-sealed gate',d:'Old wards still cling to the stones. With the right word they would hold a while longer.',opts:()=>[{n:'Speak the word',d:'One fewer gate opens for the next 3 fights.',run:()=>{R.seal=3;R.nextQ=waveList(R.wave)}},{n:'Pry out the wardstones',d:'Gain 12 gold.',run:()=>{R.gold+=12}}]},
+  moonshrine:{ic:'☾',t:'A moonlit shrine',d:'The pool is perfectly still. Something old is listening.',opts:()=>[{n:'Pray',d:'The keep repairs 15 health.',run:()=>{R.hp=Math.min(R.hpMax,R.hp+15)}},{n:'Offer blood',d:'Lose 12 keep health: your cheapest fielded ★1 hero becomes ★2.',ok:()=>R.hp>12&&R.board.some(h=>h.star===1),run:()=>{R.hp-=12;const h=R.board.filter(h=>h.star===1).sort((a,b)=>HEROES[a.k].c-HEROES[b.k].c)[0];h.star=2;fxStar(h);calcTraits()}}]},
+});
+// change a few hexes of terrain: free ones anywhere, or ones on the road
+function terraform(t,n,road){const F=R.field,ok=(c,r)=>!F.blk[r*COLS+c]&&!F.ter[r*COLS+c]&&!runeAt(c,r)&&!portalAt(c,r)&&!isGate(c,r)&&c>0&&c<COLS-1;let cells=[];
+  if(road)cells=(F.route||[]).filter(([c,r])=>ok(c,r));else for(let r=0;r<ROWS;r++)for(let c=2;c<COLS-2;c++)if(ok(c,r))cells.push([c,r]);
+  for(let i=0;i<n&&cells.length;i++){const [c,r]=cells.splice((rng()*cells.length)|0,1)[0];F.ter[r*COLS+c]=t}calcTraits();if(typeof bgDirty!=='undefined')bgDirty=1}
 const EVKEYS=Object.keys(EVENTS);
 applyIcons();
 function transmute(h){const c=Math.min(5,HEROES[h.k].c+1),opts=HKEYS.filter(k=>HEROES[k].c===c&&(unlocked(k)||R.daily)&&k!==h.k);if(!opts.length)return;const k=rndS(opts);toast(`${HEROES[h.k].n} becomes ${HEROES[k].n}!`);h.k=k;if(h.c>=0)fxStar(h);merge(h)}

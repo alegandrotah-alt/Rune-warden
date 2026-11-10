@@ -74,8 +74,8 @@ function drawAmbient(dt){if(!R)return;const bk=actD(R.act).obs??R.act,K=AMBK[bk]
   ctx.restore()}
 // a hash so decorations stay put for a run and act
 const hh=(a,b,c)=>((a*73856093)^(b*19349663)^(c*83492791))>>>0;
-function groundDetail(g,act){const sd=R?R.seed:0;g.save();
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const h=hh(c,r,sd+act*7),x=sx(hx(c,r)-T*.5),y=sy(hy(r)-T*.5),s=ss(T);
+function groundDetail(g,act){const sd=R?R.seed:0;g.save();upr(g,[DPR,0,0,DPR,0,0]);// drawn upright so grass and cracks never lie sideways in portrait
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const h=hh(c,r,sd+act*7),s=ss(T),P0=scr(hx(c,r),hy(r)),x=P0[0]-s*.5,y=P0[1]-s*VY*.5;
     if(act===0){if(h%6===0){g.strokeStyle='rgba(20,24,18,.35)';g.lineWidth=Math.max(1,s*.025);g.beginPath();const x0=x+s*((h>>3)%60)/100+s*.2,y0=y+s*VY*.3;g.moveTo(x0,y0);g.lineTo(x0+s*.12,y0+s*.08);g.lineTo(x0+s*.08,y0+s*.2);g.moveTo(x0+s*.12,y0+s*.08);g.lineTo(x0+s*.26,y0+s*.06);g.stroke()}
       if(h%9===1){g.fillStyle='rgba(230,225,205,.5)';g.save();g.translate(x+s*((h>>4)%70)/100+s*.15,y+s*VY*((h>>6)%60)/100+s*.12);g.rotate((h%10)/3);g.fillRect(-s*.07,-s*.012,s*.14,s*.024);g.beginPath();g.arc(-s*.07,0,s*.022,0,6.283);g.arc(s*.07,0,s*.022,0,6.283);g.fill();g.restore()}
       if(h%5===2){g.fillStyle='rgba(90,120,70,.22)';g.beginPath();g.ellipse(x+s*.5,y+s*VY*.5,s*.35,s*.2*VY+s*.05,0,0,6.283);g.fill()}}
@@ -271,10 +271,12 @@ function render(dt){
 // a boss arrives: letterbox bars, its portrait and title slide in, the world slows down
 function drawBossIntro(){const I=R.b&&R.b.intro;if(!I)return;const p=I.t/I.dur,inn=Math.min(1,I.t/.35),out=p>.8?(1-p)/.2:1,a=inn*out,bh=H*.13*a;
   ctx.save();ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(0,0,W,bh);ctx.fillRect(0,H-bh,W,bh);ctx.fillStyle=`rgba(20,0,10,${.35*a})`;ctx.fillRect(0,bh,W,H-bh*2);
-  const D=MON[I.k],cx=W/2,cy=H*.46,sz=Math.min(H*.5,W*.3),f=frame('m_'+I.k,160,((TIME*4)|0)%6,sz*DPR);
-  if(f){ctx.globalAlpha=a;ctx.save();ctx.globalCompositeOperation='lighter';const gl=glow(I.k==='devourer'?'150,60,255':'255,80,50');if(gl)ctx.drawImage(gl,cx-sz*.8-(1-inn)*W*.3,cy-sz*.75,sz*1.6,sz*1.3);ctx.restore();ctx.drawImage(f,cx-sz*.75-(1-inn)*W*.3,cy-sz*.7,sz,sz)}
-  const tx=cx+sz*.05+(1-inn)*W*.3;ctx.globalAlpha=a;ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.font=`700 ${Math.max(11,H*.035)}px "Barlow Condensed",sans-serif`;ctx.fillStyle='#ffb0a0';ctx.fillText((EPITHET[I.k]||'').toUpperCase(),tx,cy-H*.035);
-  ctx.font=`900 ${Math.min(W/14,H*.085)}px Cinzel,serif`;ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.9)';ctx.strokeText(D.n,tx,cy+H*.045);ctx.fillStyle=I.k==='devourer'?'#d6a8ff':'#ffd76a';ctx.fillText(D.n,tx,cy+H*.045);ctx.restore()}
+  // sideways: the boss on the left, its name beside it. Upright: the boss above, the text centred under it.
+  const D=MON[I.k],P=ROT,cx=W/2,cy=P?H*.36:H*.46,sz=P?Math.min(H*.3,W*.62):Math.min(H*.5,W*.3),f=frame('m_'+I.k,160,((TIME*4)|0)%6,sz*DPR),slide=(1-inn)*W*.3,ix=P?cx-sz/2-slide:cx-sz*.75-slide;
+  if(f){ctx.globalAlpha=a;ctx.save();ctx.globalCompositeOperation='lighter';const gl=glow(I.k==='devourer'?'150,60,255':'255,80,50');if(gl)ctx.drawImage(gl,ix-sz*.05,cy-sz*.75,sz*1.6*(P?.7:1),sz*1.3);ctx.restore();ctx.drawImage(f,ix,cy-sz*.7,sz,sz)}
+  const tx=P?cx+slide:cx+sz*.05+slide,y0=P?cy+sz*.5:cy,nf=P?Math.min(W/12,H*.05):Math.min(W/14,H*.085);ctx.globalAlpha=a;ctx.textAlign=P?'center':'left';ctx.textBaseline='alphabetic';ctx.font=`700 ${Math.max(11,P?W/26:H*.035)}px "Barlow Condensed",sans-serif`;ctx.fillStyle='#ffb0a0';ctx.fillText((EPITHET[I.k]||'').toUpperCase(),tx,y0-nf*.45);
+  ctx.font=`900 ${nf}px Cinzel,serif`;ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.9)';ctx.strokeText(D.n,tx,y0+nf*.6);ctx.fillStyle=I.k==='devourer'?'#d6a8ff':'#ffd76a';ctx.fillText(D.n,tx,y0+nf*.6);
+  if(D.sig){const sf=Math.max(12,P?W/27:Math.min(W/42,H*.045));ctx.font=`700 ${sf}px "Barlow Condensed",sans-serif`;ctx.fillStyle='#ffe9b0';ctx.lineWidth=3;const t=D.sig.n+': '+D.sig.d,mw=P?W-36:W-tx-14,words=t.split(' ');let line='',yy=y0+nf*.6+sf*1.7;const put=()=>{ctx.strokeText(line.trim(),tx,yy);ctx.fillText(line.trim(),tx,yy)};for(const w of words){if(ctx.measureText(line+w).width>mw&&line){put();yy+=sf*1.25;line=''}line+=w+' '}put()}ctx.restore()}
 function drawBench(){
   const n=R.bench.length;if(ZM.z>1){const a=benchSlot(0),b=benchSlot(n-1);ctx.fillStyle='rgba(15,10,7,.78)';ctx.fillRect(a.x-a.w*.6,a.y-a.w*.42,b.x-a.x+a.w*1.2,a.w*.82)}for(let i=0;i<n;i++){const b=benchSlot(i),h=R.bench[i];ctx.fillStyle=DRAG&&DRAG.overBench===i?'rgba(255,215,106,.25)':'rgba(0,0,0,.32)';ctx.strokeStyle='rgba(255,230,180,.25)';ctx.lineWidth=1;
     const w=b.w*.92,hh=b.w*.66;ctx.beginPath();ctx.roundRect?ctx.roundRect(b.x-w/2,b.y-hh*.55,w,hh,6):ctx.rect(b.x-w/2,b.y-hh*.55,w,hh);ctx.fill();ctx.stroke();

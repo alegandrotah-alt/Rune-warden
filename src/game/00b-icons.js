@@ -53,5 +53,5 @@ function applyIcons(){const set=(o,n)=>{if(!o)return;o.glyph=o.glyph||o.ic;o.icn
   const ND={battle:'swords',elite:'skull',event:'question',rest:'fire',merchant:'scales',treasure:'chest',boss:'crown'};for(const k in ND)set(NODES[k],ND[k]);
   for(const k in POTIONS)set(POTIONS[k],'flask');
   const GD={archers:'bow',banner:'flag',priestess:'cross',trebuchet:'boulder',sentinel:'shield',oracle:'rune',reaper:'scythe',dragon:'flame',chrono:'hourglass'};for(const k in GD)set(GUARDS[k],GD[k]);
-  const EV={armory:'swords',well:'drop',gambler:'dice',pilgrim:'rune',drill:'flag',altar:'cross',bard:'note',fey:'leaf',hoard:'chest',library:'eye',smithy:'hammer',mirror:'moon',merchant2:'scales'};
+  const EV={beastmaster:'paw',surveyor:'flag',sealedgate:'rune',moonshrine:'moon',armory:'swords',well:'drop',gambler:'dice',pilgrim:'rune',drill:'flag',altar:'cross',bard:'note',fey:'leaf',hoard:'chest',library:'eye',smithy:'hammer',mirror:'moon',merchant2:'scales'};
   if(typeof EVENTS!=='undefined')for(const k in EVENTS)if(EV[k]){EVENTS[k].ic=icon(EV[k])}}
