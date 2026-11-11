@@ -175,6 +175,8 @@ function projTick(q,dt){
     const o={crit:q.crit,mult:q.mult,spell:q.spell,big:q.mult>1};
     if(q.aoe){for(const m of R.b.mons)if(m.hp>0&&Math.hypot(m.x-q.x,m.y-q.y)<q.aoe){hit(m,q.dmg*q.mult,q.src,o);if(q.stun)m.stunT=Math.max(m.stunT,MON[m.k].final?.15:q.stun)}fx({k:'ring',x:q.x,y:q.y,r:q.aoe,col:'#ffb060',dur:.3});if(q.kind==='boulder'){shake(3);fx({k:'die',x:q.x,y:q.y,dur:.5,col:'#a08060',r:T*.8})}}
     else if(q.tg&&q.tg.hp>0)hit(q.tg,q.dmg*q.mult,q.src,o);
+    // a burst of sparks where the shot lands, in the shot's colour
+    if(typeof LQ==='function'&&!LQ()){const rgb=q.kind==='fire'?'255,150,60':q.kind==='ice'?'170,225,255':q.kind==='holy'?'255,230,150':q.kind==='arrow'||q.kind==='bolt'?'255,245,220':'150,200,255';fx({k:'spark',x:q.tg?q.tg.x:q.x,y:q.tg?q.tg.y:q.y,dur:.22,col:`rgb(${rgb})`,rgb,rot:Math.random()*6})}
     if(q.kind==='flask'&&!LQ())fx({k:'ring',x:q.x,y:q.y,r:T*.35,col:'#a6e04a',dur:.25});
     if(q.mult>=9)award('rune9');return}
   q.x+=dx/d*step;q.y+=dy/d*step;

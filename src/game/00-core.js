@@ -81,6 +81,8 @@ const SPR={img:{},st:{},cache:{}};
 function sheet(name){const s=SPR.st[name];if(s===1)return SPR.img[name];if(s!==undefined)return null;if(typeof Image==='undefined'||!document.createElement){SPR.st[name]=-1;return null}
   SPR.st[name]=0;const im=new Image();im.onload=()=>{SPR.st[name]=1;if(typeof onSheet==='function')onSheet(name)};im.onerror=()=>{SPR.st[name]=-1};im.src='gfx/'+name+'.png';SPR.img[name]=im;return null}
 // a frame, downscaled once to the size it is drawn at (cached per 8px bucket)
+// how many cells a character sheet has (0 until it loads)
+function cells(name){const im=sheet(name);return im&&im.naturalHeight?Math.round(im.naturalWidth/im.naturalHeight):0}
 // character sheets are square cells in one row, so the cell size is the sheet's height (older 160px sheets still work)
 function frame(name,cell,i,want){const im=sheet(name);if(!im)return null;if(im.naturalHeight&&(name[1]==='_'||name==='props3'))cell=im.naturalHeight;const b=Math.max(16,Math.min(cell,Math.ceil(want/8)*8)),key=name+'|'+i+'|'+b;let c=SPR.cache[key];if(c)return c;
   c=mk(b,b);if(!c)return null;const g=c.getContext('2d');if(!g||!g.drawImage)return null;g.imageSmoothingQuality='high';

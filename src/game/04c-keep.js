@@ -33,7 +33,7 @@ function priestessSave(h){if(!hasGuard('priestess')||R.b.revived)return false;R.
 const GFIG={archers:'archer',banner:'squire',priestess:'druid',trebuchet:'tinker',sentinel:'warlord',oracle:'apprentice',reaper:'nightblade',dragon:'wyrm',chrono:'frostmage'};
 function drawGuards(kx,ky,ks){if(!R.guards)return;const n=R.guards.length,B=R.b;
   // the guardians themselves stand on the wall in front of the keep, facing the field
-  R.guards.forEach((g,i)=>{if(g.k==='sentinel')return;const fs=ks*.38,fx=kx-ks*.24+i*ks*.17,fy=ky-ks*.26,busy=g.fire>0,fi=busy?4+Math.min(5,((1-g.fire/.5)*6)|0):((TIME*4+i*2)|0)%4,fr=frame('h_'+GFIG[g.k],160,fi,fs*DPR);
+  R.guards.forEach((g,i)=>{if(g.k==='sentinel')return;const fs=ks*.38,fx=kx-ks*.24+i*ks*.17,fy=ky-ks*.26,busy=g.fire>0,[gi,ga]=heroCells(GFIG[g.k]),fi=busy?gi+Math.min(ga-1,((1-g.fire/.5)*ga)|0):((TIME*gi+i*2)|0)%gi,fr=frame('h_'+GFIG[g.k],160,fi,fs*DPR);
     if(fr){ctx.save();ctx.translate(fx,fy);ctx.scale(-1,1);ctx.drawImage(fr,-fs/2,-fs*.86,fs,fs);ctx.restore()}
     if(g.k==='banner'){ctx.strokeStyle='#d8c8a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(fx+fs*.25,fy);ctx.lineTo(fx+fs*.25,fy-fs*1.1);ctx.stroke();ctx.fillStyle='#4a8ae8';ctx.beginPath();ctx.moveTo(fx+fs*.25,fy-fs*1.1);ctx.lineTo(fx+fs*.25+fs*.4,fy-fs*.95+Math.sin(TIME*4)*fs*.05);ctx.lineTo(fx+fs*.25,fy-fs*.8);ctx.fill()}});
   R.guards.forEach((g,i)=>{const G=GUARDS[g.k],r=Math.max(9,ks*.1),x=kx+ks*.33,y=ky-ks*.62+i*r*2.7;if(g.fire>0)g.fire-=FRAME_DT;

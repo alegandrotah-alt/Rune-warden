@@ -1,5 +1,5 @@
 // ---------- panels: damage chart, next-wave preview, trait details ----------
-function smallPortrait(pre,k,px){const c=mk(px*2,px*2);if(!c)return null;const g=c.getContext('2d');const f=frame(pre+k,160,0,px*2);if(f&&g&&g.drawImage)g.drawImage(f,-px*.2,-px*.05,px*2.4,px*2.4);return c}
+function smallPortrait(pre,k,px){const c=mk(px*4,px*4);if(!c)return null;const g=c.getContext('2d');const f=frame(pre+k,160,0,px*4);if(f&&g&&g.drawImage){g.imageSmoothingQuality='high';g.drawImage(f,-px*.4,-px*.1,px*4.8,px*4.8)}return c}
 let DMGSIG='';
 function uiDmg(){if(!DOM||!R)return;const el=$('dmgP'),open=!!SET.dmgOpen&&$('ovStart').hidden;$('dmgB').classList.toggle('on',open);el.hidden=!open;if(!open)return;
   if(SET.ptab==='rel'){const sig='rel|'+R.relics.join()+'|'+R.potions.join();if(sig===DMGSIG)return;DMGSIG=sig;el.innerHTML=panelTabs()+relicsHTML();bindTabs(el);return}

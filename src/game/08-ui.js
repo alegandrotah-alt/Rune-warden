@@ -2,7 +2,8 @@
 const DOM=typeof document!=='undefined'&&!!document.body&&!!$('app');
 let toastT=0;
 function toast(t){if(!DOM)return;const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{el.hidden=true},2200)}
-function portrait(k,size){const c=mk(size*2,size*2);if(!c)return c;const g=c.getContext('2d');const f=frame('h_'+k,160,0,size*2);if(f&&g&&g.drawImage)g.drawImage(f,-size*.15,-size*.1,size*2.3,size*2.3);return c}
+// portraits are drawn at four times their CSS size so they stay sharp on dense phone screens
+function portrait(k,size){const c=mk(size*4,size*4);if(!c)return c;const g=c.getContext('2d');const f=frame('h_'+k,160,0,size*4);if(f&&g&&g.drawImage){g.imageSmoothingQuality='high';g.drawImage(f,-size*.3,-size*.2,size*4.6,size*4.6)}return c}
 function onSheet(name){if(DOM&&name.startsWith('h_')){renderShop();if(!$('ovStart').hidden){clearTimeout(onSheet.t);onSheet.t=setTimeout(renderCol,200)}}if(/^props|^keep/.test(name))bgDirty=1}
 function uiRefresh(){if(!DOM||!R)return;calcTraits();
   $('waveT').textContent=R.final?'The Rift · Final':R.endless?`Wave ${R.wave} · Endless`:`Floor ${R.wave} / 30`;uiPots();$('actT').textContent=`Act ${['I','II','III'][R.act]} · ${actD(R.act).n}`;
@@ -23,7 +24,7 @@ function renderShop(force){if(!DOM||!R)return;const owned={};for(const h of allH
     const p=portrait(k,38);if(p)b.prepend(p);b.addEventListener('click',()=>shopTap(i));
     b.addEventListener('contextmenu',e=>{e.preventDefault();shopTap(i)});box.appendChild(b)});
   // the shop changed under a selected card: drop the selection
-  const key=R.shop.join();if(SHOPSEL>=0&&(!R.shop[SHOPSEL]||key!==renderShop.key)){SHOPSEL=-1;if(!$('info').hidden)$('info').hidden=true}renderShop.key=key;markShopSel()}
+  const key=R.shop.join();if(SHOPSEL>=0&&(!R.shop[SHOPSEL]||key!==renderShop.key)){SHOPSEL=-1;if(!$('info').hidden)$('info').hidden=true}box.classList.toggle('fresh',key!==renderShop.key&&!R.shop.some(k=>!k));renderShop.key=key;markShopSel()}
 let TRSIG='';
 function renderTraits(){if(!DOM)return;const sig=JSON.stringify(SYN);if(sig===TRSIG)return;TRSIG=sig;const box=$('traits');box.innerHTML='';
   const list=TRAIT_ORDER.filter(t=>SYN[t]&&SYN[t].n>0).sort((a,b)=>(SYN[b].tier-SYN[a].tier)||(SYN[b].n-SYN[a].n));
