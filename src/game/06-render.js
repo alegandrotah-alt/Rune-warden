@@ -179,9 +179,9 @@ const OBS_SCALE=[1.25,1.2,.95,.75,.85,.7];
 // which way a sprite faces on screen: along the road in landscape, across it in portrait
 const fc=o=>ROT?(o.fy||1):(o.face||1);
 // the first 40% of a hero sheet is the idle loop, the rest the attack (4+6 on old sheets, 8+12 on new ones)
-// hero sheets: idle, attack and (on 28-cell sheets) 8 cast frames, which are framed wider (HCF) and drawn that much larger
+// hero sheets: idle, attack and 8 cast frames (36 cells: 12 idle, 16 attack; 28-cell sheets: 8 and 12), which are framed wider (HCF) and drawn that much larger
 const HCF=1.3;let HFZ=1;
-function heroCells(k){const n=cells('h_'+k)||10;if(n>=28)return[8,12,n-20];const ni=Math.round(n*.4);return[ni,n-ni,0]}
+function heroCells(k){const n=cells('h_'+k)||10;if(n>=36)return[12,16,n-28];if(n>=28)return[8,12,n-20];const ni=Math.round(n*.4);return[ni,n-ni,0]}
 function heroFrame(h){const [ni,na,nc]=heroCells(h.k),wave=R.phase==='wave',busy=h.atk>0&&wave;HFZ=1;if(h.castA>0){h.castA=wave?h.castA-FRAME_DT:0;if(nc&&h.castA>0){HFZ=HCF;return ni+na+clamp(((1-h.castA/.6)*nc)|0,0,nc-1)}}if(busy){const p=1-h.atk/.42;return ni+clamp((p*na)|0,0,na-1)}return((TIME*ni*1.25+h.uid)|0)%ni}
 // a soft round shadow, cached, instead of a flat ellipse
 let SHD=null;function shadow(x,y,rx,ry,a){if(LQ()){ctx.fillStyle=`rgba(0,0,0,${(a||.3)*.9})`;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,6.283);ctx.fill();return}if(!SHD){SHD=mk(64,64);const g=SHD&&SHD.getContext('2d');if(g&&g.createRadialGradient){const gr=g.createRadialGradient(32,32,2,32,32,32);gr.addColorStop(0,'rgba(0,0,0,.85)');gr.addColorStop(.55,'rgba(0,0,0,.45)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,64,64)}}if(!SHD)return;ctx.save();ctx.globalAlpha*=Math.min(1,(a||.3)*1.9);ctx.drawImage(SHD,x-rx*1.35,y-ry*1.35,rx*2.7,ry*2.7);ctx.restore()}

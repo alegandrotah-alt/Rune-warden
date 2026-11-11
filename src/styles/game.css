@@ -243,3 +243,13 @@ button:disabled{filter:saturate(.55)}
 #roomArt{display:block;width:100%;aspect-ratio:3/1;max-height:170px;object-fit:cover;object-position:50% 100%;border-radius:12px;margin-bottom:8px;background:#120b07;box-shadow:inset 0 0 0 1px rgba(255,207,106,.18)}
 @media (max-height:480px){#wardBox:not([hidden]){display:flex;gap:8px;max-width:none;align-items:stretch}.wrow{flex:0 0 44%}.wd{margin-top:0;flex:1;font-size:11.5px;padding:4px 8px}.wd em{display:none}.wcard canvas{width:32px;height:32px}}
 #roomArt[hidden]{display:none}@media (max-height:480px){#roomArt{max-height:92px;margin-bottom:5px}}
+
+/* ---------- phone held sideways: the shop is a column on the right ---------- */
+body.side #shop{left:auto;top:var(--topB,38px);right:0;bottom:0;width:calc(150px + env(safe-area-inset-right));flex-direction:column;gap:4px;padding:5px max(6px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) 8px;background:linear-gradient(90deg,rgba(30,20,14,0),rgba(30,20,14,.9) 9%,#1a110b)}
+body.side #cards{grid-template-columns:1fr;grid-auto-rows:minmax(0,1fr);gap:3px;flex:1;min-height:0}
+body.side .hc{min-height:0}body.side .hc canvas{width:50px;height:50px;right:-4px;top:-5px}body.side .hc .nm{padding:2px 5px}body.side .hc .nm b{font-size:12.5px}body.side .hc .nm small{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:104px}
+body.side .hc .cost{font-size:12px;top:2px;left:3px}
+body.side .sbtn{width:auto;flex-direction:row;gap:4px;height:32px;flex:none}body.side .sbtn button{flex-direction:row;gap:5px}body.side .sbtn button b{font-size:12.5px}body.side .sbtn button small{font-size:10px}
+body.side .sbtn .fight{height:36px}body.side .sbtn:last-of-type{height:36px}body.side .sbtn .fight b{font-size:16px}
+body.side #info,body.side #dmgP,body.side #relP{right:calc(var(--shopW,150px) + 6px)}
+@media (max-width:700px){body.side #shop{width:calc(126px + env(safe-area-inset-right));padding-left:6px}body.side .hc .nm b{font-size:11.5px}body.side .hc canvas{width:40px;height:40px}body.side .hc .nm small{max-width:86px}body.side .sbtn button small{display:none}body.side .sbtn .fight small{display:inline}}

@@ -35,19 +35,23 @@ const PERF={low:false,acc:0,n:0};let FPSV=60;
 // anchor and is drawn with upr(), so it never turns sideways.
 function resize(){if(!cv)return;W=cv.clientWidth||innerWidth;H=cv.clientHeight||innerHeight;DPR=Math.min(LQ()?1:2,window.devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
   const rot=H>W*1.05?1:0;if(rot!==ROT){ROT=rot;ZM.z=0;if(typeof document!=='undefined'&&document.body)document.body.classList.toggle('port',!!ROT)}
+  // a phone held sideways: the shop moves to a column on the right, so the board gets the full height and nothing lies on top of it
+  const sd=!ROT&&H<=480;if(typeof document!=='undefined'&&document.body&&document.body.classList.contains('side')!==sd)document.body.classList.toggle('side',sd);
   if(typeof measure==='function')measure();
   if(ROT){// portrait: the field fills the width; the spawn sits above it, the keep and the bench strip below
     const top=(UI.topH||80)+4,bot=(UI.shopH||120)+4,availW=W-12,availH=H-top-bot-4;
     const nw=FH+T*1.1,nh=(FW+T*1.6)*VY+T*3.7,s=Math.min(availW/nw,availH/nh);VB.s=s;VB.ox=VB.oy=0;VB.px=6+(availW-nw*s)/2+T*.6*s;VB.py=top+(availH-nh*s)/2+T*.95*VY*s;
     FB={l:VB.px-T*.1*s,r:VB.px+(FH+T*.1)*s,b:VB.py+(FW+T*.62)*s*VY+T*1.3*s}}
   else{// fit the field (plus room for the keep, the spawn portal and the bench strip) between the top bar and the shop
-    const short=H<=430,top=short?38:46,bot=(UI.shopH||120)+4,side=short||W<700?62:176,availW=W-side-16,availH=H-top-bot-4;
+    const short=H<=430,top=short?38:46,bot=(sd?0:UI.shopH||120)+4,side=short||W<700?62:176,availW=W-side-16-(sd?UI.shopW||150:0),availH=H-top-bot-4;
     const nw=FW+T*3,nh=FH*VY+T*1.55,s=Math.min(availW/nw,availH/nh);VB.s=s;VB.ox=side+8+(availW-nw*s)/2+T*1.15*s;VB.oy=top+(availH-nh*s)/2+T*.5*s;VB.px=VB.py=0;
     FB={l:VB.ox-T*.1*s,r:VB.ox+(FW+T*.1)*s,b:VB.oy+FH*s*VY}}
   // phones start zoomed in so heroes are big; the zoom button shows the whole board
   if(!(ZM.z>0)){ZM.z=defZoom();ZM.x=ZM.y=0;centreZoom()}applyZoom();
   if(typeof bgDirty!=='undefined')bgDirty=1}
-const defZoom=()=>clamp(SET.zoom||(Math.min(W,H)<=500?(ROT?1.3:1.15):1),1,ZMAX);
+// (the zoom is remembered per layout: upright phones start zoomed in, sideways shows the whole board)
+const defZoom=()=>clamp(ROT?SET.zoom||(Math.min(W,H)<=500?1.3:1):SET.zoomL||1,1,ZMAX);
+function keepZoom(){SET[ROT?'zoom':'zoomL']=ZM.z;saveSet()}
 const ZMAX=2.4;
 const sx=x=>VIEW.ox+x*VIEW.s,sy=y=>VIEW.oy+y*VIEW.s*VY,ss=v=>v*VIEW.s;
 // field point -> screen point, in either layout
@@ -75,7 +79,7 @@ function centreZoom(){if(ZM.z<=1)return;const z=ZM.z;ZM.z=1;applyZoom();const c=
   // upright: keep the castle in view just above the bench; the far end of the road scrolls under the top bar
   if(ROT){const kb=scr(FW+T*.62,FH/2)[1]+ss(T*1.3);ZM.y+=FB.b-kb;applyZoom()}}
 function panBy(dx,dy){if(ZM.z<=1)return;ZM.x+=dx;ZM.y+=dy;applyZoom()}
-const UI={shopH:150,topH:80};
+const UI={shopH:150,topH:80,shopW:0};
 // ---------- sprite sheets rendered offline from CC0 3D models (gfx/) ----------
 const SPR={img:{},st:{},cache:{}};
 function sheet(name){const s=SPR.st[name];if(s===1)return SPR.img[name];if(s!==undefined)return null;if(typeof Image==='undefined'||!document.createElement){SPR.st[name]=-1;return null}

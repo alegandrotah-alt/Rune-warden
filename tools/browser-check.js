@@ -57,8 +57,10 @@ function serve() {
   const busy = await page.evaluate(() => { const B = window.__RW.R.b; return B ? { mons: B.mons.length, projs: B.projs.length, ko: B.ko } : { mons: 0, projs: 0, ko: 0 }; });
   // 3. items combine on a hero, the act map and a mystery event open
   // tapping a hero's head (not its hex) opens its panel, which lists what its equipped items do
-  const head = await page.evaluate(() => { const G = window.__RW, R = G.R; R.b = null; R.phase = 'plan'; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; }); document.getElementById('info').hidden = true;
+  const head = await page.evaluate(() => { const G = window.__RW, R = G.R; G.tutEnd(); R.b = null; R.phase = 'plan'; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; }); document.getElementById('info').hidden = true;
     const h = R.board[0]; h.it = []; R.items.length = 0; G.dropItem('sword'); G.dropItem('bow'); G.equipFrom(0, h); G.equipFrom(0, h); G.uiRefresh(); const p = G.tileXY(h.c, h.r); return { x: p.x, y: p.y - 0.75 * G.tileSize() }; });
+  // hint cards wait for the tutorial to end: close any that pop up now so the tap reaches the field
+  for (let i = 0; i < 8; i++) { await page.waitForTimeout(250); if (await page.evaluate(() => !document.getElementById('ovTip').hidden)) await page.click('#tipOk'); else break; }
   await page.waitForTimeout(200); await page.mouse.click(head.x, head.y); await page.waitForTimeout(250);
   const heroItems = await page.evaluate(() => !document.getElementById('info').hidden && /Rune Arrows/.test(document.getElementById('info').textContent));
   const extra = await page.evaluate(() => { const G = window.__RW, R = G.R; R.b = null; R.phase = 'plan'; R.room = null; R.queue = null; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; });

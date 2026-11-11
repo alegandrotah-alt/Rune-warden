@@ -19,7 +19,7 @@ function pdown(e){if(!R||R.phase==='over'||R.phase==='pick')return;ensureAudio()
   {const cl=cellAt(px,py);if(cl){const t=terAt(cl.c,cl.r),g=(R.field.gates||[]).find(q=>q.k!=='west'&&q.c===cl.c&&q.r===cl.r);
     if(g)toast((g.k==='breach'?'A breach in the field':'The '+g.k+' gate')+': monsters come through here when it glows. It always keeps a road to the keep.');
     else if(t)toast(TERN[t]+': '+['','shooters here get +1 range, melee heroes +20% damage.','monsters here are 35% slower.','monsters here bleed 1.4% of their health a second.','nothing can stand or walk here; shots fly over it.'][t])}}
-  SEL=null;uiInfo(null);const now=performance.now();if(now-(pdown.lastTap||0)<320){if(ZM.z>1){ZM.z=1}else{const p=[px,py];zoomAt(p[0],p[1],Math.max(1.3,SET.zoom||1.3))}SET.zoom=ZM.z;saveSet();applyZoom();uiZoom()}pdown.lastTap=now;if(ZM.z>1)PAN={x:px,y:py}}
+  SEL=null;uiInfo(null);const now=performance.now();if(now-(pdown.lastTap||0)<320){if(ZM.z>1){ZM.z=1}else{const p=[px,py];zoomAt(p[0],p[1],Math.max(1.3,(ROT?SET.zoom:SET.zoomL)||1.3))}keepZoom();applyZoom();uiZoom()}pdown.lastTap=now;if(ZM.z>1)PAN={x:px,y:py}}
 function startValid(){VALID=null;if(R.phase!=='plan')return;VALID=new Uint8Array(COLS*ROWS);const was=DRAG.from==='board'?DRAG.h:null;if(was){R.board.splice(R.board.indexOf(was),1);rebuildBlk()}
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)VALID[r*COLS+c]=canPlace(c,r)?1:0;if(was){R.board.push(was);rebuildBlk()}}
 function pmove(e){if(!DRAG)return;DRAG.x=e.clientX;DRAG.y=e.clientY;DRAG.moved=DRAG.moved||Math.hypot(DRAG.x-DRAG.sx,DRAG.y-DRAG.sy)>8;DRAG.over=cellAt(DRAG.x,DRAG.y+ss(T*.2));DRAG.overBench=benchAt(DRAG.x,DRAG.y);DRAG.sell=!!DRAG.h&&overShop(DRAG.x,DRAG.y);if(DRAG.item!=null)DRAG.tgt=itemTarget(DRAG.x,DRAG.y);uiSellHint(DRAG.sell&&DRAG.h?sellValue(DRAG.h):0)}
@@ -60,15 +60,15 @@ let PAN=null,PINCH=null;const PTR=new Map();
 const mid=()=>{const v=[...PTR.values()];return{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2,d:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y)||1}};
 function uiZoom(){const o=$('zoomOB'),i=$('zoomIB');if(o)o.disabled=ZM.z<=1.001;if(i)i.disabled=ZM.z>=ZMAX-.01}
 // zoom buttons step around the middle of the field on screen and remember the choice
-function zoomStep(k){const F=fieldBox(),cx=clamp(W/2,F.l,F.r),cy=clamp((F.t+F.b)/2,0,H);zoomAt(cx,cy,ZM.z*k);SET.zoom=ZM.z;saveSet();uiZoom()}
+function zoomStep(k){const F=fieldBox(),cx=clamp(W/2,F.l,F.r),cy=clamp((F.t+F.b)/2,0,H);zoomAt(cx,cy,ZM.z*k);keepZoom();uiZoom()}
 if(cv&&cv.addEventListener){
   cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catch(_){}PTR.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(PTR.size===2){DRAG=null;VALID=null;PAN=null;uiSellHint(0);const m=mid();PINCH={d0:m.d,z0:ZM.z,x:m.x,y:m.y};return}if(PTR.size>2)return;pdown(e)});
   cv.addEventListener('pointermove',e=>{if(PTR.has(e.pointerId))PTR.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(PINCH&&PTR.size===2){const m=mid();zoomAt(m.x,m.y,PINCH.z0*m.d/PINCH.d0);panBy(m.x-PINCH.x,m.y-PINCH.y);PINCH.x=m.x;PINCH.y=m.y;uiZoom();return}
     if(PAN){panBy(e.clientX-PAN.x,e.clientY-PAN.y);PAN.x=e.clientX;PAN.y=e.clientY;return}pmove(e)});
-  const up=e=>{PTR.delete(e.pointerId);if(PINCH){if(PTR.size<2){PINCH=null;SET.zoom=ZM.z;saveSet()}return}if(PAN){PAN=null;return}if(e.type==='pointercancel'){DRAG=null;VALID=null;return}pup(e)};
+  const up=e=>{PTR.delete(e.pointerId);if(PINCH){if(PTR.size<2){PINCH=null;keepZoom()}return}if(PAN){PAN=null;return}if(e.type==='pointercancel'){DRAG=null;VALID=null;return}pup(e)};
   cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
-  cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,ZM.z*(e.deltaY<0?1.12:1/1.12));SET.zoom=ZM.z;saveSet();uiZoom()},{passive:false})}
+  cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,ZM.z*(e.deltaY<0?1.12:1/1.12));keepZoom();uiZoom()},{passive:false})}
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('keydown',e=>{if(!R||document.activeElement&&document.activeElement.tagName==='INPUT')return;
   if(e.key===' '){e.preventDefault();if(R.phase==='plan')fight();else if(R.phase==='wave')cycleSpeed()}else if(e.key==='d'||e.key==='D'){reroll();uiRefresh()}else if(e.key==='f'||e.key==='F'){buyXP();uiRefresh()}else if(e.key==='q'||e.key==='Q'){if(R.phase==='wave')usePower()}else if(e.key==='Escape'||e.key==='p')togglePause()});

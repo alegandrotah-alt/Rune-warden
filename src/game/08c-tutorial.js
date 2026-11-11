@@ -32,6 +32,8 @@ function tutTick(dt){if(!TUT||!DOM)return;const s=TUTS[TUT.i],co=$('coach'),ring
   // bubble beside the target, kept on screen
   const bw=co.offsetWidth||300,bh=co.offsetHeight||120;let x=clamp((r.l+r.r)/2-bw/2,8,W-bw-8),y=r.t-bh-14;if(r.t>H*.55&&s.hand)y=44;if(y<44)y=r.b+14;if(y+bh>H-4)y=clamp(H/2-bh/2,44,H-bh-4);
   if(r.b-r.t>H*.5){y=60;x=clamp(r.r-bw-10,8,W-bw-8)}
+  // sideways phone: the shop is a column on the right, so the bubble sits to its left
+  if(UI.shopW&&r.l>W-UI.shopW-20){x=Math.max(8,r.l-bw-16);y=clamp((r.t+r.b)/2-bh/2,44,H-bh-4)}
   const k2=Math.round(x)+','+Math.round(y);if(k2!==TUT.ck){TUT.ck=k2;co.style.left=x+'px';co.style.top=y+'px'}}
 // a ghost hand that shows the drag from bench to field
 function drawTutHand(){if(!TUT||!TUTS[TUT.i].hand||!TUT.tile||R.phase!=='plan')return;const i=R.bench.findIndex(Boolean);if(i<0)return;const a=benchSlot(i),c=TUT.tile,[bx,by]=scr(hx(c[0],c[1]),hy(c[1]));
