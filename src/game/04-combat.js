@@ -51,6 +51,7 @@ function monTick(m,dt){
   if(!D.final&&m.boss&&!m.rifted&&m.hp<m.max*.5&&R.wave<=30){m.rifted=1;openRift(1+R.act,R.act>=2?1:0);banner(D.n.toUpperCase()+' TEARS A BREACH','#d6a8ff')}
   if(D.beh==='phase'){m.phT-=dt;if(m.phT<=0){m.phased=!m.phased;m.phT=m.phased?1.2:3.5}}
   if(m.dreadT>0)m.dreadT-=dt;
+  if(frenzy()){m.sleepT=0;m.charmT=0;m.stunT=0;m.rootT=0;m.slowP=1}
   if(m.sleepT>0){m.sleepT-=dt;return}
   if(m.charmT>0){charmTick(m,dt);return}
   if(m.stunT>0){m.stunT-=dt;return}if(m.rootT>0){m.rootT-=dt;monAttack(m,dt);return}
@@ -60,13 +61,14 @@ function monTick(m,dt){
   // hunters stop to fight a hero in reach; runners never stop
   // (after a long brawl they push on for a while, so a stalemate can't stop a wave)
   if(m.huntCd>0)m.huntCd-=dt;
-  if(D.beh==='hunt'&&D.atk&&m.x>0&&!(m.huntCd>0)&&R.board.some(h=>heroUp(h)&&Math.hypot(hx(h.c,h.r)-m.x,hy(h.r)-m.y)<=D.atk.r*T)){m.huntT=(m.huntT||0)+dt;if(m.huntT>(m.boss?6:10)){m.huntT=0;m.huntCd=4}monAttack(m,dt);return}
+  if(D.beh==='hunt'&&D.atk&&m.x>0&&!(m.huntCd>0)&&!frenzy()&&R.board.some(h=>heroUp(h)&&Math.hypot(hx(h.c,h.r)-m.x,hy(h.r)-m.y)<=D.atk.r*T)){m.huntT=(m.huntT||0)+dt;if(m.huntT>(m.boss?6:10)){m.huntT=0;m.huntCd=4}monAttack(m,dt);return}
   if(m.kb>0){kbTick(m,dt);return}
   if(m.slowT>0)m.slowT-=dt;else m.slowP=1;
   let sp=m.sp*T*(rush?Math.max(m.slowP,.75):m.slowP)*(has('mire')?.9:1)*zs;
   if(tier('guardian')>=0&&!m.fly&&!rush)for(const h of R.board){if(h.ko||!HEROES[h.k].tr.includes('guardian'))continue;const p=heroPos(h);if(Math.abs(p.x-m.x)<T*1.5&&Math.abs(p.y-m.y)<T*1.5){sp*=1-[.2,.4][tier('guardian')];break}}
   if(!m.fly&&m.c>=0&&R.field.ter){const t=R.field.ter[m.r*COLS+m.c];if(t===2)sp*=has('quagmire')?(rush?.65:.4):(rush?.8:.65);else if(t===3){dealRaw(m,m.max*(m.boss?.002:.014)*(has('bramble')?3:1)*dt,null,1);if(Math.random()<dt*2)fx({k:'thorn',x:m.x,y:m.y,dur:.35})}}
   if(m.gale>0){m.gale-=dt;sp*=1.5}
+  if(frenzy()){sp*=1.6;if(!B.frz){B.frz=1;banner('FRENZY','#ff8a5a')}}
   let tx,ty;
   if(m.fly){tx=FW+T;ty=FH/2}
   else{const cl=m.x<T*.15?null:cellOf(m.x,m.y);
@@ -241,8 +243,10 @@ function charmTick(m,dt){m.charmT-=dt;const B=R.b;let tx=m.x-T,ty=m.y;
   const dx=tx-m.x,dy=ty-m.y,dd=Math.hypot(dx,dy)||1;if(m.x>T*.2){m.x+=dx/dd*m.sp*T*.7*dt;m.y+=dy/dd*m.sp*T*.7*dt}m.face=dx>0?1:-1;
   m.catk=(m.catk||0)-dt;if(m.catk<=0){let o=null,od=T*1.6;for(const q of B.mons){if(q===m||q.hp<=0||q.charmT>0)continue;const d=Math.hypot(q.x-m.x,q.y-m.y);if(d<od){od=d;o=q}}
     if(o){m.catk=1;m.lunge=.25;dealRaw(o,Math.max(mDmg(m)*4,o.max*.06),m.charmBy||null,0,{charm:1});fx({k:'mslash',x:o.x,y:o.y,dur:.25,face:m.face})}}}
+// a wave that drags on past two minutes (three for the Devourer) turns into a frenzy: monsters shrug off knockback, sleep, charm, stuns, roots and slows, stop brawling and run faster, so no stalemate lasts
+const frenzy=()=>!!R.b&&R.b.t>(R.final?400:120);
 // knockback: shove a walker back up the road (towards higher distance from the keep), in hexes
-function knock(m,hexes){if(m.hp<=0||m.fly||MON[m.k].final||m.c<0)return;R.stats.kb=(R.stats.kb||0)+1;if(R.stats.kb>=200)award('kb200');if(has('ram'))m.stunT=Math.max(m.stunT,m.boss?.15:.4);m.kb=Math.min(T*2.2,(m.kb||0)+hexes*T*(m.boss?.33:m.big?.6:1))}
+function knock(m,hexes){if(m.hp<=0||m.fly||MON[m.k].final||m.c<0||frenzy())return;R.stats.kb=(R.stats.kb||0)+1;if(R.stats.kb>=200)award('kb200');if(has('ram'))m.stunT=Math.max(m.stunT,m.boss?.15:.4);m.kb=Math.min(T*2.2,(m.kb||0)+hexes*T*(m.boss?.33:m.big?.6:1))}
 function kbTick(m,dt){const d=R.field.dist;if(!d||m.c<0){m.kb=0;return}const cur=d[m.r*COLS+m.c];let best=null,bd=cur;
   for(const [c,r] of nbrs(m.c,m.r)){const v=d[r*COLS+c];if(v>bd){bd=v;best=[c,r]}}if(!best){m.kb=0;return}
   const tx=hx(best[0],best[1]),ty=hy(best[1]),dx=tx-m.x,dy=ty-m.y,dd=Math.hypot(dx,dy)||1,st=Math.min(m.kb,T*7*dt,dd);m.x+=dx/dd*st;m.y+=dy/dd*st;m.kb-=st;
