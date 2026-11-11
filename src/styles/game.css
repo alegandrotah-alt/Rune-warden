@@ -253,3 +253,7 @@ body.side .sbtn{width:auto;flex-direction:row;gap:4px;height:32px;flex:none}body
 body.side .sbtn .fight{height:36px}body.side .sbtn:last-of-type{height:36px}body.side .sbtn .fight b{font-size:16px}
 body.side #info,body.side #dmgP,body.side #relP{right:calc(var(--shopW,150px) + 6px)}
 @media (max-width:700px){body.side #shop{width:calc(126px + env(safe-area-inset-right));padding-left:6px}body.side .hc .nm b{font-size:11.5px}body.side .hc canvas{width:40px;height:40px}body.side .hc .nm small{max-width:86px}body.side .sbtn button small{display:none}body.side .sbtn .fight small{display:inline}}
+/* act map on a sideways phone: the grid takes almost the whole height so the rooms are not stacked on top of each other */
+@media (max-height:430px){#ovMap .card{position:relative;padding:8px 12px 6px}#ovMap h2{font-size:17px;margin:0;line-height:1.2}#ovMap .sub{font-size:11.5px;margin:1px 70px 2px}
+  #mapGrid{height:calc(100vh - 112px);height:calc(100dvh - 112px);min-height:190px}#ovMap .row{position:absolute;top:6px;right:8px;margin:0}#ovMap .row button{padding:4px 12px;font-size:13px}
+  .mn{width:34px;height:34px}.mn.boss{width:46px;height:46px}#mapLeg{margin:2px 0 0}}
