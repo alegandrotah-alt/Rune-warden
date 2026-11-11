@@ -90,7 +90,17 @@ function serve() {
     return { rot: v.ROT, fits: document.documentElement.scrollWidth <= W + 1 && ![...document.querySelectorAll('#top button,#top .pill,#shop button')].some((e) => { const r = e.getBoundingClientRect(); return r.width && (r.right > W + 1 || r.bottom > H + 1); }), benchClear: b.y + b.w * .3 < sh.top }; });
   await pp.screenshot({ path: path.join(OUT, '7-portrait.png') });
   await pp.setViewportSize({ width: 667, height: 375 }); await pp.waitForTimeout(500); const turned = await pp.evaluate(() => window.__RW.dbgView().ROT);
-  await pp.setViewportSize({ width: 375, height: 667 }); await pp.waitForTimeout(500); const back = await pp.evaluate(() => window.__RW.dbgView().ROT); await port.close();
+  await pp.setViewportSize({ width: 375, height: 667 }); await pp.waitForTimeout(500); const back = await pp.evaluate(() => window.__RW.dbgView().ROT);
+  // act IV, room pictures and the warden's power
+  const rift = await pp.evaluate(() => { const G = window.__RW, R = G.R; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; }); R.b = null; R.room = null; R.phase = 'plan'; R.wave = 31; R.won = 1; R.warden = 'beastlord'; G.startRift();
+    const q = G.waveListOf(31), ok = ['voidling', 'riftimp', 'shade', 'gazer', 'maw']; return { floors: R.map && R.map.nodes.length, act: R.act, mons: q.length, rift: q.every((e) => ok.includes(e.k)), elite: q.some((e) => e.elite) }; });
+  await pp.evaluate(() => { document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; }); window.__RW.setRoom({ t: 'event', id: 'tower', fl: 0, gold: 0, comp: 0, rel: 0 }); }); await pp.waitForTimeout(1500);
+  const art = await pp.evaluate(() => { const c = document.getElementById('roomArt'); if (!c || c.hidden || !c.width) return 0; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, seen = new Set(); for (let i = 0; i < d.length; i += 4 * 37) seen.add(d[i] >> 3 << 10 | d[i + 1] >> 3 << 5 | d[i + 2] >> 3); return seen.size; });
+  await pp.screenshot({ path: path.join(OUT, '8-room-picture.png') });
+  await pp.evaluate(() => { const G = window.__RW, R = G.R; document.querySelectorAll('.overlay').forEach((o) => { o.hidden = true; }); R.room = null; R.phase = 'plan'; R.map.next = { f: 0, l: R.map.nodes[0].findIndex(Boolean) }; R.node = 'battle'; G.startWave(); G.uiRefresh(); });
+  await pp.waitForTimeout(6000); await pp.screenshot({ path: path.join(OUT, '9-rift.png') }); await pp.click('#pwB'); await pp.waitForTimeout(300);
+  const power = await pp.evaluate(() => ({ used: !!(window.__RW.R.b && window.__RW.R.b.pw), cls: document.getElementById('pwB').className }));
+  const riftOk = rift.floors === 5 && rift.act === 3 && rift.rift && rift.elite && art > 40 && power.used && /used/.test(power.cls); await port.close();
   const portOk = portrait.rot === 1 && portrait.fits && portrait.benchClear && turned === 0 && back === 1;
   await browser.close(); srv.close();
   const d = ft.slice(1).map((t, i) => t - ft[i]).sort((a, b) => a - b);
@@ -98,10 +108,10 @@ function serve() {
   let md = `### Browser check\n- Script errors: ${errors.length ? '**' + errors.length + '**' : 'none'}\n- Tutorial shown on the first run: ${tut ? 'yes' : '**no**'}\n- First wave: tapping a shop card showed the hero with a Buy button: ${shopInfo ? 'yes' : '**no**'}; bought from the shop: ${drag ? 'yes' : '**no**'}, heroes on the field: ${placed}\n` +
     `- Busy late wave (${busy.mons} monsters, ${busy.projs} projectiles, ${busy.ko} heroes knocked out), CPU slowed 4×, landscape phone at 2× density: **${(1000 / avg).toFixed(0)} FPS** average, ${p95.toFixed(0)} ms 95th-percentile frame\n` +
     `- Save, reload and continue restored the same run on the same screen: ${resumeOk ? 'yes' : '**no** ' + JSON.stringify(resumed)}\n- Smallest phone (568×320) fits without spilling off screen: ${fit ? 'yes' : '**no**'}\n- Portrait phone (375×667): spawn on top and keep below, fits, bench clear of the shop, turning sideways and back switches layouts: ${portOk ? 'yes' : '**no** ' + JSON.stringify({ portrait, turned, back })}\n` +
-    `- Tapping a hero's head shows its items and what they do: ${heroItems ? 'yes' : '**no**'}\n- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item, closed, and left no stale map behind: ${extra.evOk ? 'yes' : '**no**'}\n` +
+    `- Tapping a hero's head shows its items and what they do: ${heroItems ? 'yes' : '**no**'}\n- Act IV: the Rift has its own 5-floor map and monsters, a room shows its picture, and the warden's power fires once: ${riftOk ? 'yes' : '**no** ' + JSON.stringify({ rift, art, power })}\n- Sword + bow on one hero made: ${extra.item === 'runearrow' ? 'Rune Arrows' : '**' + (extra.item || 'nothing') + '**'}; act map opened: ${extra.mapOk ? 'yes' : '**no**'} (${extra.chosen}); merchant room bought an item, closed, and left no stale map behind: ${extra.evOk ? 'yes' : '**no**'}\n` +
     `  (CI has no GPU, so real phones run far faster; compare this number between builds)\n- Screenshots are attached to the run as **browser-check-screens**.\n`;
   if (errors.length) md += '\n```\n' + errors.slice(0, 10).join('\n') + '\n```\n';
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');
-  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk || !resumeOk || !fit || !portOk || !shopInfo || !heroItems ? 1 : 0);
+  process.exit(errors.length || !drag || !placed || !tut || extra.item !== 'runearrow' || !extra.mapOk || !extra.evOk || !resumeOk || !fit || !portOk || !shopInfo || !heroItems || !riftOk ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

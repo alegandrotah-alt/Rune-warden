@@ -58,7 +58,7 @@ const POOL=[0,22,20,17,10,9];
 const XPNEED=[0,0,2,2,6,10,20,36,48,72,84];// xp to go from level i to i+1
 const STARM=[0,1,1.8,3.24];
 // monsters: hp in units of the wave base, sp in tiles/s, ar = physical armour, mr = magic resist, w = keep damage on leak
-const EPITHET={sporemother:'Queen of the Sunken Bog',colossus:'Warden of Frostpeak Pass',skyking:'Tyrant of the Sunscorch Dunes',necro:'Lord of the Hollow Crypts',mushking:'The Rot-Crowned Sovereign',dragon:'Scourge of the Ember Wastes',devourer:'The Hunger Beneath the World'};
+const EPITHET={sporemother:'Queen of the Sunken Bog',colossus:'Warden of Frostpeak Pass',skyking:'Tyrant of the Sunscorch Dunes',necro:'Lord of the Hollow Crypts',mushking:'The Rot-Crowned Sovereign',dragon:'Scourge of the Ember Wastes',devourer:'The Hunger Beneath the World',herald:'Voice of the Devourer'};
 const MON={
   minion:{n:'Skeleton Minion',hp:.7,sp:1.25,ar:0,mr:0,w:1,sz:.85,atk:{k:'melee',r:1.45,cd:1.4,m:.4}},
   warrior:{n:'Skeleton Warrior',hp:1.3,sp:.9,ar:.3,mr:0,w:2,sz:.95,atk:{k:'melee',r:1.45,cd:1.3,m:1}},
@@ -96,6 +96,12 @@ const MON={
   squidle:{n:'Squidle',beh:'phase',hp:.9,sp:1.15,ar:0,mr:.3,w:2,sz:.85,fly:1},
   brute:{n:'Sand Brute',beh:'hunt',hp:5,sp:.6,ar:.3,mr:.3,w:5,sz:1.35,big:1,atk:{k:'slam',r:1.4,cd:2.6,m:2.1}},
   skyking:{n:'The Sky Tyrant',hp:33,sp:.5,ar:.3,mr:.35,w:25,sz:2,boss:1,sig:{k:'gale',n:'Tailwind',d:'every 9s a gale makes every monster 50% faster for 3s'},fly:1,summon:'squidle',atk:{k:'bolt',r:2.8,cd:1.4,m:1.3}},
+  voidling:{n:'Voidling',hp:1.2,sp:.95,ar:.1,mr:.4,w:2,sz:.85,atk:{k:'bolt',r:2.4,cd:2.4,m:.8,hush:.6}},
+  riftimp:{n:'Rift Imp',beh:'rush',hp:.9,sp:1.5,ar:.1,mr:.2,w:2,sz:.85,fly:1},
+  shade:{n:'Hollow Shade',beh:'hunt',hp:1.6,sp:1,ar:.3,mr:.3,w:3,sz:.95,atk:{k:'melee',r:1.45,cd:1.2,m:1.3,leech:.05}},
+  gazer:{n:'Gazer',beh:'phase',hp:1,sp:1.1,ar:0,mr:.45,w:2,sz:.9,fly:1,atk:{k:'bolt',r:2.6,cd:2.2,m:.9,drain:25}},
+  maw:{n:'Rift Maw',beh:'hunt',hp:6,sp:.6,ar:.4,mr:.4,w:6,sz:1.35,big:1,atk:{k:'slam',r:1.5,cd:2.6,m:2.2}},
+  herald:{n:'The Rift Herald',hp:34,sp:.5,ar:.3,mr:.45,w:25,sz:2.1,boss:1,fly:1,sig:{k:'unravel',n:'Unravel',d:'every 9s it tears a breach open in the field and wraps itself in a shield worth 5% of its health'},summon:'riftimp',atk:{k:'breath',r:2.6,cd:3.2,m:1.7}},
 };
 // three acts of ten waves; wave 10 of each act is its boss
 const ACTS=[
@@ -110,6 +116,9 @@ const BIOMES={
   dunes:{a:2,n:'Sunscorch Dunes',obs:5,roster:['cactoro','dino','birb','squidle'],big:'brute',boss:'skyking',ter:{water:1,hill:4,mud:0,thorn:3},ground:['#c09a62','#cba46c','#b6925a'],edge:'#6e5028',fog:'rgba(255,215,150,.08)',sky:['#4e3218','#e0a868']},
 };
 const BIOALT=['bog','frost','dunes'];
+// act IV: the Rift, five floors between the last act boss and the Rune Devourer. Its monsters meddle with your heroes.
+const RIFTN=5;
+const RIFT={n:'The Rift',obs:6,roster:['voidling','riftimp','shade','gazer'],big:'maw',boss:'herald',ter:{water:2,hill:3,mud:1,thorn:3},ground:['#4a3a6a','#56447a','#42345e'],edge:'#1c1430',fog:'rgba(170,110,255,.09)',sky:['#120a22','#5a3a9a']};
 // the alternate bosses count as their act's boss for unlocks
 const BOSSEQ={sporemother:'necro',colossus:'mushking',skyking:'dragon'};
 // relics: picked like augments, three choices at a time. tier 1 silver, 2 gold, 3 prismatic
@@ -238,6 +247,9 @@ const ACH=[
   {id:'kb200',n:'Get Back',d:'Knock monsters back 200 times in one run',g:40},
   {id:'hill3',n:'King of the Hill',d:'Have three heroes on high ground at once',g:25},
   {id:'moon',n:'Blood Moon',d:'Bring Fenrir\'s Blood Moon to its full strength',g:60},
+  {id:'herald',n:'Silence the Herald',d:'Defeat the Rift Herald',g:80},
+  {id:'wardens',n:'Many Hands',d:'Win a run with three different wardens',g:100},
+  {id:'twins',n:'Double Trouble',d:'Slay an elite that carries two twists',g:40},
   {id:'h_lone',n:'One Warden',hidden:'One is all it takes.',d:'Clear a wave after wave 5 with a single hero on the field',g:60},
   {id:'h_three',n:'Trinity',hidden:'Three legends at once.',d:'Have three ★3 heroes on the field at once',g:120},
   {id:'h_dragon',n:'Dragonheart',hidden:'Raise a dragon to its full glory.',d:'Get a ★3 Wyrmling',g:150},
@@ -308,8 +320,26 @@ const AFFIX={
   swift:{n:'Swift',col:'#ffe06a',d:'moves 40% faster'},
   thorns:{n:'Thorned',col:'#a6e04a',d:'heroes that hit it take damage back'},
   regen:{n:'Undying',col:'#7dff9a',d:'regenerates 2% health every second'},
+  split:{n:'Splitting',col:'#ffb0e0',d:'splits into two lesser copies when it dies'},
+  ward:{n:'Warding',col:'#8ad8ff',d:'monsters near it take 25% less damage'},
+  molten:{n:'Molten',col:'#ff8a3a',d:'bursts when it dies, burning heroes within 2 hexes'},
+  jugg:{n:'Unstoppable',col:'#d8c8a8',d:'cannot be knocked back, stunned, rooted or slowed'},
+  hex:{n:'Hexing',col:'#c9a8ff',d:'its hits silence a hero for a second'},
 };
 const AFFKEYS=Object.keys(AFFIX);
+// a twist that fits the monster: ones that need an attack only go to monsters that have one
+const pickAff=(k,not)=>rnd(AFFKEYS.filter(a=>a!==not&&!((a==='vamp'||a==='hex')&&!MON[k].atk)&&!(a==='split'&&MON[k].split)));
+const affd=(m,a)=>m.aff===a||m.aff2===a;
+// ---------- wardens: who you play. Each has a perk, a power to use once per fight and a keep guardian that fights a level higher for them ----------
+// (a free extra guardian was tried and was far too strong: the Keep Dragon alone took the bot from 10% wins to 67%)
+const WARDENS={
+  castellan:{n:'The Castellan',fig:'paladin',col:'#6fb6ff',say:'A soldier of the old guard. Steady walls, steady hands.',perk:'The keep has 10 more health.',pw:{n:'Rally',ic:'flag',d:'Heroes attack 40% faster for 6 seconds.'},g:'banner'},
+  runesmith:{n:'The Runesmith',fig:'tinker',col:'#9cc4ff',say:'Reads the old runes like others read weather.',perk:'Start with a ×2 rune stone and get another at every new act.',pw:{n:'Overcharge',ic:'rune',d:'Every rune multiplies by 1 more for 10 seconds.'},g:'oracle',un:{ach:'act1',d:'Defeat an Act I boss'}},
+  beastlord:{n:'The Beastlord',fig:'druid',col:'#d99a4a',say:'Raised by the pack, and still runs with it.',perk:'Start with a Grey Wolf. Your Beasts count as one more for the Beast trait.',pw:{n:'Stampede',ic:'paw',d:'Walking monsters are thrown back 2 hexes and stunned for 2 seconds.'},g:'dragon',un:{ach:'act2',d:'Defeat an Act II boss'}},
+  gravewarden:{n:'The Gravewarden',fig:'necromancer',col:'#c9a8ff',say:'Keeps a ledger of the dead, and collects.',perk:'Every elite or boss slain repairs 3 keep health. The keep has 10 less health.',pw:{n:'Rise Again',ic:'skull',d:'Knocked-out heroes get back up at half health; the others heal 20%.'},g:'reaper',un:{ach:'win',d:'Win a run'}},
+};
+const WKEYS=Object.keys(WARDENS);
+const wardenOpen=k=>!WARDENS[k].un||!!(META.ach&&META.ach[WARDENS[k].un.ach]);
 // the oracle at the gate offers a blessing at the start of a run
 const ORACLE={
   gold:{n:'A purse of gold',d:'+15 gold.'},
@@ -337,8 +367,9 @@ const OBS_SETS=[
 OBS_SETS.push([['props3',0,1.05],['props3',1,1.1],['props3',2,.95],['props3',3,1],['props3',4,.95],['props3',5,1.2]],
   [['props3',6,1.3],['props3',7,1],['props3',8,1.05],['props3',9,1],['props3',10,1.05],['props3',11,1.05]],
   [['props3',12,1.1],['props3',13,.95],['props3',14,1.3],['props3',15,1],['props3',16,1.05],['props3',17,.95]]);
+OBS_SETS.push([['props4',16,1.05],['props4',17,1.2],['props4',18,1],['props4',20,.9],['props4',21,1.15],['props4',22,1.2]]);
 const EDGE_SETS=[[['props2',4,.8],['props2',5,.55],['props2',6,.6],['props2',0,.7],['props2',1,.75],['props2',7,.9]],[['props2',9,.6],['props2',10,.7],['props',5,.7],['props2',8,.7],['props2',7,.9]],[['props2',11,.7],['props2',12,.8],['props2',13,.8],['props2',14,.65]]];
-EDGE_SETS.push([['props3',21,.7],['props3',22,.7],['props3',23,.7],['props3',5,.9],['props3',2,.7]],[['props3',6,.95],['props3',8,.85],['props3',10,.8],['props3',7,.7]],[['props3',18,.9],['props3',19,.8],['props3',20,.6],['props3',13,.7],['props3',14,.95]]);
+EDGE_SETS.push([['props3',21,.7],['props3',22,.7],['props3',23,.7],['props3',5,.9],['props3',2,.7]],[['props3',6,.95],['props3',8,.85],['props3',10,.8],['props3',7,.7]],[['props3',18,.9],['props3',19,.8],['props3',20,.6],['props3',13,.7],['props3',14,.95]],[['props4',17,.9],['props4',19,.9],['props4',16,.7],['props4',23,.7],['props4',22,.85],['props4',18,.8]]);
 // ---------- keep guardians: they man the keep, unlock through deeds, and level up with gems ----------
 // cd = seconds between actions at level 1; p(l) = power multiplier per level
 const GUARDS={

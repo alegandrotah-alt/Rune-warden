@@ -19,7 +19,7 @@ function hexPathS(g,c,r,k,lift){const x=hx(c,r),y=hy(r),R_=HR*(k||1);g.beginPath
 function hexPath(g,c,r,k,lift){const x=hx(c,r),y=hy(r),R_=HR*(k||1);g.beginPath();for(let i=0;i<6;i++){const a=(-90+60*i)*Math.PI/180,px=sx(x+Math.cos(a)*R_),py=sy(y+Math.sin(a)*R_)-(lift||0);i?g.lineTo(px,py):g.moveTo(px,py)}g.closePath()}
 const cv=$('cv'),ctx=cv&&cv.getContext?cv.getContext('2d'):null;
 let W=0,H=0,DPR=1,VIEW={s:1,ox:0,oy:0,px:0,py:0},VB={s:1,ox:0,oy:0,px:0,py:0},ZM={z:0,x:0,y:0},ROT=0,FB={l:0,r:0,b:0};
-let SET={music:.6,sfx:.7,shake:1,nums:1,quality:'auto',speedPref:1};
+let SET={music:.6,sfx:.7,shake:1,nums:1,quality:'auto',speedPref:1,fps:false};
 try{const m=JSON.parse(localStorage.getItem('runewarden-settings')||'null');if(m)Object.assign(SET,m)}catch(e){}
 const saveSet=()=>{try{localStorage.setItem('runewarden-settings',JSON.stringify(SET))}catch(e){}};
 let META={gems:0,best:0,runs:0,res:{},ach:{},seen:{},wins:0,bestEndless:0,kills:0};
@@ -27,7 +27,7 @@ try{const m=JSON.parse(localStorage.getItem('runewarden-meta')||'null');if(m)MET
 const saveMeta=()=>{try{localStorage.setItem('runewarden-meta',JSON.stringify(META))}catch(e){}};
 const rank=id=>META.res[id]||0;
 const LQ=()=>SET.quality==='low'||(SET.quality==='auto'&&PERF.low);
-const PERF={low:false,acc:0,n:0};
+const PERF={low:false,acc:0,n:0};let FPSV=60;
 // Two layouts. Landscape: the road runs left to right. Portrait (ROT): the same field turned so monsters come in at the top
 // and the keep stands at the bottom. Field coordinates never change; only the view does.
 // sx/sy map field x/y into "layout space"; in landscape that is the screen. In portrait, ground art (hexes, rings, roads) is drawn

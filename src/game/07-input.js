@@ -71,4 +71,4 @@ if(cv&&cv.addEventListener){
   cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
   cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,ZM.z*(e.deltaY<0?1.12:1/1.12));SET.zoom=ZM.z;saveSet();uiZoom()},{passive:false})}
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('keydown',e=>{if(!R||document.activeElement&&document.activeElement.tagName==='INPUT')return;
-  if(e.key===' '){e.preventDefault();if(R.phase==='plan')fight();else if(R.phase==='wave')cycleSpeed()}else if(e.key==='d'||e.key==='D'){reroll();uiRefresh()}else if(e.key==='f'||e.key==='F'){buyXP();uiRefresh()}else if(e.key==='Escape'||e.key==='p')togglePause()});
+  if(e.key===' '){e.preventDefault();if(R.phase==='plan')fight();else if(R.phase==='wave')cycleSpeed()}else if(e.key==='d'||e.key==='D'){reroll();uiRefresh()}else if(e.key==='f'||e.key==='F'){buyXP();uiRefresh()}else if(e.key==='q'||e.key==='Q'){if(R.phase==='wave')usePower()}else if(e.key==='Escape'||e.key==='p')togglePause()});

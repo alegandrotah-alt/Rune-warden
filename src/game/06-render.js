@@ -4,6 +4,11 @@ function fx(o){if(FXL.length>(LQ()?60:160))return;o.t=0;FXL.push(o)}
 function floatText(x,y,t,col,s){if(TXT.length>40)TXT.shift();TXT.push({x,y,t,col,s:s||1,life:1.1})}
 function banner(t,col){BANNER={t,col,life:2.4}}
 function shake(v){SHK=Math.max(SHK,v*(SET.shake??1))}
+// hit-stop: the fight freezes for a blink on a big blow; flash: a white wash over the field (both skipped by the headless sim)
+let HSTOP=0,FLASH=0;function hitStop(t){if(DOM&&(SET.shake??1)>0)HSTOP=Math.max(HSTOP,t)}function flash(v){if(DOM&&(SET.shake??1)>0)FLASH=Math.max(FLASH,v)}
+// monster sheets: the walk cycle, then (on newer sheets) attack and death frames in the last two quarters, framed wider
+function monCells(k){const n=cells('m_'+k)||6;return n>=20?[n>>1,n>>2,n>>2]:[n,0,0]}
+const MAF=1.3,MDF=1.7;
 function fxStar(h){const p=h.c>=0?{x:hx(h.c,h.r),y:hy(h.r)}:null;if(p){fx({k:'star',x:p.x,y:p.y,dur:.9,col:'#ffd76a'});floatText(p.x,p.y-T,'★'.repeat(h.star),'#ffd76a',1.4)}sfx('level',.7)}
 const TIERCOL=['','#b8c2cc','#5fd17a','#4aa8ff','#c77dff','#ffcf2e'];
 function benchSlot(i){const B=bottomLayout(),n=R.bench.length;return{x:B.cx+(i-(n-1)/2)*B.w,y:B.y,w:B.w}}
@@ -201,12 +206,13 @@ function drawMon(m){
   const D=MON[m.k],[x,y]=scr(m.x,m.y),fly=m.fly?ss(T*.55)+Math.sin(m.wob)*ss(4):0,size=ss(T*1.42*(m.sz||D.sz))*(m.boss?1.15:1);
   m.age=(m.age||0)+FRAME_DT;const pop=m.age<.3?m.age/.3:1,pk=pop<1?1-(1-pop)*(1-pop):1;shadow(x,y,size*.25*pk,size*.085*pk,m.fly?.2:.34);
   if(pop<1&&!LQ()){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=(1-pop)*.8;const gl=glow(m.gate!=null?'190,120,255':'255,240,210');if(gl)ctx.drawImage(gl,x-size*.5,y-size*.75-fly,size,size);ctx.restore()}
+  if(m.boss&&D.sig&&m.sigT!=null&&m.sigT<1.1&&m.sigT>0&&m.x>T*.5){const q=1-m.sigT/1.1,r=size*(1.1-.6*q);ctx.save();ctx.strokeStyle=`rgba(255,215,106,${.25+.6*q})`;ctx.lineWidth=Math.max(2,ss(3+4*q));ctx.beginPath();ctx.ellipse(x,y,r,r*VY,0,0,6.283);ctx.stroke();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.5*q;const gl=glow('255,200,90');if(gl)ctx.drawImage(gl,x-size*.6,y-size*.95-fly,size*1.2,size*1.2);ctx.restore()}
   if(m.elite||m.boss){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.55+.2*Math.sin(TIME*6);const gl=glow(m.boss?'255,80,60':'255,200,60');if(gl)ctx.drawImage(gl,x-size*.5,y-size*.4-fly,size,size*.6);ctx.restore()}
   if(m.slowT>0&&m.slowP<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.35;const gl=glow('120,200,255');if(gl)ctx.drawImage(gl,x-size*.35,y-size*.7-fly,size*.7,size*.7);ctx.restore()}
-  const nc=cells('m_'+m.k)||6,fi=((m.wob*1.1*nc/6)|0)%nc,f=frame('m_'+m.k,160,(m.stunT>0||m.rootT>0)?0:fi,size*DPR),bob=m.stunT>0||m.rootT>0||m.fly?1:1+.025*Math.sin(m.wob*2.2);if(m.lunge>0)m.lunge-=FRAME_DT;const lg=m.lunge>0?Math.sin(m.lunge/.25*Math.PI)*size*.12*fc(m):0;
+  const [nc,na]=monCells(m.k);if(m.atkA>0)m.atkA-=FRAME_DT;const swing=na&&m.atkA>0,fz=swing?MAF:1,fi=swing?nc+clamp(((1-m.atkA/.36)*na)|0,0,na-1):((m.wob*1.1*nc/6)|0)%nc,f=frame('m_'+m.k,160,(m.stunT>0||m.rootT>0)&&!swing?0:fi,size*fz*DPR),bob=m.stunT>0||m.rootT>0||m.fly?1:1+.025*Math.sin(m.wob*2.2);if(m.lunge>0)m.lunge-=FRAME_DT;const lg=m.lunge>0?Math.sin(m.lunge/.25*Math.PI)*size*.12*fc(m):0;
   if(m.phased)ctx.globalAlpha=.3;if(MON[m.k].final){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.5+.2*Math.sin(TIME*3);const gl=glow('150,60,255');if(gl)ctx.drawImage(gl,x-size*.7,y-size*1.05,size*1.4,size*1.2);ctx.restore()}
   if(m.charmT>0){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.6;const gl=glow('255,80,160');if(gl)ctx.drawImage(gl,x-size*.4,y-size*.8,size*.8,size*.8);ctx.restore()}
-  if(f){ctx.save();ctx.translate(x+lg,y-fly);ctx.scale((fc(m)<0?-1:1)*pk/bob,pk*bob);ctx.drawImage(f,-size/2,-size*.86,size,size);if(m.hitT>0&&!LQ()){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=m.hitT*3;ctx.drawImage(f,-size/2,-size*.86,size,size)}ctx.restore()}
+  if(f){const fs=size*fz,fx0=-fs/2,fy0=-fs*(.5+.36/fz);ctx.save();ctx.translate(x+lg,y-fly);ctx.scale((fc(m)<0?-1:1)*pk/bob,pk*bob);ctx.drawImage(f,fx0,fy0,fs,fs);if(m.hitT>0&&!LQ()){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=m.hitT*3;ctx.drawImage(f,fx0,fy0,fs,fs)}ctx.restore()}
   else{ctx.fillStyle='#c8c0b0';ctx.beginPath();ctx.arc(x,y-size*.3-fly,size*.22,0,6.283);ctx.fill()}ctx.globalAlpha=1;
   if(m.sleepT>0){ctx.fillStyle='#cfe6ff';ctx.font=`900 ${Math.max(10,size*.16)}px sans-serif`;ctx.textAlign='center';for(let i=0;i<3;i++){const ph=(TIME*.8+i/3)%1;ctx.globalAlpha=1-ph;ctx.fillText('z',x+size*.15+ph*size*.2,y-size*(.75+ph*.35)-fly)}ctx.globalAlpha=1}
   if(m.dreadT>0){ctx.strokeStyle='rgba(180,80,255,.7)';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x,y,size*.26,size*.08,0,0,6.283);ctx.stroke()}
@@ -217,7 +223,7 @@ function drawMon(m){
   if(m.hp<m.max||m.boss||m.elite){const bw=size*(m.boss?.9:.55),by=y-size*.92-fly,p=clamp(m.hp/m.max,0,1);hpBar(m,x,by,bw,Math.max(3.5,size*(m.boss?.065:.055)),p,m.boss?'#ff5a4a':m.elite?'#ffcf2e':'#e8473f');
     if(m.sh>0){ctx.fillStyle='rgba(235,245,255,.9)';ctx.fillRect(x-bw/2,by-Math.max(2,size*.03)-1,bw*clamp(m.sh/(m.max*.35),0,1),Math.max(2,size*.03))}
     if(m.boss){ctx.font=`700 ${Math.max(10,ss(12))}px Cinzel,serif`;ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#fff';ctx.fillText(MON[m.k].n,x,by-2)}
-    else if(m.aff){const A=AFFIX[m.aff];ctx.font=`800 ${Math.max(9,ss(11))}px "Barlow Condensed",sans-serif`;ctx.textAlign='center';ctx.textBaseline='bottom';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.strokeText(A.n,x,by-3);ctx.fillStyle=A.col;ctx.fillText(A.n,x,by-3)}}
+    else if(m.aff){const A=m.aff2?{n:AFFIX[m.aff].n+' · '+AFFIX[m.aff2].n,col:AFFIX[m.aff].col}:AFFIX[m.aff];ctx.font=`800 ${Math.max(9,ss(11))}px "Barlow Condensed",sans-serif`;ctx.textAlign='center';ctx.textBaseline='bottom';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.strokeText(A.n,x,by-3);ctx.fillStyle=A.col;ctx.fillText(A.n,x,by-3)}}
 }
 function drawProj(q){const P0=scr(q.x,q.y),x=P0[0],y=P0[1]-ss(T*.35),big=q.mult>1,s=ss(T)*(big?1.25:1);
   // a fading trail behind every shot, tinted by what it is
@@ -285,12 +291,14 @@ function render(dt){
   // floating text
   ctx.textAlign='center';ctx.textBaseline='middle';for(const t of TXT){t.life-=dt;const a=clamp(t.life*2,0,1),age=1.1-t.life,fs=Math.max(11,ss(15))*t.s*(age<.12?.6+age/.12*.75:age<.22?1.35-(age-.12)/.1*.35:1);ctx.globalAlpha=a;ctx.font=`800 ${fs}px "Barlow Condensed",sans-serif`;ctx.lineWidth=Math.max(3,fs*.22);ctx.lineJoin='round';ctx.strokeStyle='rgba(0,0,0,.9)';const [tx0,ty0]=scr(t.x,t.y),y=ty0-ss(T*.4)-(1.1-t.life)*ss(26);ctx.strokeText(t.t,tx0,y);ctx.fillStyle=t.col;ctx.fillText(t.t,tx0,y)}ctx.globalAlpha=1;for(let i=TXT.length-1;i>=0;i--)if(TXT[i].life<=0)TXT.splice(i,1);
   if(BANNER){BANNER.life-=dt;const a=clamp(BANNER.life,0,1),fs=Math.min(W/16,42);ctx.globalAlpha=a;ctx.font=`900 ${fs}px Cinzel,serif`;ctx.lineWidth=6;ctx.strokeStyle='rgba(0,0,0,.8)';const bY=ROT?fieldBox().t+(fieldBox().b-fieldBox().t)*.3:sy(FH*.25);ctx.strokeText(BANNER.t,W/2,bY);ctx.fillStyle=BANNER.col;ctx.fillText(BANNER.t,W/2,bY);ctx.globalAlpha=1;if(BANNER.life<=0)BANNER=null}
+  if(FLASH>0){ctx.fillStyle=`rgba(255,244,220,${Math.min(.7,FLASH)})`;ctx.fillRect(0,0,W,H);FLASH=Math.max(0,FLASH-dt*1.6)}
+  if(SET.fps){ctx.font='700 12px "Barlow Condensed",sans-serif';ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillStyle='rgba(0,0,0,.6)';const fy=(UI&&UI.topH||56)+24;ctx.fillRect(W-58,fy-18,54,18);ctx.fillStyle=FPSV<40?'#ffb04a':'#bfffc8';ctx.fillText(Math.round(FPSV)+' fps',W-53,fy-2)}
   drawTimeStop();drawBossIntro();drawTutHand();drawDrag();ctx.restore()}
 // a boss arrives: letterbox bars, its portrait and title slide in, the world slows down
 function drawBossIntro(){const I=R.b&&R.b.intro;if(!I)return;const p=I.t/I.dur,inn=Math.min(1,I.t/.35),out=p>.8?(1-p)/.2:1,a=inn*out,bh=H*.13*a;
   ctx.save();ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(0,0,W,bh);ctx.fillRect(0,H-bh,W,bh);ctx.fillStyle=`rgba(20,0,10,${.35*a})`;ctx.fillRect(0,bh,W,H-bh*2);
   // sideways: the boss on the left, its name beside it. Upright: the boss above, the text centred under it.
-  const D=MON[I.k],P=ROT,cx=W/2,cy=P?H*.36:H*.46,sz=P?Math.min(H*.3,W*.62):Math.min(H*.5,W*.3),f=frame('m_'+I.k,160,((TIME*8)|0)%(cells('m_'+I.k)||6),sz*DPR),slide=(1-inn)*W*.3,ix=P?cx-sz/2-slide:cx-sz*.75-slide;
+  const D=MON[I.k],P=ROT,cx=W/2,cy=P?H*.36:H*.46,sz=P?Math.min(H*.3,W*.62):Math.min(H*.5,W*.3),f=frame('m_'+I.k,160,((TIME*8)|0)%monCells(I.k)[0],sz*DPR),slide=(1-inn)*W*.3,ix=P?cx-sz/2-slide:cx-sz*.75-slide;
   if(f){ctx.globalAlpha=a;ctx.save();ctx.globalCompositeOperation='lighter';const gl=glow(I.k==='devourer'?'150,60,255':'255,80,50');if(gl)ctx.drawImage(gl,ix-sz*.05,cy-sz*.75,sz*1.6*(P?.7:1),sz*1.3);ctx.restore();ctx.drawImage(f,ix,cy-sz*.7,sz,sz)}
   const tx=P?cx+slide:cx+sz*.05+slide,y0=P?cy+sz*.5:cy,nf=P?Math.min(W/12,H*.05):Math.min(W/14,H*.085);ctx.globalAlpha=a;ctx.textAlign=P?'center':'left';ctx.textBaseline='alphabetic';ctx.font=`700 ${Math.max(11,P?W/26:H*.035)}px "Barlow Condensed",sans-serif`;ctx.fillStyle='#ffb0a0';ctx.fillText((EPITHET[I.k]||'').toUpperCase(),tx,y0-nf*.45);
   ctx.font=`900 ${nf}px Cinzel,serif`;ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.9)';ctx.strokeText(D.n,tx,y0+nf*.6);ctx.fillStyle=I.k==='devourer'?'#d6a8ff':'#ffd76a';ctx.fillText(D.n,tx,y0+nf*.6);
@@ -320,5 +328,7 @@ function spellFx(f,x,y,r,p,a){if(!FXOK())return;const n=f.k==='nova'?6:8,seed=(f
     else{dspr(i%2?'star_06':'spark_05',f.col,px,py-r*.2-p*r*.3,r*.3,r*.3,TIME*3+i,a,1)}}
   if(f.k==='hex'||f.k==='nova')dspr('circle_05',f.col,x,y,r*2.2*(.6+.4*p),r*2.2*(.6+.4*p)*VY,0,a*.8,1)}
 // a monster's last moment: it tips over, sinks and fades
-function drawCorpse(f,x,y,p,a){const size=ss(T*1.42*(f.sz||1))*(f.boss?1.15:1),fr=frame('m_'+f.mk,160,0,size*DPR);if(!fr)return;const fly=f.fly?ss(T*.55)*(1-p):0;
+function drawCorpse(f,x,y,p,a){const size=ss(T*1.42*(f.sz||1))*(f.boss?1.15:1),[nw,na,nd]=monCells(f.mk),fly=f.fly?ss(T*.55)*(1-Math.min(1,p*1.6)):0;
+  if(nd){const fs=size*MDF,fr=frame('m_'+f.mk,160,nw+na+clamp((p*1.5*nd)|0,0,nd-1),fs*DPR);if(!fr)return;ctx.save();ctx.globalAlpha=p<.6?1:Math.max(0,1-(p-.6)/.4);ctx.translate(x,y-fly);if(f.face<0)ctx.scale(-1,1);ctx.drawImage(fr,-fs/2,-fs*(.5+.36/MDF),fs,fs);ctx.restore();return}
+  const fr=frame('m_'+f.mk,160,0,size*DPR);if(!fr)return;
   ctx.save();ctx.globalAlpha=a*a;ctx.translate(x,y-fly+p*size*.12);ctx.rotate((f.face<0?-1:1)*Math.min(1,p*2.2)*1.25);if(f.face<0)ctx.scale(-1,1);ctx.drawImage(fr,-size/2,-size*.86,size,size);ctx.restore()}

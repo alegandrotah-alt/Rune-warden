@@ -11,20 +11,25 @@ const dayKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMont
 const relicN=id=>R?R.relics.filter(r=>r===id).length:0;
 const isFront=k=>HEROES[k].rng<2;
 // an act's look and monsters: the act itself, overridden by the biome this run rolled for it
-function actD(a){a=Math.max(0,Math.min(2,a|0));const b=R&&R.bio&&typeof BIOMES!=='undefined'?BIOMES[R.bio[a]]:null;return b?Object.assign({},ACTS[a],b):ACTS[a]}
-function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),hp=100+10*rank('keep')-(A>=5?20:0);
+function actD(a){a=Math.max(0,Math.min(3,a|0));if(a===3)return RIFT;const b=R&&R.bio&&typeof BIOMES!=='undefined'?BIOMES[R.bio[a]]:null;return b?Object.assign({},ACTS[a],b):ACTS[a]}
+// a floor that ends in a boss: the tenth of each act, or the last of the Rift
+const bossWave=w=>R&&R.rift?w===30+RIFTN:w%10===0&&w<=30;
+function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),wk=!o.daily&&WARDENS[o.warden]&&wardenOpen(o.warden)?o.warden:'castellan',hp=100+10*rank('keep')-(A>=5?20:0)+({castellan:10,gravewarden:-10}[wk]||0);
   R={act:0,wave:1,gold:8+2*rank('gold')-(A>=3?3:0),lvl:2,xp:0,hp,hpMax:hp,bench:new Array(8+rank('bench')).fill(null),board:[],items:[],
     shop:[],relics:[],stones:rank('stone')?[2]:[],streak:0,phase:'plan',rerolls:0,freeRoll:0,portalGold:0,goldFrac:0,egg:-1,pool:{},picks:[],leakAct:0,
-    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null};
-  R.guards=o.daily?[{k:'archers',l:1,t:1}]:stage()<2?[]:guardLoadout();const ban=R.guards.find(g=>g.k==='banner');if(ban){R.hpMax+=10*ban.l;R.hp=R.hpMax}
-  if(rank('promo'))R.lvl=3;if(rank('potion'))R.potions.push(rnd(POTKEYS));for(let i=0;i<rank('item');i++)R.items.push(rnd(COMPS));
+    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null,warden:wk,t0:Date.now(),secs:0};
+  R.guards=o.daily?[{k:'archers',l:1,t:1}]:stage()<2?[]:guardLoadout();
+  // the warden's favoured guardian fights one level higher when it is stationed
+  if(!o.daily)for(const g of R.guards)if(g.k===WARDENS[wk].g)g.l=Math.min(5,g.l+1);
+  const ban=R.guards.find(g=>g.k==='banner');if(ban){R.hpMax+=10*ban.l;R.hp=R.hpMax}
+  if(wk==='runesmith')R.stones.push(2);if(rank('promo'))R.lvl=3;if(rank('potion'))R.potions.push(rnd(POTKEYS));for(let i=0;i<rank('item');i++)R.items.push(rnd(COMPS));
   if(R.daily){let h=7;for(const ch of R.daily)h=Math.imul(h^ch.charCodeAt(0),2654435761);R.rs=h|0;R.seed=h>>>0}
   for(const k of HKEYS)R.pool[k]=unlocked(k)||R.daily?POOL[HEROES[k].c]:0;
   // each act rolls its usual biome or the alternate one (first runs keep the usual ones)
   R.bio=[0,1,2].map(a=>stage()>=1&&rng()<.5?BIOALT[a]:null);
   genField();genMap();autoNode();rollShop(true);
   // a free starter so the first wave is never empty
-  const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);if(rank('vet')&&allHeroes()[0])allHeroes()[0].vet=1;
+  const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);if(wk==='beastlord')addHero('wolf',1,true);if(rank('vet')&&allHeroes()[0])allHeroes()[0].vet=1;
   if(rank('relic')&&!R.daily){const r=randomRelic(1);if(r){R.relics.push(r);applyRelic(r)}}
   if(R.daily){const r2=RELICS.filter(r=>r.t===2&&!['egg','recruit'].includes(r.id));const id=rndS(r2).id;R.relics.push(id);applyRelic(id);R.dailyRelic=id}
   R.freeRoll=rank('reroll');R.nextQ=nodeQ(waveList(1));
@@ -54,7 +59,7 @@ function genField(){
   for(let i=0,tries=0;i<(TW.water||0)&&tries<60;tries++){let c=2+((rng()*(COLS-5))|0),r=(rng()*ROWS)|0;if(!free(c,r))continue;const cells=[[c,r]],n=2+((rng()*3)|0);
     for(let j=1;j<n;j++){const nb=nbrs(c,r).filter(([a,b])=>free(a,b)&&!cells.some(([x,y])=>x===a&&y===b));if(!nb.length)break;[c,r]=rndS(nb);cells.push([c,r])}
     for(const [a,b] of cells){F.blk[b*COLS+a]=2;F.ter[b*COLS+a]=4}if(!flow(F.blk)){for(const [a,b] of cells){F.blk[b*COLS+a]=0;F.ter[b*COLS+a]=0}continue}i++}
-  const kinds=[[0,0,1,2,3,4,5],[0,1,2,3,3,4,5],[0,1,2,3,4,5,5]][R.act];
+  const kinds=[[0,0,1,2,3,4,5],[0,1,2,3,3,4,5],[0,1,2,3,4,5,5]][Math.min(2,R.act)];
   for(let i=0,n=7+R.act*2,tries=0;i<n&&tries<200;tries++){const c=1+((rng()*(COLS-2))|0),r=(rng()*ROWS)|0;if(!free(c,r))continue;F.blk[r*COLS+c]=2;
     if(!flow(F.blk)){F.blk[r*COLS+c]=0;continue}F.obs.push({c,r,k:rndS(kinds),a:A.obs??R.act});i++}
   // soft terrain: patches of mud and thorns along the middle, single hills where shooters like to stand
@@ -98,17 +103,17 @@ function traceRoute(g){const d=R.field.dist;if(!d)return[];let c,r;
   const out=[[c,r]];
   for(let i=0;i<COLS*ROWS;i++){const n=nextCell(c,r);if(!n)break;[c,r]=n;out.push([c,r])}const L=out.length;if(!g&&R.stats&&L>R.stats.maxMaze){R.stats.maxMaze=L;if(L>=40)award('maze40');if(L>=70)award('h_maze')}return out}
 // which gates a wave uses: early floors come only from the west, later ones split between several gates
-function gatePlan(w){const F=R.field,G=F&&F.gates||[{k:'west',id:0}];if(G.length<2)return[0];const wi=((w-1)%10)+1,boss=wi===10;
-  let n=boss?Math.min(G.length,R.act+2):Math.min(G.length-(wi<5&&G.some(g=>g.k==='breach')?1:0),(R.act===0?(wi>=(stage()<1?5:3)?2:1):R.act===1?(wi>=3?2:1)+(wi>=7?1:0):(wi>=3?2:1)+(wi>=6?1:0)+(wi>=8?1:0))+(R.endless?1:0));
+function gatePlan(w){const F=R.field,G=F&&F.gates||[{k:'west',id:0}];if(G.length<2)return[0];const rf=!!R.rift,wi=((w-1)%10)+1,boss=bossWave(w)||!rf&&wi===10;
+  let n=boss?Math.min(G.length,R.act+2):Math.min(G.length-(wi<5&&!rf&&G.some(g=>g.k==='breach')?1:0),(R.act===0?(wi>=(stage()<1?5:3)?2:1):R.act===1?(wi>=3?2:1)+(wi>=7?1:0):(wi>=3?2:1)+(wi>=6?1:0)+(wi>=8?1:0))+(R.endless?1:0));
   // a breach in the middle of the field only opens once the act has warmed up
-  const others=G.slice(1).filter(g=>g.k!=='breach'||wi>=5).map(g=>g.id);const out=[0];while(out.length<n&&others.length)out.push(others.splice((rng()*others.length)|0,1)[0]);
+  const others=G.slice(1).filter(g=>g.k!=='breach'||wi>=5||rf).map(g=>g.id);const out=[0];while(out.length<n&&others.length)out.push(others.splice((rng()*others.length)|0,1)[0]);
   // sometimes the west gate stays shut and every monster comes from the others
   if(out.length>2&&rng()<.3)out.shift();if((has('sealstone')?1:0)+(R.seal>0?1:0)){for(let k=(has('sealstone')?1:0)+(R.seal>0?1:0);k>0&&out.length>1;k--)out.pop()}return out}
 // hand out the wave's monsters to its gates in runs of a few, so each gate sends a little pack
 function tagGates(q,w){const P=gatePlan(w);let gi=0,run=0;for(const e of q){if(MON[e.k]&&MON[e.k].boss){e.g=P.includes(0)?0:P[0];continue}if(run<=0){gi=P[(rng()*P.length)|0];run=2+((rng()*4)|0)}e.g=gi;run--}return q}
 const runeAt=(c,r)=>R.field.runes.find(q=>q.c===c&&q.r===r);
 const portalAt=(c,r)=>R.field.portals.find(q=>q.c===c&&q.r===r);
-const runeMul=q=>q.v+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0)+(hasGuard('oracle')?1:0);
+const runeMul=q=>q.v+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0)+(hasGuard('oracle')?1:0)+(R.b&&R.b.surgeT>0?1:0);
 const portalMul=q=>q.v+(has('riftlord')?1:0);
 // ---------- heroes: bench, field, merging ----------
 const boardMax=()=>R.lvl+(has('recruit')?1:0)+(has('kingmaker')?2:0)+['crown','ecto','sozu','coffee','fusion'].filter(has).length;
@@ -142,6 +147,8 @@ let SYN={};
 function calcTraits(){const seen={},cnt={};for(const h of R.board){if(seen[h.k])continue;seen[h.k]=1;for(const t of HEROES[h.k].tr)cnt[t]=(cnt[t]||0)+1}
   for(const r of R.relics){const em=RELIC[r].em;if(em)cnt[em]=(cnt[em]||0)+1}
   for(const g of R.guards||[])for(const t of GUARDS[g.k].tr)cnt[t]=(cnt[t]||0)+1;
+  if(R.warden==='beastlord'&&cnt.beast)cnt.beast++;
+  
   // frontline auras: a melee hero buffs the heroes on the hexes touching it
   for(const h of R.board)h.au={as:0,dmg:0,dr:0,hp:0,heal:0};
   for(const h of R.board){const F=HEROES[h.k].fl;if(!F)continue;const A={rally:['as',.15],howl:['as',.2],warcry:['dmg',.15],ward:['dr',.2],tend:['heal',.03],bulwark:['hp',.3],coat:['dr',.12],antler:['hp',.2],mount:['dmg',.12]}[F.k];if(!A)continue;
@@ -165,7 +172,7 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
   if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
   if(h.buffT>0)s.as*=h.buffAs||2;
-  if(h.vet)s.dmg*=1+.25*h.vet;if(h.au){s.as*=1+h.au.as;s.dmg*=1+h.au.dmg}if(h.hoard)s.dmg*=1+.005*h.hoard;if(has('philo'))s.dmg*=1.3;if(R.b&&R.b.rageT>0)s.as*=1.6;
+  if(h.vet)s.dmg*=1+.25*h.vet;if(h.au){s.as*=1+h.au.as;s.dmg*=1+h.au.dmg}if(h.hoard)s.dmg*=1+.005*h.hoard;if(has('philo'))s.dmg*=1.3;if(R.b&&R.b.rageT>0)s.as*=1.6;if(R.b&&R.b.rallyT>0)s.as*=1.4;
   // items
   const I=itemStats(h);s.dmg*=1+I.dmg;s.as*=1+I.as;s.spell*=1+I.sp;s.crit=1-(1-s.crit)*(1-I.crit);s.rng+=I.rng||0;
   if(hasIt(h,'edge'))s.cm+=.5;if(hasIt(h,'titan'))s.dmg*=1+Math.min(.8,.04*(h.stk||0));if(hasIt(h,'rage'))s.as*=1+Math.min(2,.04*(h.stk||0));

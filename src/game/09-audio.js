@@ -13,9 +13,9 @@ function ostStart(k,fade){const T0=OST.buf[k],t=AC.currentTime,src=AC.createBuff
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(1,t+fade);src.connect(g).connect(OST.gain);src.start(t,T0.ls);return{k,src,g,end:t+(T0.le-T0.ls)}}
 function ostStop(c,fade){if(!c)return;const t=AC.currentTime;try{c.g.gain.cancelScheduledValues(t);c.g.gain.setValueAtTime(c.g.gain.value,t);c.g.gain.linearRampToValueAtTime(0,t+fade);c.src.stop(t+fade+.05)}catch(e){}}
 function musicTick(){if(!AC)return;if(!OST.gain){OST.gain=AC.createGain();OST.gain.gain.value=0;OST.gain.connect(AC.destination)}
-  const want=MUSMODE==='menu'||!R?'menu':(R.wave%10===0&&R.wave<=30&&R.phase==='wave')?'boss':'act'+(R.act+1);ostLoad(want);
+  const want=MUSMODE==='menu'||!R?'menu':((bossWave(R.wave)||R.final)&&R.phase==='wave')?'boss':'act'+Math.min(3,R.act+1);ostLoad(want);
   // decoded music is big, so only the playing track and the one likely next are kept in memory
-  const nx=MUSMODE==='menu'||!R?'act1':R.wave%10>=8||R.wave%10===0?'boss':'act'+(R.act+1);if(OST.buf[want])ostLoad(nx);
+  const nx=MUSMODE==='menu'||!R?'act1':R.wave%10>=8||R.wave%10===0||R.rift?'boss':'act'+Math.min(3,R.act+1);if(OST.buf[want])ostLoad(nx);
   for(const k in OST.buf)if(OST.buf[k]&&k!==want&&k!==nx&&!(OST.cur&&OST.cur.k===k)){delete OST.buf[k];OST.ld[k]=0}
   OST.gain.gain.setTargetAtTime(SET.music*(PAUSED?.3:MUSMODE==='menu'?.6:R&&R.phase==='wave'?.75:.5),AC.currentTime,.3);
   if(!OST.buf[want])return;const t=AC.currentTime;

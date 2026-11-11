@@ -11,18 +11,19 @@ const RUNS = +arg('runs', 6);
 
 const frag = buildFragment();
 let src = frag.slice(frag.indexOf('<script>') + 8, frag.lastIndexOf('</script>'));
-src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
+src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={usePower,WARDENS,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
 const script = new vm.Script(src, { filename: 'game.js' });
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 function runOnce(seed, opt) {
   const rand = mulberry(seed), math = Object.create(Math); math.random = rand;
   const store = { 'runewarden-settings': JSON.stringify({ allSys: opt && opt.stage0 ? false : true }) };
+  if (opt && opt.warden) store['runewarden-meta'] = JSON.stringify({ ach: { act1: 1, act2: 1, win: 1 } });
   const ctx = { Math: math, console, JSON, Object, Array, Number, String, Date, Map, Set, Promise, Uint8Array, Int16Array, Float32Array, isFinite, parseInt, parseFloat, Error,
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     setTimeout: () => 0, clearTimeout: () => 0, performance: { now: () => 0 } };
   ctx.globalThis = ctx; vm.createContext(ctx); script.runInContext(ctx);
-  WALL = null; RAND = rand; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true }); const R = () => G.R;
+  WALL = null; RAND = rand; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true, warden: opt && opt.warden }); const R = () => G.R;
   const nodes = {}, rooms = {}; let kos = 0;
   // fuzzing: start holding a random pile of relics, boss relics included, plus potions
   if (opt && opt.fuzz) { const R0 = G.R, pool = G.RELICS.map((r) => r.id); for (let i = 0; i < 12; i++) { const id = pool[(rand() * pool.length) | 0]; if (!R0.relics.includes(id)) { R0.relics.push(id); G.applyRelic(id); } } for (const p of G.POTKEYS) G.gainPotion(p); }
@@ -48,7 +49,7 @@ function runOnce(seed, opt) {
   const r = R();
   if (!err && r.phase !== 'over') err = `stalled on floor ${r.wave} in phase ${r.phase}${r.room ? ' (' + r.room.t + ')' : ''}`;
   const items = G.allHeroes().reduce((a, h) => a + (h.it || []).length, 0);
-  return { rooms: Object.keys(rooms).length, pots: r.stats.pots || 0, kos, seed, waves: r.phase === 'over' ? r.wave - 1 : waves, win: !!r.win, tw: !!r.trueWin, fin: !!r.final, devHp: r.devHp, hp: Math.round(r.hp), lvl: r.lvl, relics: r.relics.length, maze: r.stats.maxMaze, items, elites: r.stats.elites || 0, nodes, stars: G.allHeroes().map((h) => h.k + h.star + ((h.it || []).length ? '[' + h.it.join(',') + ']' : '')).join(' '), err };
+  return { rooms: Object.keys(rooms).length, pots: r.stats.pots || 0, kos, seed, waves: r.phase === 'over' ? r.wave - 1 : waves, win: !!r.win, tw: !!r.trueWin, fin: !!r.final, rift: !!r.rift || !!r.final, devHp: r.devHp, hp: Math.round(r.hp), lvl: r.lvl, relics: r.relics.length, maze: r.stats.maxMaze, items, elites: r.stats.elites || 0, nodes, stars: G.allHeroes().map((h) => h.k + h.star + ((h.it || []).length ? '[' + h.it.join(',') + ']' : '')).join(' '), err };
 }
 // ---------- the bot ----------
 // traits the bot builds towards: the two it already has the most different heroes in
@@ -146,7 +147,10 @@ function botRoom(G, rand) { const R = G.R, V = G.roomView(); if (!V) return; con
   const risky = (q) => /Lose|health/.test(q.d || '') && R.hp < 40; const pick = ok.find(({ q }) => !risky(q)) || ok[ok.length - 1]; if (!pick || !G.roomAct(pick.i)) G.roomAct(V.opts.length - 1); }
 function botRecruit(G) { const R = G.R, S = R.spoils, H = G.HEROES; const own = (k) => G.allHeroes().some((h) => h.k === k);
   let i = S.heroes.findIndex(own); if (i < 0) i = S.heroes.map((k, j) => [H[k].c, j]).sort((a, b) => b[0] - a[0])[0][1]; if (R.bench.every(Boolean) || !G.takeRecruit(i)) G.takeRecruit(-1); }
-function botPotion(G, t) { const R = G.R; if (!R.potions.length || !R.b) return; const leak = R.b.mons.some((m) => m.x > (G.COLS - 2) * G.T); const ko = R.b.ko;
+// the warden's power, once per fight: when the field is busy, the keep is threatened or heroes are down
+function botPower(G) { const R = G.R, B = R.b; if (!B || B.pw || B.t < 3) return; const k = R.warden, n = B.mons.filter((m) => m.hp > 0).length, leak = B.mons.some((m) => m.hp > 0 && m.x > (G.COLS - 4) * G.T);
+  if (k === 'gravewarden' ? B.ko >= 2 || (B.ko >= 1 && B.t > 45) : k === 'beastlord' ? leak || n >= 12 : n >= 8 || leak || B.t > 30) G.usePower(); }
+function botPotion(G, t) { const R = G.R; botPower(G); if (!R.potions.length || !R.b) return; const leak = R.b.mons.some((m) => m.x > (G.COLS - 2) * G.T); const ko = R.b.ko;
   R.potions.forEach((id, i) => { const P = G.POTIONS[id]; if (P.plan) return; if (id === 'heal' && R.hp < R.hpMax * .6) G.usePotion(i); else if (id === 'phoenix' && ko >= 2) G.usePotion(i); else if (P.wave && id !== 'phoenix' && (leak || R.b.mons.length > 25)) G.usePotion(i); }); }
 function botItems(G) { const R = G.R, H = G.HEROES, val = (h) => H[h.k].c * Math.pow(3, h.star - 1);
   const carry = R.board.slice().sort((a, b) => (b.wd || 0) - (a.wd || 0) || val(b) - val(a));
@@ -155,14 +159,15 @@ const results = []; const t0 = Date.now();
 const ASCN = +arg('asc', 0);
 const BOT = arg('bot', 'strong'); BOTKIND = BOT;
 const FUZZ = process.argv.includes('--fuzz'), GOD = process.argv.includes('--god');
-for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN, bot: BOT, fuzz: FUZZ }));
+const WARDEN = arg('warden', '');
+for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN, bot: BOT, fuzz: FUZZ, warden: WARDEN }));
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
 const errs = results.filter((r) => r.err), ws = results.map((r) => r.waves).sort((a, b) => a - b);
 const avg = ws.reduce((a, b) => a + b, 0) / ws.length, past5 = results.filter((r) => r.waves >= 5).length / results.length;
 let md = `### Balance simulation\n${results.length} seeded bot runs in ${secs}s (the bot builds around traits, saves gold for interest, mazes, places rune stones in its shooters' lines, picks map rooms and uses items and potions; it still plays worse than a good player).\n\n| Seed | Waves survived | Won | Keep HP | Level | Relics | Longest road | Items | Heroes |\n|---|---|---|---|---|---|---|---|---|\n`;
 for (const r of results) md += `| ${r.seed} | ${r.waves} | ${r.win ? 'yes' : ''} | ${r.hp} | ${r.lvl} | ${r.relics} | ${r.maze} | ${r.items} | ${r.stars} |\n`;
 const reach = (f) => Math.round(100 * results.filter((r) => r.waves >= f || r.win).length / results.length);
-md += `\nReached act II: ${reach(10)}%, act III: ${reach(20)}%, won: ${reach(31)}%, faced the Devourer: ${results.filter((r) => r.fin).length}, beat it: ${results.filter((r) => r.tw).length}` + (results.some((r) => r.fin && !r.tw) ? ` (it had ${results.filter((r) => r.fin && !r.tw).map((r) => r.devHp == null ? 'escorts' : Math.round(r.devHp * 100) + '%').join(', ')} health left when it won)` : '') + '.';
+md += `\nReached act II: ${reach(10)}%, act III: ${reach(20)}%, won: ${reach(31)}%, entered the Rift: ${results.filter((r) => r.rift).length}, faced the Devourer: ${results.filter((r) => r.fin).length}, beat it: ${results.filter((r) => r.tw).length}` + (results.some((r) => r.fin && !r.tw) ? ` (it had ${results.filter((r) => r.fin && !r.tw).map((r) => r.devHp == null ? 'escorts' : Math.round(r.devHp * 100) + '%').join(', ')} health left when it won)` : '') + '.';
 md += `\nAverage ${avg.toFixed(1)} waves, median ${ws[ws.length >> 1]}, best ${ws[ws.length - 1]}. Wins: ${results.filter((r) => r.win).length}/${results.length}. Average road ${(results.reduce((a, r) => a + r.maze, 0) / results.length).toFixed(0)} tiles, knockouts per run ${(results.reduce((a, r) => a + r.kos, 0) / results.length).toFixed(0)}, potions drunk ${(results.reduce((a, r) => a + r.pots, 0) / results.length).toFixed(1)}, items held ${(results.reduce((a, r) => a + r.items, 0) / results.length).toFixed(1)}, elite stops cleared ${(results.reduce((a, r) => a + r.elites, 0) / results.length).toFixed(1)}.\n`;
 const fails = [];
 if (errs.length) fails.push(`${errs.length} run(s) crashed: seed ${errs[0].seed}: ${errs[0].err}`);

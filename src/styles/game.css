@@ -227,3 +227,19 @@ button:disabled{filter:saturate(.55)}
 .primary{box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 3px 10px rgba(232,166,58,.35)}
 #toast:not([hidden]){animation:toastin .2s ease-out}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01s!important;transition-duration:.01s!important}}
+
+/* ---------- wardens ---------- */
+#wardBox{margin:6px auto;max-width:520px}.wrow{display:flex;gap:6px;justify-content:center}
+.wcard{flex:1 1 0;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px 4px;border-radius:12px;border:1.5px solid rgba(255,207,106,.22);background:rgba(0,0,0,.28);color:#f3e6c8;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}
+.wcard canvas{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--c) 55%,#000),#120b07)}.wcard b{font-size:11.5px;font-weight:700;letter-spacing:.02em;color:#f3e6c8}
+.wcard.on{border-color:var(--c);box-shadow:0 0 12px -2px var(--c);transform:translateY(-2px)}.wcard.lock{opacity:.45;filter:grayscale(.8)}.wcard:active{transform:scale(.96)}
+.wd{margin-top:6px;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:12px;padding:6px 10px;background:rgba(0,0,0,.22);font-size:12.5px;line-height:1.35;text-align:left}.wd>b{color:var(--c);font-family:var(--display);font-size:14px}.wd em{opacity:.7;font-size:11.5px}.wd span{display:block;margin-top:2px}.wd span b{color:var(--c)}
+.pwb{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 8px;margin-left:4px;border-radius:15px;border:1.5px solid color-mix(in srgb,var(--c,#6fb6ff) 50%,transparent);background:rgba(0,0,0,.4);color:var(--c,#6fb6ff);font:700 11.5px "Barlow Condensed",sans-serif;letter-spacing:.03em;vertical-align:middle;cursor:pointer;opacity:.6}
+.pwb svg.icn{width:15px;height:15px}.pwb.ready{opacity:1;box-shadow:0 0 10px -1px var(--c);animation:pwpulse 1.6s ease-in-out infinite}.pwb.used{opacity:.3;filter:grayscale(1)}
+@keyframes pwpulse{50%{box-shadow:0 0 16px 1px var(--c)}}
+@media (max-width:520px){.pwb small{display:none}.pwb{padding:0 7px}.wcard b{font-size:10.5px}}
+@media (prefers-reduced-motion:reduce){.pwb.ready{animation:none}}
+/* ---------- room pictures ---------- */
+#roomArt{display:block;width:100%;aspect-ratio:3/1;max-height:170px;object-fit:cover;object-position:50% 100%;border-radius:12px;margin-bottom:8px;background:#120b07;box-shadow:inset 0 0 0 1px rgba(255,207,106,.18)}
+@media (max-height:480px){#wardBox:not([hidden]){display:flex;gap:8px;max-width:none;align-items:stretch}.wrow{flex:0 0 44%}.wd{margin-top:0;flex:1;font-size:11.5px;padding:4px 8px}.wd em{display:none}.wcard canvas{width:32px;height:32px}}
+#roomArt[hidden]{display:none}@media (max-height:480px){#roomArt{max-height:92px;margin-bottom:5px}}
