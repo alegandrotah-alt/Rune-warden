@@ -199,7 +199,7 @@ function lineMult(x0,y0,x1,y1,extra){let m=1,mask=0;const n=Math.ceil(Math.hypot
 function chainBolt(h,from,first,dmg,n,col,o){let cur=first,done=new Set();for(let i=0;i<n&&cur;i++){done.add(cur);hit(cur,dmg,h,Object.assign({chainHit:1},o||{}));fx({k:'bolt',x:from.x,y:from.y,x1:cur.x,y1:cur.y,dur:.25,col});from={x:cur.x,y:cur.y};let nb=null,nd=T*2.5;for(const m of R.b.mons){if(m.hp<=0||done.has(m))continue;const d=Math.hypot(m.x-cur.x,m.y-cur.y);if(d<nd){nd=d;nb=m}}cur=nb}}
 function cast(h,s,tg){
   const D=HEROES[h.k],A=D.ab,p=heroPos(h),B=R.b,crit=hasIt(h,'gauntlet')&&Math.random()<s.crit,pw=s.dmg*A.m*s.spell*(crit?s.cm:1),o={spell:1,dt:D.dt,big:1,crit};
-  h.atk=.6;fx({k:'cast',x:p.x,y:p.y,dur:.5,col:TRAITS[D.tr[1]].col});if(TXT.filter(t=>t.cast).length<3){floatText(p.x,p.y-T*.75,D.ab.n+'!',TRAITS[D.tr[1]].col,.9);TXT[TXT.length-1].cast=1}sfx(A.snd||'zap',.32,.92+Math.random()*.16);
+  h.atk=.6;h.castA=.6;fx({k:'cast',x:p.x,y:p.y,dur:.5,col:TRAITS[D.tr[1]].col});if(TXT.filter(t=>t.cast).length<3){floatText(p.x,p.y-T*.75,D.ab.n+'!',TRAITS[D.tr[1]].col,.9);TXT[TXT.length-1].cast=1}sfx(A.snd||'zap',.32,.92+Math.random()*.16);
   const inR=(x,y,r)=>B.mons.filter(m=>m.hp>0&&Math.hypot(m.x-x,m.y-y)<r);
   if(hasIt(h,'bloom'))for(const x of R.board){const q=heroPos(x);if(Math.hypot(q.x-p.x,q.y-p.y)<=T*2.1)healHero(x,x.hpMax*.25)}
   if(A.k==='nova'){const cx=A.self?p.x:tg.x,cy=A.self?p.y:tg.y,r=A.r*T;

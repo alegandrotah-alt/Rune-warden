@@ -1,6 +1,6 @@
 // Offline support for the home-screen web app: the page and fonts are cached up front,
 // the sprite sheets and music are cached the first time the game loads them.
-const CACHE = 'rune-warden-v10';
+const CACHE = 'rune-warden-v11';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
