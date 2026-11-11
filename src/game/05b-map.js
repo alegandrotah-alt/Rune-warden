@@ -42,13 +42,14 @@ function showMap(){if(!DOM||!R.map||!R.map.nodes)return;const M=R.map,FN=M.nodes
   const pick=opts.length>0&&R.phase==='plan';
   $('mapT').textContent=`Act ${['I','II','III','IV'][R.act]} · ${actD(R.act).n}`;
   $('mapS').textContent=pick?(M.next?`Next: ${NODES[R.node].n}. ${NODES[R.node].d} Tap another room to change your mind.`:'Choose your next room. Only rooms joined to where you stand can be reached.'):'Your road through this act.';
-  const X=f=>(f+.5)/FN*100,Y=l=>(l+.5)/MAPL*100;let svg=`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">`;
+  // sideways the road runs left to right; on an upright phone it runs top to bottom, so ten floors get the long side of the screen
+  const vert=ROT,X=(f,l)=>vert?(l+.5)/MAPL*100:(f+.5)/FN*100,Y=(f,l)=>vert?(f+.5)/FN*100:(l+.5)/MAPL*100;box.classList.toggle('vert',!!vert);let svg=`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">`;
   for(let f=0;f<FN-1;f++)for(let l=0;l<MAPL;l++){const n=M.nodes[f][l];if(!n)continue;for(const b of n.nx){const dest=f===FN-2?2:b,live=M.pos&&M.pos.f===f&&M.pos.l===l||(!M.pos&&f===0&&cur===0);
-    svg+=`<line x1="${X(f)}" y1="${Y(l)}" x2="${X(f+1)}" y2="${Y(dest)}" class="${f<cur?'old':''}${live?' live':''}"/>`}}
+    svg+=`<line x1="${X(f,l)}" y1="${Y(f,l)}" x2="${X(f+1,dest)}" y2="${Y(f+1,dest)}" class="${f<cur?'old':''}${live?' live':''}"/>`}}
   box.innerHTML=svg+'</svg>';
   for(let f=0;f<FN;f++)for(let l=0;l<MAPL;l++){const n=M.nodes[f][l];if(!n)continue;const N=NODES[n.t],can=pick&&opts.some(o=>o.f===f&&o.l===l),here=M.pos&&M.pos.f===f&&M.pos.l===l,nx=M.next&&M.next.f===f&&M.next.l===l;
     const b=document.createElement('button');b.type='button';b.className='mn'+(can?' can':'')+(here?' was':'')+(nx?' nx':'')+(f<cur&&!here?' past':'')+(n.t==='boss'?' boss':'');
-    b.style.setProperty('--c',N.col);b.style.left=X(f)+'%';b.style.top=Y(l)+'%';b.innerHTML=`<i>${N.ic}</i><small>${N.n}</small>`;b.title=N.d;b.disabled=!can;
+    b.style.setProperty('--c',N.col);b.style.left=X(f,l)+'%';b.style.top=Y(f,l)+'%';b.innerHTML=`<i>${N.ic}</i><small>${N.n}</small>`;b.title=N.d;b.disabled=!can;
     if(can)b.addEventListener('click',()=>{if(chooseNode(f,l)===false){showMap();return}$('ovMap').hidden=true;uiRefresh()});box.appendChild(b)}
   $('mapLeg').innerHTML=Object.keys(NODES).map(k=>`<span style="--c:${NODES[k].col}"><i>${NODES[k].ic}</i>${NODES[k].n}</span>`).join('');
   $('mapClose').hidden=needMap();$('ovMap').hidden=false}

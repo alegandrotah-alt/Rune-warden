@@ -257,3 +257,7 @@ body.side #info,body.side #dmgP,body.side #relP{right:calc(var(--shopW,150px) + 
 @media (max-height:430px){#ovMap .card{position:relative;padding:8px 12px 6px}#ovMap h2{font-size:17px;margin:0;line-height:1.2}#ovMap .sub{font-size:11.5px;margin:1px 70px 2px}
   #mapGrid{height:calc(100vh - 112px);height:calc(100dvh - 112px);min-height:190px}#ovMap .row{position:absolute;top:6px;right:8px;margin:0}#ovMap .row button{padding:4px 12px;font-size:13px}
   .mn{width:34px;height:34px}.mn.boss{width:46px;height:46px}#mapLeg{margin:2px 0 0}}
+/* act map on an upright phone: the road runs down the screen */
+#mapGrid.vert{height:min(calc(100vh - 250px),620px);height:min(calc(100dvh - 250px),620px);min-height:330px;background:radial-gradient(ellipse at 50% 40%,rgba(255,230,180,.08),rgba(0,0,0,.25)),repeating-linear-gradient(180deg,rgba(255,255,255,.02) 0 2px,transparent 2px 40px)}
+#mapGrid.vert .mn{width:40px;height:40px}#mapGrid.vert .mn i{font-size:17px}#mapGrid.vert .mn.boss{width:54px;height:54px}#mapGrid.vert .mn.boss i{font-size:24px}
+#mapGrid.vert .mn small{top:50%;left:100%;transform:translateY(-50%);margin:0 0 0 3px;font-size:9px}
