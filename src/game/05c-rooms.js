@@ -22,7 +22,7 @@ function leaveRoom(){const t=R.room&&R.room.t;R.room=null;if(DOM)$('ovRoom').hid
   R.calm=(R.calm||0)+1;if(R.calm>=4)award('nofight');finishFloor()}
 // a floor with no monsters still counts as a round: income, XP and a fresh shop
 function finishFloor(){const inc={base:5,int:0,st:0,ex:has('tithe')?2:0};R.gold+=inc.base+inc.ex;gainXP(2+(has('scholar')?3:0)+rank('xp'));if(R.egg>0){R.egg--;if(R.egg===0){R.gold+=35;R.egg=-1;toast('The golden egg hatches: +35 gold')}}
-  if(STONE_AT[R.wave])R.stones.push(2);R.wave++;rollShop(true);R.freeRoll=rank('reroll');R.node=null;R.nextQ=waveList(R.wave);
+  if(STONE_AT[R.wave])R.stones.push(2);R.wave++;rollShop(true);R.freeRoll=rank('reroll')+mods().free;R.node=null;R.nextQ=waveList(R.wave);
   floatText(FW/2,FH*.45,`+${inc.base+inc.ex} gold (no interest without a fight)`,'#ffcf2e',1.1);autoNode();enterPlan()}
 function enterPlan(){R.phase='plan';R.queue=null;saveRun();uiRefresh();if(DOM){if(needMap())showMap();else $('ovMap').hidden=true}}
 function roomView(){const o=R.room;if(!o)return null;const done=()=>leaveRoom(),V={ic:'?',t:'',d:'',opts:[]};
@@ -33,6 +33,7 @@ function roomView(){const o=R.room;if(!o)return null;const done=()=>leaveRoom(),
     else{const heal=Math.max(0,Math.min(R.hpMax-R.hp,Math.round(R.hpMax*(rank('hearth')?.45:.3))));
       V.opts=[{n:'Rest',d:has('coffee')?'The Coffee Dripper keeps you awake.':heal?`Repair ${heal} keep health.`:'The keep is already whole.',dis:has('coffee')||!heal,act:()=>{R.hp+=heal;sfx('taken',.5);done()}},
         {n:'Train',d:has('fusion')?'The Fusion Hammer forbids it.':'A hero becomes a veteran: +25% damage and health.',dis:has('fusion')||!trainable().length,act:()=>{o.step='train'}}];
+      if(R.tree&&R.tree.length)V.opts.push({n:'Read the stars',d:`Take back all ${R.tree.length} of your stars and spend the points again.`,act:()=>{starReset();sfx('level',.5);toast('Your stars are yours to place again');done()}});
       if(has('shovel'))V.opts.push({n:'Dig',d:'Dig up a random relic.',act:()=>{gainRelic(randomRelic(rng()<.3?2:1));done()}});
       V.opts.push({n:'Move on',d:'Leave the fire behind.',leave:1,act:done})}}
   else if(o.t==='merchant'){Object.assign(V,{ic:NODES.merchant.ic,t:'The Merchant',d:`"Gold for goods, warden. Everything here works, mostly." You have ${R.gold} gold.`,shop:1});

@@ -14,10 +14,10 @@ const isFront=k=>HEROES[k].rng<2;
 function actD(a){a=Math.max(0,Math.min(3,a|0));if(a===3)return RIFT;const b=R&&R.bio&&typeof BIOMES!=='undefined'?BIOMES[R.bio[a]]:null;return b?Object.assign({},ACTS[a],b):ACTS[a]}
 // a floor that ends in a boss: the tenth of each act, or the last of the Rift
 const bossWave=w=>R&&R.rift?w===30+RIFTN:w%10===0&&w<=30;
-function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),wk=!o.daily&&WARDENS[o.warden]&&wardenOpen(o.warden)?o.warden:'castellan',hp=100+10*rank('keep')-(A>=5?20:0)+({castellan:10,gravewarden:-10}[wk]||0);
+function newRun(o){o=o||{};const A=o.daily?2:CHALL[o.ch]?0:clamp(o.asc||0,0,10),wk=!o.daily&&WARDENS[o.warden]&&wardenOpen(o.warden)?o.warden:'castellan',hp=100+10*rank('keep')-(A>=5?20:0)+({castellan:10,gravewarden:-10}[wk]||0);
   R={act:0,wave:1,gold:8+2*rank('gold')-(A>=3?3:0),lvl:2,xp:0,hp,hpMax:hp,bench:new Array(8+rank('bench')).fill(null),board:[],items:[],
     shop:[],relics:[],stones:rank('stone')?[2]:[],streak:0,phase:'plan',rerolls:0,freeRoll:0,portalGold:0,goldFrac:0,egg:-1,pool:{},picks:[],leakAct:0,
-    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null,warden:wk,t0:Date.now(),secs:0};
+    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null,warden:wk,t0:Date.now(),secs:0,cnt:{},tree:[],tp:0,pact:[],pacts:null,ch:!o.daily&&CHALL[o.ch]?o.ch:null};modsDirty();
   R.guards=o.daily?[{k:'archers',l:1,t:1}]:stage()<2?[]:guardLoadout();
   // the warden's favoured guardian fights one level higher when it is stationed
   if(!o.daily)for(const g of R.guards)if(g.k===WARDENS[wk].g)g.l=Math.min(5,g.l+1);
@@ -32,7 +32,8 @@ function newRun(o){o=o||{};const A=o.daily?2:clamp(o.asc||0,0,10),wk=!o.daily&&W
   const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);if(wk==='beastlord')addHero('wolf',1,true);if(rank('vet')&&allHeroes()[0])allHeroes()[0].vet=1;
   if(rank('relic')&&!R.daily){const r=randomRelic(1);if(r){R.relics.push(r);applyRelic(r)}}
   if(R.daily){const r2=RELICS.filter(r=>r.t===2&&!['egg','recruit'].includes(r.id));const id=rndS(r2).id;R.relics.push(id);applyRelic(id);R.dailyRelic=id}
-  R.freeRoll=rank('reroll');R.nextQ=nodeQ(waveList(1));
+  if(R.ch&&CHALL[R.ch].start)CHALL[R.ch].start();
+  R.freeRoll=rank('reroll')+mods().free;R.nextQ=nodeQ(waveList(1));
   // the oracle offers three plain gifts and one with a price
   if(o.oracle){const safe=Object.keys(ORACLE).filter(k=>!ORACLE[k].risk),pick=[];while(pick.length<3){const k=rndS(safe);if(!pick.includes(k))pick.push(k)}pick.push(rndS(['risk','risk2']));R.room={t:'oracle',opts:pick};R.phase='room'}
 }
@@ -53,7 +54,7 @@ function genField(){
   const ns=rng()<.5;if(R.act>=0)eg(ns?'north':'south',ns?0:ROWS-1);if(R.act>=1)eg(ns?'south':'north',ns?ROWS-1:0);
   if(R.act>=2||R.endless){for(let t=0;t<40;t++){const c=4+((rng()*6)|0),r=2+((rng()*6)|0);if(!F.gates.some(g=>Math.abs(g.c-c)+Math.abs(g.r-r)<3)){F.gates.push({k:'breach',c,r,id:F.gates.length});break}}}
   const gateNear=(c,r)=>F.gates.some(g=>g.k!=='west'&&Math.abs(g.c-c)<=1&&Math.abs(g.r-r)<=1);
-  for(const q of mine)if(!gateNear(q.c,q.r))F.runes.push({c:q.c,r:q.r,v:q.v,ph:q.ph||0,flash:.6,mine:1});
+  for(const q of mine)if(!gateNear(q.c,q.r))F.runes.push({c:q.c,r:q.r,v:q.v,k:q.k,ph:q.ph||0,flash:.6,mine:1});
   const free=(c,r)=>!F.blk[r*COLS+c]&&!F.ter[r*COLS+c]&&!F.runes.some(q=>q.c===c&&q.r===r)&&!F.portals.some(q=>q.c===c&&q.r===r)&&!gateNear(c,r)&&!(c<=1&&SPAWN_ROWS.includes(r))&&!(c>=COLS-2&&KEEP_ROWS.includes(r));
   // water first: little lakes and streams of 2-4 hexes that block the road
   for(let i=0,tries=0;i<(TW.water||0)&&tries<60;tries++){let c=2+((rng()*(COLS-5))|0),r=(rng()*ROWS)|0;if(!free(c,r))continue;const cells=[[c,r]],n=2+((rng()*3)|0);
@@ -69,6 +70,8 @@ function genField(){
   // runes sit in the middle of the field; portals are off to the side so you choose whether to route monsters through them
   const put=(arr,v,cmin,cmax,rows)=>{for(let t=0;t<80;t++){const c=cmin+((rng()*(cmax-cmin+1))|0),r=rndS(rows);if(free(c,r)){arr.push({c,r,v,ph:rng()*6});return}}};
   put(F.runes,2,4,7,[2,3,4,5,6,7]);put(F.runes,2,8,12,[1,2,7,8]);if(R.act>=1)put(F.runes,3,5,11,[0,9]);
+  // from act II on, one of the field's own runes is attuned (two in the Rift)
+  if(R.act>=1){const own=F.runes.filter(q=>!q.mine&&!q.k);for(let i=0;i<(R.act>=3?2:1)&&own.length;i++)own.splice((rng()*own.length)|0,1)[0].k=rndS(RKEYS)}
   put(F.portals,2,3,7,[0,1,8,9]);if(R.act>=1)put(F.portals,2,9,13,[0,1,8,9]);if(R.act>=2)put(F.portals,3,6,10,[1,8]);
   // heroes left on blocked tiles go back to the bench
   for(const h of R.board.slice())if(F.blk[h.r*COLS+h.c]||isGate(h.c,h.r)||F.runes.some(q=>q.c===h.c&&q.r===h.r)||F.portals.some(q=>q.c===h.c&&q.r===h.r))toBench(h);
@@ -113,18 +116,19 @@ function gatePlan(w){const F=R.field,G=F&&F.gates||[{k:'west',id:0}];if(G.length
 function tagGates(q,w){const P=gatePlan(w);let gi=0,run=0;for(const e of q){if(MON[e.k]&&MON[e.k].boss){e.g=P.includes(0)?0:P[0];continue}if(run<=0){gi=P[(rng()*P.length)|0];run=2+((rng()*4)|0)}e.g=gi;run--}return q}
 const runeAt=(c,r)=>R.field.runes.find(q=>q.c===c&&q.r===r);
 const portalAt=(c,r)=>R.field.portals.find(q=>q.c===c&&q.r===r);
-const runeMul=q=>q.v+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0)+(hasGuard('oracle')?1:0)+(R.b&&R.b.surgeT>0?1:0);
+const runeMul=q=>q.v+mods().rune+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0)+(hasGuard('oracle')?1:0)+(R.b&&R.b.surgeT>0?1:0);
 const portalMul=q=>q.v+(has('riftlord')?1:0);
 // ---------- heroes: bench, field, merging ----------
-const boardMax=()=>R.lvl+(has('recruit')?1:0)+(has('kingmaker')?2:0)+['crown','ecto','sozu','coffee','fusion'].filter(has).length;
+const boardMax=()=>Math.min(mods().cap||99,boardMax0());
+const boardMax0=()=>R.lvl+(has('recruit')?1:0)+(has('kingmaker')?2:0)+['crown','ecto','sozu','coffee','fusion'].filter(has).length;
 function heroAt(c,r){return R.board.find(h=>h.c===c&&h.r===r)}
 function mkHero(k,star){return{uid:UID++,k,star,mana:0,cd:Math.random()*.5,atk:0,face:1,hits:0,buffT:0,c:-1,r:-1,it:[]}}
-function addHero(k,star,free){
+function addHero(k,star,free,ed){
   const slot=R.bench.indexOf(null);
   // a third copy merges even with a full bench
   const same=allHeroes().filter(h=>h.k===k&&h.star===star);
   if(slot<0&&same.length<2)return false;
-  const h=mkHero(k,star||1);if(slot>=0)R.bench[slot]=h;else{h.tmp=1}
+  const h=mkHero(k,star||1);if(ed)h.ed=ed;if(slot>=0)R.bench[slot]=h;else{h.tmp=1}
   if(!free)R.pool[k]=Math.max(0,R.pool[k]-1);
   merge(h);return true}
 function allHeroes(){return R.board.concat(R.bench.filter(Boolean))}
@@ -132,12 +136,12 @@ function merge(h){
   const same=allHeroes().filter(x=>x.k===h.k&&x.star===h.star);if(h.tmp&&!same.includes(h))same.push(h);
   if(same.length<3||h.star>=3){if(h.tmp)delete h.tmp;return}
   const keep=same.find(x=>R.board.includes(x))||same.find(x=>!x.tmp)||same[0];
-  for(const x of same.slice(0,3)){if(x===keep)continue;removeHero(x);keep.vet=Math.max(keep.vet||0,x.vet||0);for(const it of x.it||[])giveItem(keep,it)}
+  for(const x of same.slice(0,3)){if(x===keep)continue;removeHero(x);keep.vet=Math.max(keep.vet||0,x.vet||0);if(!keep.ed&&x.ed)keep.ed=x.ed;for(const it of x.it||[])giveItem(keep,it)}
   delete keep.tmp;keep.star++;keep.mana=0;fxStar(keep);if(keep.star===3){award('star3');if(keep.k==='wyrm')award('h_dragon');if(R.board.filter(x=>x.star===3).length>=3)award('h_three')}
   merge(keep)}
 function removeHero(h){const i=R.board.indexOf(h);if(i>=0){R.board.splice(i,1);rebuildBlk()}const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null}
 function toBench(h){const j=R.bench.indexOf(null);if(j<0)return false;const i=R.board.indexOf(h);if(i>=0)R.board.splice(i,1);R.bench[j]=h;h.c=h.r=-1;rebuildBlk();return true}
-function placeHero(h,c,r){if(!canPlace(c,r))return false;const onBoard=R.board.includes(h);if(!onBoard&&R.board.length>=boardMax())return false;
+function placeHero(h,c,r){if(!canPlace(c,r))return false;const onBoard=R.board.includes(h);if(!onBoard&&h.ed!=='hollow'&&fieldN()>=boardMax())return false;
   if(onBoard){R.board.splice(R.board.indexOf(h),1);rebuildBlk();if(!canPlace(c,r)){R.board.push(h);rebuildBlk();return false}}
   const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null;h.c=c;h.r=r;R.board.push(h);rebuildBlk();if(R.field.ter&&R.board.filter(x=>R.field.ter[x.r*COLS+x.c]===1).length>=3)award('hill3');if(HEROES[h.k].c===5&&!onBoard&&typeof fx==='function'){fx({k:'pillar',x:hx(c,r),y:hy(r),dur:.9});sfx('sp_holy',.5,.8)}META.seen[h.k]=1;if(HKEYS.every(k=>META.seen[k]))award('all18');return true}
 const sellValue=h=>HEROES[h.k].c*Math.pow(3,h.star-1)-(h.star>1&&HEROES[h.k].c>1?1:0);
@@ -171,12 +175,16 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(has('warhorn')&&R.b&&R.b.t<6)s.as*=1.4;
   if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
   if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
+  if(has('tally'))s.dmg*=1+Math.min(.6,((R.stats.kills/25)|0)*.01);if(has('idol'))s.dmg*=1+Math.min(.4,((R.gold/4)|0)*.01);if(has('ouro'))s.as*=1+Math.min(.4,(R.cnt.rr||0)*.005);if(has('ledger'))s.dmg*=1+Math.min(1,(R.cnt.big||0)*.04);if(has('sands')&&R.b)s.dmg*=1+Math.min(.8,R.b.t*.02);if(has('flawless'))s.dmg*=1+Math.min(.6,(R.cnt.fl||0)*.03);
   if(h.buffT>0)s.as*=h.buffAs||2;
   if(h.vet)s.dmg*=1+.25*h.vet;if(h.au){s.as*=1+h.au.as;s.dmg*=1+h.au.dmg}if(h.hoard)s.dmg*=1+.005*h.hoard;if(has('philo'))s.dmg*=1.3;if(R.b&&R.b.rageT>0)s.as*=1.6;if(R.b&&R.b.rallyT>0)s.as*=1.4;
   // items
   const I=itemStats(h);s.dmg*=1+I.dmg;s.as*=1+I.as;s.spell*=1+I.sp;s.crit=1-(1-s.crit)*(1-I.crit);s.rng+=I.rng||0;
   if(hasIt(h,'edge'))s.cm+=.5;if(hasIt(h,'titan'))s.dmg*=1+Math.min(.8,.04*(h.stk||0));if(hasIt(h,'rage'))s.as*=1+Math.min(2,.04*(h.stk||0));
   if(h.chillT>0)s.as*=.7;
+  // the Constellation, pacts and challenge rules
+  if(h.ed==='savage')s.dmg*=1.25;if(h.ed==='fleet')s.as*=1.25;
+  const M=mods();s.dmg*=M.dmg;s.as*=M.as;s.spell*=M.spell;if(M.crit)s.crit=1-(1-s.crit)*(1-M.crit);if(M.rng&&!isFront(h.k))s.rng+=M.rng;
   return s}
 // hero health: bigger heroes, stars and Guardians are tougher; it refills every wave
-function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(D.tr.includes('bruiser')&&tier('bruiser')>=0?[1.25,1.5,1.8][tier('bruiser')]:1)*(isFront(h.k)?1.35:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0))*(1+(h.au?h.au.hp:0)))}
+function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*[0,1,1.8,3.2][h.star]*(D.tr.includes('guardian')?1.5:1)*(D.tr.includes('bruiser')&&tier('bruiser')>=0?[1.25,1.5,1.8][tier('bruiser')]:1)*(isFront(h.k)?1.35:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0))*(1+(h.au?h.au.hp:0))*mods().hp)}

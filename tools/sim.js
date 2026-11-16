@@ -11,19 +11,19 @@ const RUNS = +arg('runs', 6);
 
 const frag = buildFragment();
 let src = frag.slice(frag.indexOf('<script>') + 8, frag.lastIndexOf('</script>'));
-src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={usePower,WARDENS,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
+src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={starTake,starOpen,pactOffer,pactToggle,PACT,mods,usePower,WARDENS,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
 const script = new vm.Script(src, { filename: 'game.js' });
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 function runOnce(seed, opt) {
   const rand = mulberry(seed), math = Object.create(Math); math.random = rand;
   const store = { 'runewarden-settings': JSON.stringify({ allSys: opt && opt.stage0 ? false : true }) };
-  if (opt && opt.warden) store['runewarden-meta'] = JSON.stringify({ ach: { act1: 1, act2: 1, win: 1 } });
+  if (opt && (opt.warden || opt.ch)) store['runewarden-meta'] = JSON.stringify({ ach: { act1: 1, act2: 1, win: 1 } });
   const ctx = { Math: math, console, JSON, Object, Array, Number, String, Date, Map, Set, Promise, Uint8Array, Int16Array, Float32Array, isFinite, parseInt, parseFloat, Error,
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     setTimeout: () => 0, clearTimeout: () => 0, performance: { now: () => 0 } };
   ctx.globalThis = ctx; vm.createContext(ctx); script.runInContext(ctx);
-  WALL = null; RAND = rand; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true, warden: opt && opt.warden }); const R = () => G.R;
+  WALL = null; RAND = rand; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true, warden: opt && opt.warden, ch: opt && opt.ch }); const R = () => G.R;
   const nodes = {}, rooms = {}; let kos = 0;
   // fuzzing: start holding a random pile of relics, boss relics included, plus potions
   if (opt && opt.fuzz) { const R0 = G.R, pool = G.RELICS.map((r) => r.id); for (let i = 0; i < 12; i++) { const id = pool[(rand() * pool.length) | 0]; if (!R0.relics.includes(id)) { R0.relics.push(id); G.applyRelic(id); } } for (const p of G.POTKEYS) G.gainPotion(p); }
@@ -34,7 +34,7 @@ function runOnce(seed, opt) {
       if (R().phase === 'room') { botRoom(G, rand); rooms[R().room ? R().room.t : 'x'] = 1; continue; }
       if (R().phase === 'reward') { botRecruit(G); continue; }
       if (G.needMap()) { botMap(G); continue; }
-      plan(G, rand, opt);
+      botCouncil(G, opt); plan(G, rand, opt);
       if (GOD && R().final && !R().godDone) { R().godDone = 1; for (const h of R().board) { h.star = 3; h.it = [G.FINISHED[(rand() * G.FINISHED.length) | 0], G.FINISHED[(rand() * G.FINISHED.length) | 0], G.FINISHED[(rand() * G.FINISHED.length) | 0]]; } G.calcTraits(); }
       nodes[R().node || 'battle'] = (nodes[R().node || 'battle'] || 0) + 1;
       if (!G.startWave()) { err = 'could not start wave ' + R().wave; break; }
@@ -75,7 +75,7 @@ function plan(G, rand, opt) {
   while (R.bench.every(Boolean)) { const s = R.bench.slice().sort((a, b) => heroScore(G, a, F) - heroScore(G, b, F))[0]; G.sellHero(s); }
   // field the best heroes: value, stars, focus traits and items
   for (const b of R.bench.filter(Boolean).sort((a, c) => heroScore(G, c, F) - heroScore(G, a, F))) {
-    if (R.board.length < G.boardMax()) { place(G, b); continue; }
+    if (b.ed === 'hollow' || R.board.filter((h) => h.ed !== 'hollow').length < G.boardMax()) { place(G, b); continue; }
     const weak = R.board.slice().sort((a, c) => heroScore(G, a, F) - heroScore(G, c, F))[0];
     if (weak && heroScore(G, b, F) > heroScore(G, weak, F) * 1.1) { const c = weak.c, r = weak.r; R.board.splice(R.board.indexOf(weak), 1); const j = R.bench.indexOf(b); R.bench[j] = weak; weak.c = weak.r = -1; if (!G.placeHero(b, c, r)) place(G, b); }
   }
@@ -147,6 +147,10 @@ function botRoom(G, rand) { const R = G.R, V = G.roomView(); if (!V) return; con
   const risky = (q) => /Lose|health/.test(q.d || '') && R.hp < 40; const pick = ok.find(({ q }) => !risky(q)) || ok[ok.length - 1]; if (!pick || !G.roomAct(pick.i)) G.roomAct(V.opts.length - 1); }
 function botRecruit(G) { const R = G.R, S = R.spoils, H = G.HEROES; const own = (k) => G.allHeroes().some((h) => h.k === k);
   let i = S.heroes.findIndex(own); if (i < 0) i = S.heroes.map((k, j) => [H[k].c, j]).sort((a, b) => b[0] - a[0])[0][1]; if (R.bench.every(Boolean) || !G.takeRecruit(i)) G.takeRecruit(-1); }
+// the Constellation: spend points down a fixed, safe path (no keystones); pacts: one mild pact when the keep is healthy
+const STAR_PATH = ['might1', 'might2', 'mightN', 'swift1', 'swift2', 'swiftN', 'fortune1', 'fortune2', 'fortuneN', 'runes1', 'runes2', 'runesN', 'x0', 'bulwark1', 'bulwark2'];
+function botCouncil(G, opt) { const R = G.R; if (opt && opt.nostars) return; let guard = 0; while (R.tp > 0 && guard++ < 20) { const id = STAR_PATH.find((s) => G.starOpen(s)); if (!id || !G.starTake(id)) break; }
+  if (opt && opt.nopacts) return; const off = G.pactOffer(); if (R.phase === 'plan' && off.length && !R.pact.length && R.hp > R.hpMax * 0.7) { const mild = off.find((id) => ['rush', 'hush', 'swarm', 'weary'].includes(id)); if (mild && Math.random() < 0.5) G.pactToggle(mild); } }
 // the warden's power, once per fight: when the field is busy, the keep is threatened or heroes are down
 function botPower(G) { const R = G.R, B = R.b; if (!B || B.pw || B.t < 3) return; const k = R.warden, n = B.mons.filter((m) => m.hp > 0).length, leak = B.mons.some((m) => m.hp > 0 && m.x > (G.COLS - 4) * G.T);
   if (k === 'gravewarden' ? B.ko >= 2 || (B.ko >= 1 && B.t > 45) : k === 'beastlord' ? leak || n >= 12 : n >= 8 || leak || B.t > 30) G.usePower(); }
@@ -159,8 +163,8 @@ const results = []; const t0 = Date.now();
 const ASCN = +arg('asc', 0);
 const BOT = arg('bot', 'strong'); BOTKIND = BOT;
 const FUZZ = process.argv.includes('--fuzz'), GOD = process.argv.includes('--god');
-const WARDEN = arg('warden', '');
-for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN, bot: BOT, fuzz: FUZZ, warden: WARDEN }));
+const WARDEN = arg('warden', ''), CH = arg('challenge', ''), NOSTARS = process.argv.includes('--nostars'), NOPACTS = process.argv.includes('--nopacts');
+for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN, bot: BOT, fuzz: FUZZ, warden: WARDEN, ch: CH, nostars: NOSTARS, nopacts: NOPACTS }));
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
 const errs = results.filter((r) => r.err), ws = results.map((r) => r.waves).sort((a, b) => a - b);
 const avg = ws.reduce((a, b) => a + b, 0) / ws.length, past5 = results.filter((r) => r.waves >= 5).length / results.length;

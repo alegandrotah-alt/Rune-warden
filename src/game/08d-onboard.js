@@ -4,6 +4,10 @@
 // stage 2: after reaching act II or three runs (keep guardians)
 function stage(){if(SET.allSys||R&&R.daily)return 3;let s=0;if((META.runs||0)>=1)s=1;if((META.best||0)>=10||(META.runs||0)>=3)s=2;return s}
 const TIPS={
+  stars:{icn:'star',t:'The Constellation',d:'You have a point to spend. The star button at the top opens the Constellation: every level and every boss gives a point, and each star you take must touch one you own. The six outer stars are keystones: great power at a price.'},
+  pacts:{icn:'skull',t:'Pacts',d:'Before any fight you can sign up to two pacts (star button, Pacts tab). A pact makes the coming fight harder and pays out when it ends with the keep standing.'},
+  marked:{icn:'star',t:'Marked heroes',d:'Now and then the shop offers a hero with a mark: Gilded pays gold, Savage and Fleet hit harder and faster, Arcane casts sooner, and a Hollow hero takes no place on the field. When heroes merge, one mark is kept.'},
+  attuned:{icn:'rune',t:'Attuned runes',d:'A coloured rune stone is attuned: it multiplies like any rune and also changes every shot that crosses it. Bosses drop one. Tap a rune on the field to read what it does.'},
   recruit:{icn:'star',t:'Recruits',d:'After every fight you may pick one hero to join you for free. Pick heroes that share traits with your team, or a copy towards a ★2.'},
   elite:{icn:'skull',t:'Elite champions',d:'Elite fights bring champions with a twist: Vampiric, Shielded, Swift, Thorned or Undying. Beat them for an item, gold, a recruit and a relic.'},
   relic:{icn:'gem',t:'Relics',d:'Relics last the whole run. The ◈ button at the top lists yours. Boss relics are the strongest, and most have a price.'},

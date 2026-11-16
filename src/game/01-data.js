@@ -184,7 +184,44 @@ const RELICS=[
   {id:'calling',t:4,n:'Calling Bell',d:'Gain three random silver relics. The keep loses 15 maximum health.'},
   {id:'tinyhouse',t:4,n:'Tiny House',d:'An item component, a potion, 15 gold, 10 maximum keep health and 5 XP.'},
 ];
+// relics that grow: what they count is shown next to them in the relic list (cnt)
+RELICS.push(
+  {id:'tally',t:2,n:'Tally Stone',d:'Heroes deal 1% more for every 25 monsters slain this run (60% at most).',cnt:()=>'+'+Math.min(60,(R.stats.kills/25)|0)+'%'},
+  {id:'idol',t:2,n:'Greedy Idol',d:'Heroes deal 1% more for every 4 gold you hold (40% at most).',cnt:()=>'+'+Math.min(40,(R.gold/4)|0)+'%'},
+  {id:'ouro',t:2,n:'Ouroboros',d:'Every reroll makes heroes attack 0.5% faster for the rest of the run (40% at most).',cnt:()=>'+'+Math.min(40,(R.cnt.rr||0)*.5).toFixed(1)+'%'},
+  {id:'ledger',t:3,n:'Blood Ledger',d:'Heroes deal 4% more for every elite and boss slain this run (100% at most).',cnt:()=>'+'+Math.min(100,(R.cnt.big||0)*4)+'%'},
+  {id:'sands',t:2,n:'Sands of War',d:'Heroes deal 2% more for every second a fight has lasted (80% at most).'},
+  {id:'lucky',t:2,n:'Lucky Seven',d:'One attack in seven strikes for triple damage.'},
+  {id:'flawless',t:2,n:'Flawless Gem',d:'Heroes deal 3% more for every floor in a row with no leak (60% at most). A leak halves it.',cnt:()=>'+'+Math.min(60,(R.cnt.fl||0)*3)+'%'},
+  {id:'dice',t:2,n:'Loaded Dice',d:'The shop rolls as if you were one level higher.'},
+  {id:'prism',t:2,n:'Prism',d:'Gain two attuned ×2 Rune Stones: runes that also change every shot that crosses them.'},
+  {id:'conduit',t:3,n:'Runic Conduit',d:'Shots that cross two or more runes deal 50% more.'},
+);
 const RELIC={};RELICS.forEach(r=>RELIC[r.id]=r);
+// ---------- attuned runes: a plain rune only multiplies; an attuned one also changes every shot that crosses it ----------
+const RKIND={
+  ember:{n:'Ember Rune',col:'#ff9a4a',rgb:'255,140,60',d:'shots through it set their target burning for 3% of its health a second for 4s (bosses 1%).'},
+  frost:{n:'Frost Rune',col:'#a8e4ff',rgb:'120,210,255',d:'shots through it chill their target: 40% slower for 2.5s.'},
+  twin:{n:'Twin Rune',col:'#ffe08a',rgb:'255,215,106',d:'shots through it fork, and the copy flies on to a second monster.'},
+  midas:{n:'Midas Rune',col:'#ffcf2e',rgb:'255,200,40',d:'monsters killed by shots through it drop 1 more gold a third of the time.'},
+  keen:{n:'Keen Rune',col:'#ff8aa8',rgb:'255,106,138',d:'shots through it always crit.'},
+  void:{n:'Void Rune',col:'#d0a0ff',rgb:'192,122,255',d:'shots through it ignore armour and magic resist.'},
+  well:{n:'Wellspring Rune',col:'#8ab8ff',rgb:'95,150,255',d:'the shooter gains 12 mana whenever its shot crosses.'},
+};
+const RKEYS=Object.keys(RKIND);
+// ---------- marked heroes: now and then the shop offers a hero with a mark. A merged hero keeps one mark. ----------
+const MARKS={
+  gilded:{n:'Gilded',col:'#ffcf2e',rgb:'255,207,46',w:3,d:'pays 1 gold after every fight it stands in.'},
+  savage:{n:'Savage',col:'#ff7a5a',rgb:'255,122,90',w:3,d:'deals 25% more damage.'},
+  fleet:{n:'Fleet',col:'#7ddc6a',rgb:'125,220,106',w:3,d:'attacks 25% faster.'},
+  arcane:{n:'Arcane',col:'#6ab8ff',rgb:'106,184,255',w:3,d:'gains mana 40% faster.'},
+  hollow:{n:'Hollow',col:'#c9a8ff',rgb:'201,168,255',w:1,d:'takes no place on the field: it fights as an extra hero.'},
+};
+const MARKKEYS=Object.keys(MARKS).flatMap(k=>Array(MARKS[k].w).fill(k));
+// heroes on the field that count against the limit (Hollow ones do not)
+const fieldN=()=>R.board.filter(h=>h.ed!=='hollow').length;
+// a rune stone waiting on the rack is a number (plain) or {v,k} (attuned)
+const stV=s=>typeof s==='number'?s:s.v,stK=s=>typeof s==='number'?null:s.k,kindStone=v=>({v:v||2,k:rndS(RKEYS)});
 // research between runs, paid with gems
 const RES=[
   {id:'gold',cat:'Economy',n:'War Chest',max:3,cost:[30,60,120],d:l=>`Start runs with +${2*l} gold.`},
@@ -246,6 +283,20 @@ const ACH=[
   {id:'gates4',n:'Four Fronts',d:'Clear a wave that came through four gates without a leak',g:50},
   {id:'kb200',n:'Get Back',d:'Knock monsters back 200 times in one run',g:40},
   {id:'hill3',n:'King of the Hill',d:'Have three heroes on high ground at once',g:25},
+  {id:'keystone',n:'Written in the Stars',d:'Take a keystone in the Constellation',g:30},
+  {id:'keystone2',n:'Double Edged',d:'Hold two keystones in one run',g:60},
+  {id:'pact1',n:'Signed in Blood',d:'Keep a pact',g:20},
+  {id:'pact2',n:'Devil\'s Bargain',d:'Win a fight under two pacts without a leak',g:50},
+  {id:'pact15',n:'Pact Collector',d:'Keep 15 pacts in one run',g:80},
+  {id:'ch_glass',n:'Glass Keep',d:'Win the Glass Keep challenge',g:120},
+  {id:'ch_zealot',n:'Rune Fanatic',d:'Win the Rune Fanatic challenge',g:120},
+  {id:'ch_council',n:'Small Council',d:'Win the Small Council challenge',g:120},
+  {id:'ch_pactbound',n:'Pactbound',d:'Win the Pactbound challenge',g:120},
+  {id:'ch_night',n:'The Long Night',d:'Win the The Long Night challenge',g:120},
+  {id:'ch_pauper',n:'Pauper\'s Crusade',d:'Win the Pauper\'s Crusade challenge',g:120},
+  {id:'marked3',n:'Marked Company',d:'Field three marked heroes at once',g:40},
+  {id:'combo40',n:'Unbroken',d:'Reach a 40 kill combo in one fight',g:40},
+  {id:'attune3',n:'Rune Scribe',d:'Have three different attuned runes on the field',g:40},
   {id:'moon',n:'Blood Moon',d:'Bring Fenrir\'s Blood Moon to its full strength',g:60},
   {id:'herald',n:'Silence the Herald',d:'Defeat the Rift Herald',g:80},
   {id:'wardens',n:'Many Hands',d:'Win a run with three different wardens',g:100},
