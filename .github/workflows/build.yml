@@ -13,7 +13,7 @@ permissions:
 jobs:
   checks:
     name: Checks (balance sims + browser test)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -48,7 +48,7 @@ jobs:
   build:
     name: Android APK
     needs: checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -143,7 +143,7 @@ jobs:
   web:
     name: Web version (GitHub Pages)
     needs: checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
