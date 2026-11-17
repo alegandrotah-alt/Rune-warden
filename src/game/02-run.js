@@ -134,7 +134,7 @@ function addHero(k,star,free,ed){
 function allHeroes(){return R.board.concat(R.bench.filter(Boolean))}
 function merge(h){
   const same=allHeroes().filter(x=>x.k===h.k&&x.star===h.star);if(h.tmp&&!same.includes(h))same.push(h);
-  const need=h.star>=3?2:3;if(same.length<need||h.star>=4){if(h.tmp)delete h.tmp;return}
+  const need=3;if(same.length<need||h.star>=4){if(h.tmp)delete h.tmp;return}
   const keep=same.find(x=>R.board.includes(x))||same.find(x=>!x.tmp)||same[0];
   for(const x of same.slice(0,need)){if(x===keep)continue;removeHero(x);keep.vet=Math.max(keep.vet||0,x.vet||0);if(!keep.ed&&x.ed)keep.ed=x.ed;for(const it of x.it||[])giveItem(keep,it)}
   delete keep.tmp;keep.star++;keep.mana=0;fxStar(keep);if(keep.star===3){award('star3');if(keep.k==='wyrm')award('h_dragon');if(R.board.filter(x=>x.star===3).length>=3)award('h_three')}if(keep.star===4){award('star4');banner(HEROES[keep.k].n.toUpperCase()+' ASCENDS','#ff9ad8')}

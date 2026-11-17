@@ -62,8 +62,8 @@ const HEROES={
 const HKEYS=Object.keys(HEROES);
 // shop odds per level (tiers 1-5) and copies in the pool
 const ODDS=[null,[100,0,0,0,0],[100,0,0,0,0],[75,25,0,0,0],[55,30,15,0,0],[45,33,20,2,0],[30,40,25,5,0],[19,30,40,10,1],[18,25,32,22,3],[10,20,25,35,10],[5,10,20,40,25]];
-const POOL=[0,30,26,24,22,20];// copies of each hero in the shared pool, by cost
-const COPIES=[0,1,3,9,18];// copies inside a hero of each star (two ★3 make a ★4)
+const POOL=[0,39,36,33,30,30];// copies of each hero in the shared pool, by cost (enough for the 27 a ★4 needs)
+const COPIES=[0,1,3,9,27];// copies inside a hero of each star: three of a kind always make the next star
 const XPNEED=[0,0,2,2,6,10,20,36,48,72,84];// xp to go from level i to i+1
 const STARM=[0,1,1.8,3.24,9];const STARH=[0,1,1.8,3.2,9];
 // monsters: hp in units of the wave base, sp in tiles/s, ar = physical armour, mr = magic resist, w = keep damage on leak
@@ -261,7 +261,7 @@ const ACH=[
   {id:'act2',n:'Kingslayer',d:'Defeat the Mushroom King',g:60},
   {id:'win',n:'Rune Warden',d:'Defeat the final boss of Act III and win a run',g:150},
   {id:'star3',n:'Legendary',d:'Get a ★3 hero',g:30},
-  {id:'star4',n:'Ascended',d:'Merge two ★3 heroes into a ★4',g:60},
+  {id:'star4',n:'Ascended',d:'Merge three ★3 heroes into a ★4',g:60},
   {id:'trait6',n:'Full Banner',d:'Activate a trait at its top breakpoint',g:40},
   {id:'lvl9',n:'Warlord',d:'Reach level 9',g:40},
   {id:'gold60',n:'Hoarder',d:'Hold 60 gold at once',g:25},
