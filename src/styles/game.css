@@ -282,6 +282,13 @@ body.side #info,body.side #dmgP,body.side #relP{right:calc(var(--shopW,150px) + 
 .hc.marked{border-color:var(--m);box-shadow:0 0 10px -1px var(--m),inset 0 0 14px -6px var(--m)}.hc .mk{position:absolute;right:3px;bottom:3px;font:800 9.5px var(--cond,sans-serif);letter-spacing:.04em;text-transform:uppercase;color:#1a0d04;background:var(--m);border-radius:6px;padding:0 5px}
 .ab.mkd{border-left:3px solid var(--m)}.ab.mkd b{color:var(--m)}
 .hc.marked .nm small{visibility:hidden}
-.hc .pl{position:absolute;left:5px;top:25px;z-index:1;font:700 9px var(--cond,sans-serif);color:#cfd8e4;background:rgba(0,0,0,.55);border-radius:5px;padding:0 3px;line-height:13px}body.side .hc .pl{left:auto;right:4px;top:24px}
+.hc .pl{position:absolute;left:5px;top:25px;z-index:1;font:700 9px var(--cond,sans-serif);color:#cfd8e4;background:rgba(0,0,0,.55);border-radius:5px;padding:0 3px;line-height:13px}body.side .hc .pl{left:30px;right:auto;top:3px}
 /* map nodes: always round, icon centred at a fixed share of the node */
 .mn{min-height:0!important;padding:0!important}.mn i{font-size:0!important;position:static!important}.mn i svg.icn{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:56%!important;height:56%!important}.mn.boss i svg.icn{width:60%!important;height:60%!important}
+/* shop card header: cost and pool on the left, role, legend crown and owned count stacked on the right, names on one line */
+.hc .leg{left:auto!important;right:28px!important;top:5px!important;transform:none!important;width:20px;height:20px;padding:0!important;border-radius:50%!important;display:grid;place-items:center;font-size:0!important}.hc .leg svg.icn{width:13px;height:13px;color:#1a0d04}
+.hc .own{left:auto!important;right:4px!important;top:28px!important;display:flex;align-items:center;gap:1px;font:700 10px var(--cond,sans-serif)!important;line-height:14px;padding:0 4px 0 2px!important}.hc .own svg.icn{width:10px;height:10px;color:#ffd76a}
+.hc .nm b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hc .nm b.lng{font-size:.86em!important;letter-spacing:-.01em}
+body.side .hc .leg{right:26px!important;top:2px!important;width:18px;height:18px}body.side .hc .own{top:24px!important}
+.exb{display:flex;align-items:center;gap:4px;cursor:pointer;border:1px solid rgba(255,207,106,.45);color:#ffe7a8}.exb svg.icn{width:15px;height:15px}.exb small{opacity:.8;font-size:.82em}.exb.on{background:#6a4a14;box-shadow:0 0 0 2px #ffd76a inset}.exb.poor{opacity:.55}
+body.port .exb span{display:none}@media (max-height:430px){.exb span{display:none}}

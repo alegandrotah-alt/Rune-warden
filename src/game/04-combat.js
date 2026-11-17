@@ -3,7 +3,7 @@
 // steep through act I, a little gentler after, so hero power (stars, items, runes) can keep up; endless gets brutal again
 // (the Rift keeps the gentler curve for its floors; only endless turns brutal)
 const hpBase=w=>{const rf=R&&R.rift;return 24*Math.pow(1.19,Math.min(w,10)-1)*Math.pow(HPG,Math.max(0,Math.min(w,rf?40:30)-10))*(w>30&&!rf?Math.pow(1.19,w-30)*Math.pow(1.07,Math.pow(w-30,1.25)):1)};
-let HPG=1.19;
+let HPG=1.183;
 // what a monster hit does to a hero: grows slower than monster health, so stars and items keep up
 const mDmgBase=w=>14*Math.pow(1.105,w-1)*(w>30?Math.pow(1.04,w-30):1);
 const actOf=w=>R&&R.rift?3:Math.min(2,Math.floor((w-1)/10));

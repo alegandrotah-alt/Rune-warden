@@ -10,6 +10,7 @@ function heroUnder(px,py){let best=null,by=-1e9;for(const h of R.board){const [x
   if(best)return best;const c=cellAt(px,py);return c?heroAt(c.c,c.r)||null:null}
 function overShop(px,py){const el=$('shop');if(!el||!el.getBoundingClientRect)return false;const r=el.getBoundingClientRect();return py>=r.top-6&&px>=r.left&&px<=r.right}
 function pdown(e){if(!R||R.phase==='over'||R.phase==='pick')return;ensureAudio();const px=e.clientX,py=e.clientY;
+  if(UI.expand){const cl=cellAt(px,py);if(cl&&isleEdge(cl.c,cl.r)){if(expandAt(cl.c,cl.r)){if(R.gold<expandCost())UI.expand=false;uiRefresh();saveRun()}}else{UI.expand=false;uiRefresh()}return}
   const ii=itemAt(px,py);if(ii>=0){DRAG={item:ii,x:px,y:py,sx:px,sy:py};return}
   for(let i=0;i<R.stones.length;i++){const p=stoneSlot(i);if(Math.hypot(px-p.x,py-p.y)<p.s*.8){DRAG={stone:i,x:px,y:py,sx:px,sy:py};const k=stK(R.stones[i]);if(k)toast(`${RKIND[k].n}: ${RKIND[k].d}`);return}}
   const bi=benchAt(px,py);if(bi>=0&&R.bench[bi]){DRAG={h:R.bench[bi],from:'bench',bi,x:px,y:py,sx:px,sy:py};startValid();return}

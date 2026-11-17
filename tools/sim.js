@@ -11,7 +11,7 @@ const RUNS = +arg('runs', 6);
 
 const frag = buildFragment();
 let src = frag.slice(frag.indexOf('<script>') + 8, frag.lastIndexOf('</script>'));
-src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={starTake,starOpen,pactOffer,pactToggle,PACT,mods,usePower,WARDENS,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
+src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={expandAt,isleEdge,expandCost,starTake,starOpen,pactOffer,pactToggle,PACT,mods,usePower,WARDENS,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
 const script = new vm.Script(src, { filename: 'game.js' });
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -71,6 +71,10 @@ function plan(G, rand, opt) {
     // roll down for upgrades once levelled, keeping the interest reserve
     if (R.gold > reserve + (STRONG ? 4 : 12) && w > (STRONG ? 4 : 6) && (!STRONG || R.lvl >= wantLvl)) G.reroll(); else break;
   }
+  // raise land: up to three chunks an act, beside the middle of the island, when the gold is spare
+  { const F = R.field; for (let k = 0; k < 3 && F.land && (F.grown || 0) < 3 && R.gold - G.expandCost() >= reserve + 2; k++) { let best = null, bs = -1e9;
+      for (let r = 0; r < G.ROWS; r++) for (let c = 3; c <= G.COLS - 4; c++) { if (!G.isleEdge(c, r)) continue; const sc = -Math.abs(c - 8) - Math.abs(r - 4.5) * .3 + rand() * .5; if (sc > bs) { bs = sc; best = [c, r]; } }
+      if (!best || !G.expandAt(best[0], best[1])) break; WALL = null; } }
   // bench full: sell the least useful single copy
   while (R.bench.every(Boolean)) { const s = R.bench.slice().sort((a, b) => heroScore(G, a, F) - heroScore(G, b, F))[0]; G.sellHero(s); }
   // field the best heroes: value, stars, focus traits and items
@@ -133,7 +137,7 @@ function place(G, h) {
 // pick columns where a wall (with one gap at the top or bottom) can actually be built around runes and portals
 let WALL = null, RAND = Math.random, BOTKIND = 'strong';
 function planWalls(G) { const R = G.R, C = G.COLS, RR = G.ROWS, opts = [];
-  for (let c = 3; c <= C - 4; c++) for (const gap of [0, RR - 1]) { let need = 0, ok = true; for (let r = 0; r < RR; r++) { if (r === gap) continue; const b = R.field.blk[r * C + c]; if (b === 2) continue; if (G.runeAt(c, r) || G.portalAt(c, r)) { ok = false; break; } need++; } if (ok) opts.push({ c, gap, need }); }
+  for (let c = 3; c <= C - 4; c++) { const L = R.field.land, land = (r) => !L || L[r * C + c]; let top = 0, bot = RR - 1; while (top < RR - 1 && !land(top)) top++; while (bot > 0 && !land(bot)) bot--; for (const gap of [top, bot]) { let need = 0, ok = true; for (let r = 0; r < RR; r++) { if (r === gap) continue; const b = R.field.blk[r * C + c]; if (b === 2 || b === 3) continue; if (G.runeAt(c, r) || G.portalAt(c, r)) { ok = false; break; } need++; } if (ok) opts.push({ c, gap, need }); } }
   opts.sort((a, b) => a.need - b.need); WALL = new Map(); const first = opts[0]; if (!first) return; const add = (o, v) => { for (let r = 0; r < RR; r++) if (r !== o.gap) WALL.set(o.c + ',' + r, v); };
   add(first, 8); const second = opts.find((o) => Math.abs(o.c - first.c) >= 3 && o.gap !== first.gap); if (second) add(second, 4); }
 // every few waves, lift each hero and put it back where the maze is best now

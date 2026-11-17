@@ -48,11 +48,12 @@ function genField(){
   // runes you placed yourself travel with you into the next act
   const mine=R.field?R.field.runes.filter(q=>q.mine):[];
   const A=actD(R.act),TW=A.ter||{water:1,hill:3,mud:2,thorn:1};
-  const F=R.field={blk:new Uint8Array(COLS*ROWS),ter:new Uint8Array(COLS*ROWS),obs:[],runes:[],portals:[],gates:[{k:'west',c:0,r:4,id:0}]};
+  const F=R.field={blk:new Uint8Array(COLS*ROWS),ter:new Uint8Array(COLS*ROWS),obs:[],runes:[],portals:[],gates:[{k:'west',c:0,r:4,id:0}],grown:0};
+  genIsland(F);
   // gates for this act (portal rules: every gate opens in the western half of the field, at least 8 hexes from the keep): one edge gate in act I, both in act II, both plus a breach in act III
-  const gl=[];const eg=(k,r)=>{for(let t=0;t<30;t++){const c=2+((rng()*5)|0);if(!F.gates.some(g=>Math.abs(g.c-c)<2&&g.r===r)){F.gates.push({k,c,r,id:F.gates.length});return}}};
+  const gl=[];const eg=(k,r0)=>{for(let t=0;t<30;t++){const c=2+((rng()*5)|0),r=rimRow(F,c,r0===0);if(r<0)continue;if(!F.gates.some(g=>Math.abs(g.c-c)<2&&g.r===r)){F.gates.push({k,c,r,id:F.gates.length});return}}};
   const ns=rng()<.5;if(R.act>=0)eg(ns?'north':'south',ns?0:ROWS-1);if(R.act>=1)eg(ns?'south':'north',ns?ROWS-1:0);
-  if(R.act>=2||R.endless){for(let t=0;t<40;t++){const c=3+((rng()*5)|0),r=2+((rng()*6)|0);if(!F.gates.some(g=>Math.abs(g.c-c)+Math.abs(g.r-r)<4)){F.gates.push({k:'breach',c,r,id:F.gates.length});break}}}
+  if(R.act>=2||R.endless){for(let t=0;t<40;t++){const c=3+((rng()*5)|0),r=2+((rng()*6)|0);if(F.land[r*COLS+c]&&!F.gates.some(g=>Math.abs(g.c-c)+Math.abs(g.r-r)<4)){F.gates.push({k:'breach',c,r,id:F.gates.length});break}}}
   const gateNear=(c,r)=>F.gates.some(g=>g.k!=='west'&&Math.abs(g.c-c)<=1&&Math.abs(g.r-r)<=1);
   for(const q of mine)if(!gateNear(q.c,q.r))F.runes.push({c:q.c,r:q.r,v:q.v,k:q.k,ph:q.ph||0,flash:.6,mine:1});
   const free=(c,r)=>!F.blk[r*COLS+c]&&!F.ter[r*COLS+c]&&!F.runes.some(q=>q.c===c&&q.r===r)&&!F.portals.some(q=>q.c===c&&q.r===r)&&!gateNear(c,r)&&!(c<=1&&SPAWN_ROWS.includes(r))&&!(c>=COLS-2&&KEEP_ROWS.includes(r));
@@ -77,6 +78,39 @@ function genField(){
   for(const h of R.board.slice())if(F.blk[h.r*COLS+h.c]||isGate(h.c,h.r)||F.runes.some(q=>q.c===h.c&&q.r===h.r)||F.portals.some(q=>q.c===h.c&&q.r===h.r))toBench(h);
   rebuildBlk();fixRoads();if(typeof bgDirty!=='undefined')bgDirty=1;
 }
+// ---- the floating island ----
+// The field is a 16×10 grid, but only the island's hexes are land: the rest is open sky (blk 3), where nothing stands and no road runs.
+// Each act raises a new island; land bought with Expand (R.isle) makes every later island bigger too.
+const ISLE=[100,112,124,112];
+const isleN=()=>Math.min(COLS*ROWS-8,(R.endless?132:ISLE[Math.min(3,R.act)])+(R.isle||0));
+// island shapes: a plain oval, twin isles joined at a narrow waist, a crescent with a bay bitten out of one side, or a ring around a hole in the sky
+const ISHAPE=['Oval Isle','Twin Isles','Crescent Isle','Ring Isle'];
+function genIsland(F){const N=isleN(),L=F.land=new Uint8Array(COLS*ROWS),sc=[],ph=rng()*6.283,ph2=rng()*6.283,amp=.6+rng()*.6,squash=1+rng()*.35,
+    k=F.shape=R.act===0&&!R.endless&&!R.isle?0:(rng()*ISHAPE.length)|0,bs=rng()<.5?-1:1,bx=(rng()-.5)*.6,hxp=(rng()-.5)*.5,hyp=(rng()<.5?-1:1)*(.3+rng()*.15);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const x=(c+(r&1)*.5-7.75)/8.4,y=(r-4.5)/5.2,a=Math.atan2(y,x);
+    let s=x*x+y*y*squash-amp*.12*(Math.sin(a*3+ph)*.6+Math.sin(a*5+ph2)*.4)+rng()*.14;
+    if(k===1)s+=.9*Math.exp(-(x-bx*.5)*(x-bx*.5)/.025)*Math.min(1,y*y*6);
+    else if(k===2)s+=1.4*Math.exp(-((x-bx)*(x-bx)+(y-bs*.85)*(y-bs*.85))/.09);
+    else if(k===3)s+=2*Math.exp(-((x-hxp)*(x-hxp)+(y-hyp)*(y-hyp))/.012);
+    // the road's ends and a spine between them are always land, so the island never splits
+    if((c<=1&&SPAWN_ROWS.includes(r))||(c>=COLS-2&&KEEP_ROWS.includes(r))||r===SPAWN_ROWS[0])s=-9;
+    sc.push([s,r*COLS+c])}
+  sc.sort((a,b)=>a[0]-b[0]);for(let i=0;i<N&&i<sc.length;i++)L[sc[i][1]]=1;
+  const seen=new Uint8Array(COLS*ROWS),q=[KEEP_ROWS[0]*COLS+COLS-1];seen[q[0]]=1;
+  for(let h=0;h<q.length;h++){const i=q[h];for(const [nc,nr] of nbrs(i%COLS,(i/COLS)|0)){const j=nr*COLS+nc;if(L[j]&&!seen[j]){seen[j]=1;q.push(j)}}}
+  for(let i=0;i<L.length;i++){if(!seen[i])L[i]=0;if(!L[i])F.blk[i]=3}}
+// the topmost (or bottom-most) land hex in a column: where an edge gate opens on the rim
+function rimRow(F,c,top){for(let k=0;k<ROWS;k++){const r=top?k:ROWS-1-k;if(F.land[r*COLS+c])return r}return -1}
+const isLand=(c,r)=>c>=0&&r>=0&&c<COLS&&r<ROWS&&(!R.field.land||R.field.land[r*COLS+c]===1);
+// Expand: raise a chunk of three hexes out of the sky next to the island, between fights
+const expandCost=()=>3+(R.field.grown||0)*2;
+function isleEdge(c,r){const F=R.field;return !!F.land&&c>=0&&r>=0&&c<COLS&&r<ROWS&&!F.land[r*COLS+c]&&nbrs(c,r).some(([a,b])=>F.land[b*COLS+a])}
+function expandChunk(c,r){const F=R.field,add=[[c,r]],d=(p)=>Math.hypot(hx(p[0],p[1])-hx(c,r),hy(p[1])-hy(r));
+  for(let k=0;k<2;k++){const cand=[];for(const [a,b] of add)for(const p of nbrs(a,b))if(!F.land[p[1]*COLS+p[0]]&&!add.some(o=>o[0]===p[0]&&o[1]===p[1])&&!cand.some(o=>o[0]===p[0]&&o[1]===p[1]))cand.push(p);if(!cand.length)break;cand.sort((p,q)=>d(p)-d(q));add.push(cand[0])}return add}
+function expandAt(c,r){const F=R.field;if(R.phase!=='plan'||!isleEdge(c,r)||R.gold<expandCost())return false;R.gold-=expandCost();
+  const add=expandChunk(c,r);F.rise=F.rise||[];for(const [a,b] of add){const i=b*COLS+a;F.land[i]=1;F.blk[i]=0;F.rise.push({c:a,r:b,t:0})}
+  F.grown=(F.grown||0)+1;R.isle=(R.isle||0)+add.length;R.stats.isle=(R.stats.isle||0)+add.length;rebuildBlk();if(typeof bgDirty!=='undefined')bgDirty=1;
+  if(typeof sfx==='function')sfx('level',.5);if(typeof fx==='function')for(const [a,b] of add)fx({k:'ring',x:hx(a,b),y:hy(b),r:T*.7,col:'#e8d6a8',dur:.5});if(R.isle>=30)award('isle');return true}
 // heroes kept from the last act may wall off a new gate: lift the ones nearest the gates until every road is open,
 // then put them back wherever the roads stay open (or on the bench, or sell them if the bench is full)
 function fixRoads(){const F=R.field;if(F.dist)return;const G=(F.gates||[]).filter(g=>g.k!=='west'),lift=[];

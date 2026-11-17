@@ -5,9 +5,13 @@ function toast(t){if(!DOM)return;const el=$('toast');el.textContent=t;el.hidden=
 // portraits are drawn at four times their CSS size so they stay sharp on dense phone screens
 function portrait(k,size){const c=mk(size*4,size*4);if(!c)return c;const g=c.getContext('2d');const f=frame('h_'+k,160,0,size*4);if(f&&g&&g.drawImage){g.imageSmoothingQuality='high';g.drawImage(f,-size*.3,-size*.2,size*4.6,size*4.6)}return c}
 function onSheet(name){if(DOM&&name.startsWith('h_')){renderShop();if(!$('ovStart').hidden){clearTimeout(onSheet.t);onSheet.t=setTimeout(()=>{renderCol();renderWardens()},200)}}if(/^props|^keep/.test(name))bgDirty=1}
+// Expand: raise land at the island's edge between fights
+function uiExpand(){const b=$('exB');if(!b||!R.field||!R.field.land)return;const can=R.phase==='plan'&&!R.final,cost=expandCost();b.hidden=!can;if(!can){UI.expand=false;return}
+  b.innerHTML=`${icon('raise')}<span>${UI.expand?'Pick a hex':'Expand'}</span><small>${cost}g</small>`;b.classList.toggle('on',!!UI.expand);b.classList.toggle('poor',R.gold<cost)}
 function uiRefresh(){if(!DOM||!R)return;calcTraits();
   $('waveT').textContent=R.final?'The Rune Devourer':R.rift?`Rift ${R.wave-30} / ${RIFTN}`:R.endless?`Wave ${R.wave} · Endless`:`Floor ${R.wave} / 30`;uiPots();uiPower();uiCouncil();$('actT').textContent=`Act ${['I','II','III','IV'][R.act]} · ${actD(R.act).n}`;
   $('goldT').textContent=R.gold;$('lvlT').textContent='Lv '+R.lvl;const need=XPNEED[R.lvl]||0;$('xpF').style.width=(R.lvl>=10?100:100*R.xp/need)+'%';$('xpT').textContent=R.lvl>=10?'max':`${R.xp}/${need}`;
+  uiExpand();
   $('fieldT').textContent=`${fieldN()}/${boardMax()} heroes`;$('fieldT').style.color=fieldN()<boardMax()&&R.bench.some(Boolean)?'#ffd76a':'';
   $('hpT').textContent='♥ '+Math.ceil(R.hp);
   const st=$('streakT');st.hidden=Math.abs(R.streak)<2;st.textContent=R.streak>0?`🔥 ${R.streak} win streak`:`❄ ${-R.streak} loss streak`;
@@ -20,7 +24,7 @@ function renderShop(force){if(!DOM||!R)return;const owned={};for(const h of allH
   const sig=R.shop.join()+'|'+R.shop.map(k=>k?R.pool[k]:0).join()+'|'+(R.shopEd||[]).join()+'|'+R.gold+'|'+JSON.stringify(owned)+'|'+Object.keys(SPR.img).filter(k=>SPR.st[k]===1).length;if(sig===SHOPSIG&&!force)return;SHOPSIG=sig;const box=$('cards');box.innerHTML='';
   R.shop.forEach((k,i)=>{const b=document.createElement('button');b.type='button';if(!k){b.className='hc empty';b.disabled=true;box.appendChild(b);return}
     const D=HEROES[k];const E=R.shopEd&&MARKS[R.shopEd[i]];b.className='hc'+(R.gold<D.c?' poor':'')+(owned[k]===2?' pair':'')+(E?' marked':'');b.style.setProperty('--c',TIERCOL[D.c]);if(E)b.style.setProperty('--m',E.col);
-    b.innerHTML=`<span class="cost">${D.c}g</span>${owned[k]?`<span class="own">${'★'.repeat(1)}×${owned[k]}</span>`:''}<span class="nm"><b>${D.n}</b><small>${D.tr.map(t=>TRAITS[t].ic+' '+TRAITS[t].n).join(' · ')}</small></span><span class="role ${isFront(k)?'f':'b'}">${icon(isFront(k)?'sword':'bow')}</span>${D.c===5?'<span class="leg">LEGEND</span>':''}<span class="pl" title="Copies left in the shared pool">${R.pool[k]} left</span>${E?`<span class="mk">${E.n}</span>`:''}`;
+    b.innerHTML=`<span class="cost">${D.c}g</span>${owned[k]?`<span class="own" title="You own ${owned[k]}">${icon('star')}${owned[k]}</span>`:''}<span class="nm"><b${D.n.length>11?' class="lng"':''}>${D.n}</b><small>${D.tr.map(t=>TRAITS[t].ic+' '+TRAITS[t].n).join(' · ')}</small></span><span class="role ${isFront(k)?'f':'b'}">${icon(isFront(k)?'sword':'bow')}</span>${D.c===5?'<span class="leg" title="Legend">'+icon('crown')+'</span>':''}<span class="pl" title="Copies left in the shared pool">${R.pool[k]} left</span>${E?`<span class="mk">${E.n}</span>`:''}`;
     const p=portrait(k,38);if(p)b.prepend(p);b.addEventListener('click',()=>shopTap(i));
     b.addEventListener('contextmenu',e=>{e.preventDefault();shopTap(i)});box.appendChild(b)});
   // the shop changed under a selected card: drop the selection
@@ -157,6 +161,8 @@ function bindUI(){if(!DOM)return;bindPanels();bindTut();bindMap();bindRooms();bi
   $('pauseB').addEventListener('click',()=>togglePause());$('resumeB').addEventListener('click',()=>togglePause(false));
   $('quitB').addEventListener('click',()=>{togglePause(false);runOver(false)});
   $('playB').addEventListener('click',()=>startGame({asc:ASCSEL||0,warden:META.wd,ch:CHSEL}));bindCouncil();
+  $('exB').addEventListener('click',()=>{if(R.phase!=='plan')return;if(UI.expand){UI.expand=false;uiRefresh();return}if(R.gold<expandCost()){toast(`Raising land costs ${expandCost()} gold.`);return}
+    UI.expand=true;sfx('click');toast(`Tap a glowing hex at the edge of the island to raise three hexes of land for ${expandCost()} gold. Land you raise also makes the next act's island bigger.`);uiRefresh()});
   $('pwB').addEventListener('click',()=>{const W=WARDENS[R.warden||'castellan'];if(R.phase==='wave'&&R.b&&!R.b.pw)usePower();else toast(R.phase==='wave'?`${W.pw.n} is spent for this fight`:`${W.pw.n}: ${W.pw.d} Once per fight.`)});
   $('copyB').addEventListener('click',()=>copyText(runText(META.hist[0])));$('copyHistB').addEventListener('click',()=>copyText((META.hist||[]).slice(0,10).map(runText).join('\n\n')));
   $('contB').addEventListener('click',()=>{if(loadRun()){$('ovStart').hidden=true;MUSMODE='game';bgDirty=1;uiRefresh();if(R.phase==='pick')showPick();else if(R.phase==='room')showRoom();else if(R.phase==='reward')showSpoils();else if(needMap())showMap()}});
