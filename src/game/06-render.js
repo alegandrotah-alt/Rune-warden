@@ -198,7 +198,7 @@ function drawHeroAt(h,x,y,size,ghost,live){
   if(h.ed&&MARKS[h.ed]&&!LQ()){const gl=glow(MARKS[h.ed].rgb);if(gl){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.5+.2*Math.sin(TIME*3+(h.uid||0));ctx.drawImage(gl,x-size*.42,y-size*.2,size*.84,size*.4);ctx.restore()}}
   // a slow breath while idle, a quick stretch into each attack
   const br=live&&h.atk>0?1+.05*Math.sin((1-h.atk/.42)*Math.PI):1+.012*Math.sin(TIME*2.2+(h.uid||0));
-  if(h.star>1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=h.star===3?.7:.4;const gl=glow(h.star===3?'255,200,60':'150,200,255');if(gl)ctx.drawImage(gl,x-size*.45,y-size*.75,size*.9,size*.9);ctx.restore()}
+  if(h.star>1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=h.star>=4?.75+.2*Math.sin(TIME*3+(h.uid||0)):h.star===3?.7:.4;const gl=glow(h.star>=4?'255,110,200':h.star===3?'255,200,60':'150,200,255'),gs=h.star>=4?1.25:.9;if(gl)ctx.drawImage(gl,x-size*gs/2,y-size*(gs-.15),size*gs,size*gs);if(h.star>=4&&!LQ()){const g2=glow('255,215,120');for(let i=0;i<3;i++){const a=TIME*1.6+i*2.094,rx=x+Math.cos(a)*size*.36,ry=y-size*.32+Math.sin(a)*size*.12;if(g2)ctx.drawImage(g2,rx-size*.07,ry-size*.07,size*.14,size*.14)}}ctx.restore()}
   if(ghost)ctx.globalAlpha=.6;
   if(f){ctx.save();ctx.translate(x,y);ctx.scale(fc(h)<0?-1/br:1/br,br);ctx.drawImage(f,fx0,fy0,zs,zs);if(live&&h.hurtT>0&&!LQ()){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.4;ctx.drawImage(f,fx0,fy0,zs,zs)}ctx.restore();
     if(live&&h.seizT>0){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.5+.25*Math.sin(TIME*10);const gl=glow('170,80,255');if(gl)ctx.drawImage(gl,x-size*.4,y-size*.8,size*.8,size*.8);ctx.restore()}
@@ -206,7 +206,7 @@ function drawHeroAt(h,x,y,size,ghost,live){
   else{ctx.fillStyle=TIERCOL[HEROES[h.k].c];ctx.beginPath();ctx.arc(x,y-size*.35,size*.22,0,6.283);ctx.fill()}
   ctx.globalAlpha=1;
   // stars, cost colour
-  const st='★'.repeat(h.star),fs=Math.max(9,size*.16);ctx.font=`900 ${fs}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.strokeText(st,x,y+fs*.55);ctx.fillStyle=h.star===3?'#ffd76a':h.star===2?'#cfe6ff':TIERCOL[HEROES[h.k].c];ctx.fillText(st,x,y+fs*.55)}
+  const st='★'.repeat(h.star),fs=Math.max(9,size*.16);ctx.font=`900 ${fs}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.strokeText(st,x,y+fs*.55);ctx.fillStyle=h.star>=4?'#ff9ad8':h.star===3?'#ffd76a':h.star===2?'#cfe6ff':TIERCOL[HEROES[h.k].c];ctx.fillText(st,x,y+fs*.55)}
 function drawMon(m){
   const D=MON[m.k],[x,y]=scr(m.x,m.y),fly=m.fly?ss(T*.55)+Math.sin(m.wob)*ss(4):0,size=ss(T*1.42*(m.sz||D.sz))*(m.boss?1.15:1);
   m.age=(m.age||0)+FRAME_DT;const pop=m.age<.3?m.age/.3:1,pk=pop<1?1-(1-pop)*(1-pop):1;shadow(x,y,size*.25*pk,size*.085*pk,m.fly?.2:.34);
@@ -313,12 +313,14 @@ function drawBossIntro(){const I=R.b&&R.b.intro;if(!I)return;const p=I.t/I.dur,i
 function drawBench(){
   const n=R.bench.length;if(ZM.z>1){const a=benchSlot(0),b=benchSlot(n-1);ctx.fillStyle='rgba(15,10,7,.78)';ctx.fillRect(a.x-a.w*.6,a.y-a.w*.42,b.x-a.x+a.w*1.2,a.w*.82)}for(let i=0;i<n;i++){const b=benchSlot(i),h=R.bench[i];ctx.fillStyle=DRAG&&DRAG.overBench===i?'rgba(255,215,106,.25)':'rgba(0,0,0,.32)';ctx.strokeStyle='rgba(255,230,180,.25)';ctx.lineWidth=1;
     const w=b.w*.92,hh=b.w*.66;ctx.beginPath();ctx.roundRect?ctx.roundRect(b.x-w/2,b.y-hh*.55,w,hh,6):ctx.rect(b.x-w/2,b.y-hh*.55,w,hh);ctx.fill();ctx.stroke();
-    if(h&&!(DRAG&&DRAG.h===h)){drawHeroAt(h,b.x,b.y+hh*.3,b.w*1.05);drawHeroItems(h,b.x,b.y-hh*.42,b.w*1.05)}}
+    if(h&&!(DRAG&&DRAG.h===h)){drawHeroAt(h,b.x,b.y+hh*.16,b.w*.98);drawHeroItems(h,b.x,b.y-hh*.42,b.w*1.05)}}
   drawItems();
   // rune stones waiting to be placed
   drawRuneRack();R.stones.forEach((st,i)=>{if(i>3)return;if(DRAG&&DRAG.stone===i)return;const v=stV(st),K=RKIND[stK(st)],p=stoneSlot(i);ctx.save();ctx.globalCompositeOperation='lighter';const gl=glow(K?K.rgb:'120,170,255');if(gl)ctx.drawImage(gl,p.x-p.s,p.y-p.s,p.s*2,p.s*2);ctx.restore();ctx.fillStyle=K?shade(K.col,-.6):'#2a3a6a';ctx.strokeStyle=K?K.col:'#9cc4ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,p.s*.55,0,6.283);ctx.fill();ctx.stroke();
     ctx.font=`900 ${p.s*.6}px Cinzel,serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#e6eeff';ctx.fillText('×'+v,p.x,p.y+1)})}
-function stoneSlot(i){const B=bottomLayout(),col=i%2,row=((i/2)|0)%2;return{x:B.Rr-B.runeW+B.s*.56+col*B.s*1.12,y:B.iy-B.s*.56+row*B.s*1.12,s:B.s*.95}}
+// stones sit centred in the rack: one in the middle, two side by side, three or four in a square
+function stoneSlot(i){const B=bottomLayout(),n=Math.min(4,R.stones.length),col=i%2,row=((i/2)|0)%2,cx=B.Rr-B.runeW/2,cy=B.iy-B.s*.06,d=B.s*.56;
+  if(n<=1)return{x:cx,y:cy,s:B.s*.95};if(n===2)return{x:cx+(col?d:-d),y:cy,s:B.s*.95};if(n===3&&i===2)return{x:cx,y:cy+d,s:B.s*.95};return{x:cx+(col?d:-d),y:cy+(row?d:-d),s:B.s*.95}}
 function drawRuneRack(){const B=bottomLayout(),s=B.s,x0=B.Rr-B.runeW,y0=B.iy-s*1.18;ctx.save();ctx.fillStyle='rgba(12,16,30,.7)';ctx.strokeStyle=R.stones.length?`rgba(156,196,255,${.5+.3*Math.sin(TIME*4)})`:'rgba(156,196,255,.25)';ctx.lineWidth=R.stones.length?2:1.2;
   ctx.beginPath();ctx.roundRect?ctx.roundRect(x0,y0,B.runeW,s*2.24,8):ctx.rect(x0,y0,B.runeW,s*2.24);ctx.fill();ctx.stroke();ctx.font=`800 ${Math.max(9,s*.34)}px "Barlow Condensed",sans-serif`;ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillStyle='#9cc4ff';ctx.fillText('RUNES',x0+2,y0-2);
   if(!R.stones.length){ctx.fillStyle='rgba(156,196,255,.3)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`700 ${Math.max(8,s*.28)}px "Barlow Condensed",sans-serif`;ctx.fillText('none',x0+B.runeW/2,y0+s*1.12)}ctx.restore()}

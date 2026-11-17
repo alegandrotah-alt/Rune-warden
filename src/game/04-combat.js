@@ -25,7 +25,7 @@ function startWave(){
   mapEnter();
   R.phase='wave';R.b={mons:[],projs:[],fx:[],traps:[],zones:[],q:(R.nextQ&&R.nextQ.length?R.nextQ:waveList(R.wave)).map(e=>Object.assign({},e)),gs:null,qT:.3,t:0,leaked:0,kills:0,big:0,ko:0,drops:0};
   pactOffer();pactStart(R.b.q);R.b.gs=R.b.q.map(e=>({g:e.g||0}));
-  for(const h of R.board){const I=itemStats(h);h.mana=(I.mana||0)+mods().mana0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0;h.stk=0;h.ac=0;h.ko=0;h.chillT=0;h.tauntT=0;h.hurtT=0;h.seizT=0;h.hpMax=heroMaxHp(h);h.hp=h.hpMax;if(R.hymn)h.mana=HEROES[h.k].mana}R.hymn=0;
+  for(const h of R.board){const I=itemStats(h);h.mana=(I.mana||0)+mods().mana0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0;h.stk=0;h.ac=0;h.ko=0;h.chillT=0;h.tauntT=0;h.hurtT=0;h.seizT=0;h.hpMax=heroMaxHp(h);h.hp=h.hpMax;if(h.star>=4)h.mana=HEROES[h.k].mana;if(R.hymn)h.mana=HEROES[h.k].mana}R.hymn=0;
   if(R.board.filter(h=>h.ed).length>=3)award('marked3');
   calcTraits();guardWave();if(R.final||bossWave(R.wave))sfx('elite',.8);else sfx('ready',.5);
   return true}
@@ -48,14 +48,14 @@ function monTick(m,dt){
   // damage over time
   if(m.dots.length){for(const o of m.dots){const d=o.dps*Math.min(dt,o.t);o.t-=dt;if(d>0&&m.hp>0)dealRaw(m,d,o.src,1)}m.dots=m.dots.filter(o=>o.t>0)}
   if(affd(m,'regen')&&m.hp<m.max)m.hp=Math.min(m.max,m.hp+m.max*.02*dt);
-  if(m.psn){const p=m.psn;dealRaw(m,p.n*p.dps*Math.min(dt,p.t)*(tier('plague')>=1?2:1)*(1-m.mr*.5),p.src,1);p.t-=dt;if(p.t<=0)m.psn=null}
+  if(m.psn){const p=m.psn;dealRaw(m,p.n*p.dps*Math.min(dt,p.t)*psnMul()*(1-m.mr*.5),p.src,1);p.t-=dt;if(p.t<=0)m.psn=null}
   if(m.hp<=0)return;
   const D=MON[m.k];
   if(D.final)finalTick(m,dt);
   else if(m.boss&&D.sig)bossTick(m,dt,D.sig);
   if(!D.final&&m.boss&&!m.rifted&&m.hp<m.max*.5&&!R.endless){m.rifted=1;openRift(1+R.act,R.act>=2?1:0);banner(D.n.toUpperCase()+' TEARS A BREACH','#d6a8ff')}
   if(D.beh==='phase'){m.phT-=dt;if(m.phT<=0){m.phased=!m.phased;m.phT=m.phased?1.2:3.5}}
-  if(m.dreadT>0)m.dreadT-=dt;
+  if(m.dreadT>0)m.dreadT-=dt;if(m.markT>0)m.markT-=dt;
   if(frenzy()){m.sleepT=0;m.charmT=0;m.stunT=0;m.rootT=0;m.slowP=1}
   if(affd(m,'jugg')){m.sleepT=0;m.stunT=0;m.rootT=0;m.slowP=1}
   if(m.sleepT>0){m.sleepT-=dt;return}
@@ -71,7 +71,7 @@ function monTick(m,dt){
   if(m.kb>0){kbTick(m,dt);return}
   if(m.slowT>0)m.slowT-=dt;else m.slowP=1;
   let sp=m.sp*T*(rush?Math.max(m.slowP,.75):m.slowP)*(has('mire')?.9:1)*zs;
-  if(tier('guardian')>=0&&!m.fly&&!rush)for(const h of R.board){if(h.ko||!HEROES[h.k].tr.includes('guardian'))continue;const p=heroPos(h);if(Math.abs(p.x-m.x)<T*1.5&&Math.abs(p.y-m.y)<T*1.5){sp*=1-[.2,.4][tier('guardian')];break}}
+  if(tier('guardian')>=0&&!m.fly&&!rush)for(const h of R.board){if(h.ko||!HEROES[h.k].tr.includes('guardian'))continue;const p=heroPos(h);if(Math.abs(p.x-m.x)<T*1.5&&Math.abs(p.y-m.y)<T*1.5){sp*=1-[.2,.4,.55][tier('guardian')];break}}
   if(!m.fly&&m.c>=0&&R.field.ter){const t=R.field.ter[m.r*COLS+m.c];if(t===2)sp*=has('quagmire')?(rush?.65:.4):(rush?.8:.65);else if(t===3){dealRaw(m,m.max*(m.boss?.002:.014)*(has('bramble')?3:1)*dt,null,1);if(Math.random()<dt*2)fx({k:'thorn',x:m.x,y:m.y,dur:.35})}}
   if(m.gale>0){m.gale-=dt;sp*=1.5}
   if(frenzy()){sp*=1.6;if(!B.frz){B.frz=1;banner('FRENZY','#ff8a5a')}}
@@ -90,6 +90,7 @@ function monTick(m,dt){
   if(D.heal){m.healT-=dt;if(m.healT<=0){m.healT=3;for(const o of B.mons)if(o!==m&&o.hp>0&&Math.hypot(o.x-m.x,o.y-m.y)<T*1.6){o.hp=Math.min(o.max,o.hp+o.max*.15)}fx({k:'ring',x:m.x,y:m.y,r:T*1.6,col:'#7dff9a',dur:.5})}}
   if(D.summon){m.sumT-=dt;if(m.sumT<=0){m.sumT=6;for(let i=0;i<2;i++){const s=spawnMon(D.summon,0,m.x+(Math.random()-.5)*T*.6,m.y+(Math.random()-.5)*T*.6);s.c=m.c;s.r=m.r;s.portals=-1}fx({k:'ring',x:m.x,y:m.y,r:T,col:'#c07aff',dur:.5})}}
   monAttack(m,dt);
+  if(m.boss&&!MON[m.k].final&&m.x>FW-T*.15)siege(m,dt);
   if(m.x>FW+T*.35){leak(m)}
 }
 // ---------- monsters fight back: they swing at heroes they pass, they don't stop walking ----------
@@ -105,7 +106,7 @@ function monAttack(m,dt){const A=MON[m.k].atk;if(!A||m.x<0||m.x>FW)return;m.atkT
   else if(A.k==='bolt'){hurtHero(best,dmg,m);if(A.chill)best.chillT=2.5;fx({k:'mbolt',x:m.x,y:m.y,x1:p.x,y1:p.y,dur:.3,col:A.chill?'#8ad8ff':m.k==='ghost'?'#b8ffd8':'#c07aff'});sfx('sp_arcane',.12,1.3)}
   else if(A.k==='slam'){for(const h of R.board){if(!heroUp(h))continue;const q=heroPos(h);if(Math.hypot(q.x-m.x,q.y-m.y)<=rr)hurtHero(h,dmg,m)}fx({k:'ring',x:m.x,y:m.y,r:rr,col:'#d8a060',dur:.4});shake(m.boss?6:3);sfx('m_slam',.35,.8+Math.random()*.2)}
   else if(A.k==='breath'){const a=Math.atan2(p.y-m.y,p.x-m.x);for(const h of R.board){if(!heroUp(h))continue;const q=heroPos(h),dx=q.x-m.x,dy=q.y-m.y;if(Math.hypot(dx,dy)>rr)continue;let da=Math.atan2(dy,dx)-a;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)<.6)hurtHero(h,dmg,m)}fx({k:'cone',x:m.x,y:m.y,a,r:rr,dur:.6,col:'#ff7a2a'});shake(5);sfx('sp_breath',.4,.8)}}
-function hurtHero(h,d,m){if(!heroUp(h))return;let dr=h.au?h.au.dr:0;if(HEROES[h.k].fl&&HEROES[h.k].fl.k==='taunt')dr+=.3;if(R.b&&R.b.fl&&R.b.fl.some(f=>f.sanct&&Math.hypot(f.x-hx(h.c,h.r),f.y-hy(h.r))<T*2.1))dr+=.25;
+function hurtHero(h,d,m){if(!heroUp(h))return;let dr=h.au?h.au.dr:0;if(tier('guardian')>=2&&HEROES[h.k].tr.includes('guardian'))dr+=.35;if(HEROES[h.k].fl&&HEROES[h.k].fl.k==='taunt')dr+=.3;if(R.b&&R.b.fl&&R.b.fl.some(f=>f.sanct&&Math.hypot(f.x-hx(h.c,h.r),f.y-hy(h.r))<T*2.1))dr+=.25;
   d*=1-Math.min(.75,dr);h.hp-=d;h.hurtT=.18;
   if(m&&hasIt(h,'bramble')&&m.hp>0)dealRaw(m,heroStats(h).dmg*2,h,1);
   if(h.hp<=0&&priestessSave(h))return;
@@ -115,20 +116,25 @@ function portalSplit(m,p,pi){
   m.portals|=1<<pi;const v=portalMul(p),bv=.35*(has('baron')?2:1)*(has('riftlord')?3:1);m.bounty+=bv;
   for(let i=1;i<v;i++){const c=spawnMon(m.k,m.elite,m.x+(Math.random()-.5)*T*.5,m.y+(Math.random()-.5)*T*.5,m.hp/m.max*.7);c.portals=m.portals;c.bounty=m.bounty;c.c=m.c;c.r=m.r;c.psn=m.psn?Object.assign({},m.psn):null}
   p.flash=.4;fx({k:'ring',x:hx(p.c,p.r),y:hy(p.r),r:T*.7,col:'#c07aff',dur:.4});if(Math.random()<.4)sfx('zap',.25,1.3)}
+// a boss that reaches the keep does not vanish: it stays at the gate and batters the keep (five blows) before it smashes through
+function siege(m,dt){const K=keepPos(),L=mods().leak;m.x=FW-T*.15;m.y+=(K.y-m.y)*Math.min(1,dt*2);m.face=1;
+  if(!m.siege){m.siege=1;m.siegeT=2.5;m.blows=0;const d=Math.ceil(m.w*.5*L);R.hp-=d;R.b.leaked+=m.w;R.stats.leaks+=m.w;R.leakAct+=m.w;R.lastLeak=m.k;shake(14);sfx('lost',.5);flash(.4);banner('THE KEEP IS UNDER SIEGE','#ff5a5a');floatText(FW+T*.2,m.y,'-'+d,'#ff5a5a',1.3);return}
+  m.siegeT-=dt*(frenzy()?1.6:1);if(m.siegeT<=0){m.siegeT=2.5;const d=Math.max(2,Math.ceil(m.w*.2*L));R.hp-=d;if(++m.blows>=5){m.hp=0;m.dead=1;floatText(FW+T*.2,K.y-T,'Broke through','#ff8a7a',1.1)}m.lunge=.3;m.atkA=.36;shake(8);sfx('boomBig',.4,.7);fx({k:'ring',x:K.x-T*.3,y:K.y,r:T*.9,col:'#ff5a5a',dur:.5});floatText(FW+T*.2,K.y-T*.6,'-'+d,'#ff5a5a',1.1)}}
 function leak(m){R.lastLeak=m.k;if(MON[m.k].final){R.devHp=m.hp/m.max;}m.hp=0;m.dead=1;R.hp-=m.w*mods().leak;R.b.leaked+=m.w;R.stats.leaks+=m.w;R.leakAct+=m.w;shake(m.boss?14:5);sfx('lost',.5);floatText(FW+T*.2,m.y,'-'+m.w,'#ff5a5a',1)}
 // ---------- poison: stacks that eat a share of the hero's damage every second ----------
-function poison(m,src,n,s){if(m.hp<=0||!(n>0))return;const per=(s||heroStats(src)).dmg*.12,p=m.psn||(m.psn={n:0,dps:0,t:0,src});p.n=Math.min(12,p.n+n);p.dps=Math.max(p.dps,per);p.t=4;p.src=src;if(p.n>=10)award('plague10')}
+const psnMul=()=>tier('plague')>=3?4:tier('plague')>=1?2:1;
+function poison(m,src,n,s){if(m.hp<=0||!(n>0))return;const per=(s||heroStats(src)).dmg*.12,p=m.psn||(m.psn={n:0,dps:0,t:0,src});p.n=Math.min(tier('plague')>=3?30:12,p.n+n);p.dps=Math.max(p.dps,per);p.t=4;p.src=src;if(p.n>=10)award('plague10')}
 // ---------- damage ----------
 function hit(m,amt,src,opt){
   if(m.hp<=0||m.phased)return 0;opt=opt||{};const D=src?HEROES[src.k]:null,tr=D?D.tr:[];
   if(src&&!opt.spell&&D.fl){const F=D.fl.k,uc=MON[m.k].final?.2:m.boss?.4:1;if(F==='hamstring'){m.slowT=Math.max(m.slowT,2);m.slowP=Math.min(m.slowP,.65)}if(F==='bulwark')m.stunT=Math.max(m.stunT,.5*uc);if(F==='sleep'&&src.ac%4===0&&!(m.sleepT>0)){m.sleepT=2.5*uc;m.sleepHp=m.hp;fx({k:'zz',x:m.x,y:m.y,dur:1})}}
-  if(src&&tr.includes('shadow')&&tier('shadow')>=0&&m.hp<m.max/2)amt*=1+[.25,.6,1.1][tier('shadow')];
-  if(src&&tr.includes('wildwood')&&tier('wildwood')>=0){m.slowT=1.5;m.slowP=Math.min(m.slowP,1-[.15,.25,.35][tier('wildwood')])}
-  if(src&&!opt.spell&&tr.includes('guardian')&&tier('guardian')>=0){src.hits++;if(src.hits%3===0)m.stunT=Math.max(m.stunT,[.4,.8][tier('guardian')])}
+  if(src&&tr.includes('shadow')&&tier('shadow')>=0&&m.hp<m.max/2){amt*=1+[.25,.6,1.1,2][tier('shadow')];if(tier('shadow')>=3&&!m.boss&&m.hp-amt<m.max*.15){amt=m.hp+1;if(Math.random()<.3)floatText(m.x,m.y-T*.8,'EXECUTED','#b48cff',.8)}}
+  if(src&&tr.includes('wildwood')&&tier('wildwood')>=0){m.slowT=1.5;m.slowP=Math.min(m.slowP,1-[.15,.25,.35,.5][tier('wildwood')]);if(tier('wildwood')>=3&&!opt.spell&&(src.wwh=(src.wwh||0)+1)%5===0&&!frenzy())m.rootT=Math.max(m.rootT,m.boss?.3:1)}
+  if(src&&!opt.spell&&tr.includes('guardian')&&tier('guardian')>=0){src.hits++;if(src.hits%3===0)m.stunT=Math.max(m.stunT,[.4,.8,1.2][tier('guardian')])}
   if(src&&!opt.spell&&!opt.chainHit&&tr.includes('plague')&&tier('plague')>=0)poison(m,src,1);
   if(src&&opt.spell&&hasIt(src,'censer'))poison(m,src,2);
-  if(src&&!opt.spell){let kb=tr.includes('bruiser')&&tier('bruiser')>=0?[.25,.5,.75][tier('bruiser')]:0;if(D.fl&&D.fl.k==='gore')kb+=.5;if(kb)knock(m,kb)}
-  if(src&&!opt.spell&&tr.includes('beast')&&tier('beast')>=1)healHero(src,src.hpMax*(tier('beast')>=2?.04:.02));
+  if(src&&!opt.spell){let kb=tr.includes('bruiser')&&tier('bruiser')>=0?[.25,.5,.75,1][tier('bruiser')]:0;if(D.fl&&D.fl.k==='gore')kb+=.5;if(kb){knock(m,kb);if(tier('bruiser')>=3&&tr.includes('bruiser')&&!frenzy()&&!affd(m,'jugg'))m.stunT=Math.max(m.stunT,m.boss?.15:.5)}}
+  if(src&&!opt.spell&&tr.includes('beast')&&tier('beast')>=1)healHero(src,src.hpMax*[0,.02,.04,.07][tier('beast')]);
   if(src&&src.k==='fenrir'&&m.hp>0&&m.dots.length<6)m.dots.push({dps:m.max*.02*(m.boss?.2:1),t:4,src});
   if(src){const M=mods();if(M.big!==1&&(m.elite||m.boss))amt*=M.big;if(M.noRune!==1&&!opt.spell&&!(opt.nr>0))amt*=M.noRune}
   const red=src&&hasIt(src,'veil')||opt.pierce?0:(opt.dt||(D&&D.dt))==='m'?m.mr:m.ar;amt*=1-red;
@@ -137,7 +143,7 @@ function hit(m,amt,src,opt){
   if(src&&affd(m,'thorns')&&!opt.spell&&d>0&&R.b)hurtHero(src,Math.min(d*.1,mDmg(m)*.6),null);
   return d}
 function dealRaw(m,amt,src,dot,opt){
-  if(m.hp<=0||!(amt>0))return 0;if(m.dreadT>0)amt*=1.2;if(R.b&&R.b.wards&&R.b.wards.length&&!affd(m,'ward'))for(const w of R.b.wards)if(w.hp>0&&Math.hypot(w.x-m.x,w.y-m.y)<T*1.9){amt*=.75;break}if(m.gate&&has('wardstone'))amt*=1.2;if(m.shellT>0){if(!m.capMsg){m.capMsg=.6;floatText(m.x,m.y-T*1.6,'IMMUNE','#c07aff',1)}return 0}if(m.cap){const a=Math.min(amt,m.capLeft);if(a<amt&&!m.capMsg){m.capMsg=.6;floatText(m.x,m.y-T*1.6,'INVINCIBLE','#c07aff',1)}amt=a;m.capLeft-=a;if(!(amt>0))return 0}
+  if(m.hp<=0||!(amt>0))return 0;if(m.dreadT>0)amt*=1.2;if(m.markT>0)amt*=1.25;if(R.b&&R.b.wards&&R.b.wards.length&&!affd(m,'ward'))for(const w of R.b.wards)if(w.hp>0&&Math.hypot(w.x-m.x,w.y-m.y)<T*1.9){amt*=.75;break}if(m.gate&&has('wardstone'))amt*=1.2;if(m.shellT>0){if(!m.capMsg){m.capMsg=.6;floatText(m.x,m.y-T*1.6,'IMMUNE','#c07aff',1)}return 0}if(m.cap){const a=Math.min(amt,m.capLeft);if(a<amt&&!m.capMsg){m.capMsg=.6;floatText(m.x,m.y-T*1.6,'INVINCIBLE','#c07aff',1)}amt=a;m.capLeft-=a;if(!(amt>0))return 0}
   if(m.sleepT>0&&m.sleepHp-m.hp+amt>m.max*.1)m.sleepT=0;if(m.sh>0){const a=Math.min(m.sh,amt);m.sh-=a;amt-=a;if(!(amt>0))return 0}const d=Math.min(m.hp,amt);if(src)src.wd=(src.wd||0)+d;m.hp-=amt;R.stats.dmg+=d;if(!dot)m.hitT=.12;
   if(!dot&&SET.nums&&TXT.length<18&&(opt&&(opt.crit||opt.mult>1)||opt&&opt.big&&Math.random()<.5||Math.random()<.06))floatText(m.x,m.y-T*.6,fmt(amt),opt&&opt.crit?'#ffd76a':opt&&opt.mult>1?'#c9a8ff':'#ffffff',opt&&opt.crit||opt&&opt.mult>1?1.15:.85);
   if(m.hp>0&&has('reaper')&&!m.boss&&m.hp<m.max*.12)m.hp=0;
@@ -167,17 +173,18 @@ function heroTick(h,dt){
   const D=HEROES[h.k],s=heroStats(h),p=heroPos(h),B=R.b,I=itemStats(h);
   if(h.atk>0)h.atk-=dt;if(h.buffT>0)h.buffT-=dt;if(h.chillT>0)h.chillT-=dt;if(h.tauntT>0)h.tauntT-=dt;h.cd-=dt;
   if(hasIt(h,'warmog')&&h.hp<h.hpMax)h.hp=Math.min(h.hpMax,h.hp+h.hpMax*.05*dt);if(h.au&&h.au.heal&&h.hp<h.hpMax)h.hp=Math.min(h.hpMax,h.hp+h.hpMax*h.au.heal*dt);
-  const MD=mods(),regen=(tier('sorcerer')>=0?[2,5,10][tier('sorcerer')]:0)+(I.regen||0);const mm=MD.mana*(h.ed==='arcane'?1.4:1);h.mana+=regen*dt*(has('arcana')?1.5:1)*mm;if(MD.regen&&h.hp<h.hpMax)h.hp=Math.min(h.hpMax,h.hp+h.hpMax*MD.regen*dt);
+  const MD=mods(),regen=(tier('sorcerer')>=0?[2,5,10,18,30][tier('sorcerer')]:0)+(I.regen||0);const mm=MD.mana*(h.ed==='arcane'?1.4:1);h.mana+=regen*dt*(has('arcana')?1.5:1)*mm;if(MD.regen&&h.hp<h.hpMax)h.hp=Math.min(h.hpMax,h.hp+h.hpMax*MD.regen*dt);
   if(h.cd>0)return;
   const rr=s.rng*T;let best=null,bp=1e9;for(const m of B.mons){if(!targetable(m))continue;const d=Math.hypot(m.x-p.x,(m.y-p.y));if(d>rr+T*.3)continue;const pr=progress(m);if(pr<bp){bp=pr;best=m}}
   if(!best)return;
   h.cd=1/s.as;h.atk=.42;h.face=best.x>=p.x?1:-1;h.fy=best.y>=p.y?1:-1;h.ac++;h.stk++;
   h.mana+=(10+(hasIt(h,'spear')?8:0))*(has('arcana')?1.5:1)*mm;if(MD.lifeAtk)h.hp=Math.max(1,h.hp-h.hpMax*MD.lifeAtk);
-  if(h.mana>=D.mana){h.mana=hasIt(h,'sigil')?30:0;if(MD.lifeCast)h.hp=Math.max(1,h.hp-h.hpMax*MD.lifeCast);cast(h,s,best);if(has('echo')&&Math.random()<.35)setTimeoutSafe(()=>{if(R&&R.b&&R.board.includes(h)&&!h.ko)cast(h,heroStats(h),best.hp>0?best:monAlive()[0]||best)},250);return}
+  if(h.mana>=D.mana){h.mana=hasIt(h,'sigil')?30:0;if(MD.lifeCast)h.hp=Math.max(1,h.hp-h.hpMax*MD.lifeCast);cast(h,s,best);const ec=echoP(h);if(ec>0&&Math.random()<ec)setTimeoutSafe(()=>{if(R&&R.b&&R.board.includes(h)&&!h.ko){const p=heroPos(h);floatText(p.x,p.y-T*1.05,'Echo','#9fe8ff',.8);cast(h,heroStats(h),best.hp>0?best:monAlive()[0]||best)}},280);return}
   const lucky=has('lucky')&&Math.random()<1/7,crit=Math.random()<s.crit||lucky,dmg=s.dmg*(crit&&!lucky?s.cm:1)*(lucky?3:1);
   const strike=(m,o)=>{if(D.proj==='melee'||D.proj==='claw'){hit(m,dmg*(o||1),h,{crit});fx({k:'slash',x:m.x,y:m.y,dur:.18,col:D.proj==='claw'?'#ff6a8a':'#ffffff',face:h.face})}else shoot(h,p,m,dmg*(o||1),{crit,kind:D.proj})};
   strike(best);if(D.proj==='melee'||D.proj==='claw')sfx('hit',.18,1.1+Math.random()*.3);
   if(hasIt(h,'quiver')){const o=B.mons.find(m=>m!==best&&m.hp>0&&Math.hypot(m.x-p.x,m.y-p.y)<rr+T*.3);if(o)strike(o)}
+  if(D.tr.includes('marksman')&&tier('marksman')>=2&&h.ac%4===0)for(const o of B.mons.filter(m=>m!==best&&m.hp>0&&Math.hypot(m.x-p.x,m.y-p.y)<rr+T*.3).slice(0,2))strike(o,.7);
   if(hasIt(h,'storm')&&h.ac%3===0)chainBolt(h,p,best,s.dmg*.8,4,'#9ad8ff');
 }
 function shoot(h,p,m,dmg,o){const ra=h&&hasIt(h,'runearrow');R.b.projs.push({x:p.x,y:p.y-T*.25,tg:m,tx:m.x,ty:m.y,dmg,src:h,crit:o.crit,kind:o.kind,mult:ra?1.5:1,ra,mask:0,sp:o.sp||T*9,c:-2,r:-2,spell:o.spell,aoe:o.aoe||0,fxk:o.fxk});if(o.kind==='arrow'||o.kind==='bolt')sfx('rail',.12,1.6+Math.random()*.3)}
@@ -210,6 +217,9 @@ function comboKill(m){const B=R.b;if(!B||m.child)return;B.combo=(B.comboT>0?B.co
 // runes a straight line crosses (for lines and beams)
 function lineMult(x0,y0,x1,y1,extra){let m=1,mask=0;const n=Math.ceil(Math.hypot(x1-x0,y1-y0)/(T/4));for(let i=0;i<=n;i++){const cl=cellOf(lerp(x0,x1,i/n),lerp(y0,y1,i/n));if(!cl)continue;const ru=runeAt(cl[0],cl[1]);if(ru){const k=R.field.runes.indexOf(ru);if(!(mask>>k&1)){mask|=1<<k;m*=runeMul(ru)+(extra||0);ru.flash=.3}}}return m}
 function chainBolt(h,from,first,dmg,n,col,o){let cur=first,done=new Set();for(let i=0;i<n&&cur;i++){done.add(cur);hit(cur,dmg,h,Object.assign({chainHit:1},o||{}));fx({k:'bolt',x:from.x,y:from.y,x1:cur.x,y1:cur.y,dur:.25,col});from={x:cur.x,y:cur.y};let nb=null,nd=T*2.5;for(const m of R.b.mons){if(m.hp<=0||done.has(m))continue;const d=Math.hypot(m.x-cur.x,m.y-cur.y);if(d<nd){nd=d;nb=m}}cur=nb}}
+// chance that a spell casts a second time: the Echo relic, the Archmage, Sorcerer 8 and 10
+function echoP(h){const so=HEROES[h.k].tr.includes('sorcerer'),t=tier('sorcerer');let p=has('echo')?.35:0;
+  if(so&&R.board.some(x=>x.k==='archmage'&&!x.ko))p=1-(1-p)*.65;if(so&&t>=4)p=1;else if(so&&t>=3)p=1-(1-p)*.5;return p}
 function cast(h,s,tg){
   const D=HEROES[h.k],A=D.ab,p=heroPos(h),B=R.b,crit=hasIt(h,'gauntlet')&&Math.random()<s.crit,pw=s.dmg*A.m*s.spell*(crit?s.cm:1),o={spell:1,dt:D.dt,big:1,crit};
   h.atk=.6;h.castA=.6;fx({k:'cast',x:p.x,y:p.y,dur:.5,col:TRAITS[D.tr[1]].col});if(TXT.filter(t=>t.cast).length<3){floatText(p.x,p.y-T*.75,D.ab.n+'!',TRAITS[D.tr[1]].col,.9);TXT[TXT.length-1].cast=1}sfx(A.snd||'zap',.32,.92+Math.random()*.16);
@@ -224,10 +234,10 @@ function cast(h,s,tg){
     if(h.k==='vampire'){const c=inR(p.x,p.y,s.rng*T+T*.4).filter(m=>!m.boss&&!(m.charmT>0)).sort((a,b)=>b.hp-a.hp)[0];if(c){c.charmT=6;c.charmBy=h;fx({k:'ring',x:c.x,y:c.y,r:T*.6,col:'#ff4a8a',dur:.6});floatText(c.x,c.y-T,'Charmed!','#ff8ab0',1)}}
     if(A.taunt){h.tauntT=A.taunt;fx({k:'ring',x:p.x,y:p.y,r:T*2.2,col:'#ff5a3a',dur:.6})}
     fx({k:A.ice?'ice':A.psn?'poison':A.root?'roots':A.burn?'fire':A.dot?'hex':'nova',x:cx,y:cy,r,dur:.55,col:TRAITS[D.tr[1]].col});shake(A.taunt?6:2)}
-  else if(A.k==='fan'){const ts=B.mons.filter(m=>m.hp>0&&Math.hypot(m.x-p.x,m.y-p.y)<s.rng*T+T*.3).sort((a,b)=>progress(a)-progress(b));for(let i=0;i<A.shots;i++){const m=ts[i%Math.max(1,ts.length)]||tg;shoot(h,p,m,s.dmg*A.m*s.spell,{kind:D.proj==='melee'?'star':D.proj,spell:1,crit:Math.random()<s.crit})}}
-  else if(A.k==='execute'){const ts=inR(p.x,p.y,s.rng*T+T*.3);const m=A.strong?ts.sort((a,b)=>b.hp-a.hp)[0]:ts.sort((a,b)=>a.hp-b.hp)[0];if(m){if(h.k==='fenrir'&&!m.boss&&m.hp<m.max*.2){floatText(m.x,m.y-T,'DEVOURED','#ff6a6a',1);dealRaw(m,m.hp*50,h,1)}else hit(m,pw,h,{spell:1,dt:D.dt,big:1,gold:A.gold,crit:1});if(A.kb)knock(m,A.kb);if(A.stun)m.stunT=Math.max(m.stunT,A.stun*(m.boss?.4:1));fx({k:'slash',x:m.x,y:m.y,dur:.3,col:'#ff4a6a',face:h.face,big:1});shake(3)}if(A.heal)healHero(h,h.hpMax*A.heal)}
+  else if(A.k==='fan'){const ts=B.mons.filter(m=>m.hp>0&&Math.hypot(m.x-p.x,m.y-p.y)<s.rng*T+T*.3).sort((a,b)=>progress(a)-progress(b));for(let i=0;i<A.shots;i++){const m=ts[i%Math.max(1,ts.length)]||tg;shoot(h,p,m,s.dmg*A.m*s.spell,{kind:D.proj==='melee'?'star':D.proj,spell:1,crit:Math.random()<s.crit});if(A.mark&&m.hp>0)m.markT=4}}
+  else if(A.k==='execute'){const ts=inR(p.x,p.y,s.rng*T+T*.3);const m=A.strong?ts.sort((a,b)=>b.hp-a.hp)[0]:ts.sort((a,b)=>a.hp-b.hp)[0];if(m){if(h.k==='fenrir'&&!m.boss&&m.hp<m.max*.2){floatText(m.x,m.y-T,'DEVOURED','#ff6a6a',1);dealRaw(m,m.hp*50,h,1)}else hit(m,pw,h,{spell:1,dt:D.dt,big:1,gold:A.gold,crit:1});if(A.kb)knock(m,A.kb);if(A.stun)m.stunT=Math.max(m.stunT,A.stun*(m.boss?.4:1));if(A.psn&&m.hp>0)poison(m,h,A.psn,s);fx({k:'slash',x:m.x,y:m.y,dur:.3,col:'#ff4a6a',face:h.face,big:1});shake(3)}if(A.heal)healHero(h,h.hpMax*A.heal)}
   else if(A.k==='pierce'){const a=Math.atan2(tg.y-p.y,tg.x-p.x),L=s.rng*T*1.7,x1=p.x+Math.cos(a)*L,y1=p.y+Math.sin(a)*L,mm=lineMult(p.x,p.y,x1,y1,hasIt(h,'runearrow')?1:0)*(hasIt(h,'runearrow')?1.5:1);
-    for(const m of B.mons){if(m.hp<=0)continue;const t=clamp(((m.x-p.x)*Math.cos(a)+(m.y-p.y)*Math.sin(a))/L,0,1),qx=p.x+Math.cos(a)*L*t,qy=p.y+Math.sin(a)*L*t;if(Math.hypot(m.x-qx,m.y-qy)<T*.4)hit(m,pw*mm,h,{spell:1,dt:D.dt,mult:mm,big:1})}
+    for(const m of B.mons){if(m.hp<=0)continue;const t=clamp(((m.x-p.x)*Math.cos(a)+(m.y-p.y)*Math.sin(a))/L,0,1),qx=p.x+Math.cos(a)*L*t,qy=p.y+Math.sin(a)*L*t;if(Math.hypot(m.x-qx,m.y-qy)<T*.4){hit(m,pw*mm,h,{spell:1,dt:D.dt,mult:mm,big:1});if(A.stun&&m.hp>0)m.stunT=Math.max(m.stunT,A.stun*(m.boss?.3:1))}}
     fx({k:'line',x:p.x,y:p.y,x1,y1,dur:.3,col:'#ffd76a',mult:mm})}
   else if(A.k==='chain')chainBolt(h,p,tg,pw,A.n2,'#c9a8ff',{spell:1,dt:D.dt,big:1});
   else if(A.k==='trap'){let tx=tg.x,ty=tg.y;if(!tg.fly&&tg.c>=0&&tg.c<COLS){const n=nextCell(tg.c,tg.r);if(n){tx=hx(n[0],n[1]);ty=hy(n[1])}}B.traps.push({x:tx,y:ty,root:A.root,dmg:pw,uses:3,t:9,src:h,hit:new Set()});shoot(h,p,tg,s.dmg,{kind:'bolt'})}
@@ -237,7 +247,7 @@ function cast(h,s,tg){
     if(h.k==='wyrm'&&(h.hoard||0)>=60){const y=tg.y;for(const m of B.mons)if(m.hp>0&&Math.abs(m.y-y)<T*.55)hit(m,pw*.6,h,o);fx({k:'beam',x:0,y,x1:FW,y1:y,dur:.5,col:'#ff7a2a'})}}
   else if(A.k==='miasma'){let x=tg.x,y=tg.y;if(!tg.fly&&tg.c>=0&&tg.c<COLS){const n=nextCell(tg.c,tg.r);if(n){x=hx(n[0],n[1]);y=hy(n[1])}}
     B.zones.push({x,y,r:A.r*T,t:A.t,tick:0,src:h,psn:A.psn,s});for(const x2 of R.board){const q=heroPos(x2);if(Math.hypot(q.x-p.x,q.y-p.y)<=T*2.1)healHero(x2,x2.hpMax*A.heal)}fx({k:'poison',x,y,r:A.r*T,dur:.6,col:'#a6e04a'})}
-  else if(A.k==='pest'){const r=A.r*T;for(const m of inR(tg.x,tg.y,r)){if(m.psn){hit(m,m.psn.n*m.psn.dps*2*s.spell*(tier('plague')>=1?2:1),h,{spell:1,dt:'m',big:1})}if(m.hp>0)poison(m,h,A.psn,s)}fx({k:'poison',x:tg.x,y:tg.y,r,dur:.7,col:'#a6e04a'});fx({k:'hex',x:tg.x,y:tg.y,r:r*.7,dur:.5,col:'#a6e04a'});shake(3)}
+  else if(A.k==='pest'){const r=A.r*T;for(const m of inR(tg.x,tg.y,r)){if(m.psn){hit(m,m.psn.n*m.psn.dps*2*s.spell*psnMul(),h,{spell:1,dt:'m',big:1})}if(m.hp>0)poison(m,h,A.psn,s)}fx({k:'poison',x:tg.x,y:tg.y,r,dur:.7,col:'#a6e04a'});fx({k:'hex',x:tg.x,y:tg.y,r:r*.7,dur:.5,col:'#a6e04a'});shake(3)}
 }
 // ---------- the warden's power: once per fight ----------
 function usePower(){const B=R.b,k=R.warden||'castellan';if(R.phase!=='wave'||!B||B.pw)return false;B.pw=1;const P=WARDENS[k].pw;
@@ -292,12 +302,14 @@ function bossTick(m,dt,S){if(m.x<T*.5)return;m.sigT=(m.sigT??5)-dt;if(m.gale>0)m
   else if(S.k==='unravel'){m.sigT=9;m.sh=(m.sh||0)+m.max*.05;openRift(1,0);fx({k:'ring',x:m.x,y:m.y,r:T*1.6,col:'#c07aff',dur:.7});shake(5);say()}
   else if(S.k==='gale'){m.sigT=9;for(const o of B.mons)if(o.hp>0)o.gale=3;fx({k:'ring',x:m.x,y:m.y,r:FW*.6,col:'#e8f4ff',dur:.7});say()}}
 // a breach tears open on a free hex of the road and spills monsters
-function openRift(n,elite){const F=R.field,d=F.dist;if(!d)return;const opts=[];for(let r=0;r<ROWS;r++)for(let c=2;c<COLS-2;c++){const v=d[r*COLS+c];if(v>=6&&v<=22&&!F.blk[r*COLS+c])opts.push([c,r])}if(!opts.length)return;
+// portal rule: a breach never opens in the keep's half of the field (columns past RIFTC) or less than 8 steps of road from it
+const RIFTC=9;
+function openRift(n,elite){const F=R.field,d=F.dist;if(!d)return;const opts=[];for(let r=0;r<ROWS;r++)for(let c=2;c<=RIFTC;c++){const v=d[r*COLS+c];if(v>=8&&v<=24&&!F.blk[r*COLS+c]&&!R.board.some(h=>h.c===c&&h.r===r))opts.push([c,r])}if(!opts.length)return;
   const [c,r]=rnd(opts),x=hx(c,r),y=hy(r);fx({k:'breach',x,y,dur:2.4});fx({k:'ring',x,y,r:T*1.1,col:'#c07aff',dur:.6});sfx('zap',.4,.6);
   for(let i=0;i<n+1;i++){const m=spawnMon(rndS(actD(R.act).roster),i<elite?1:0,x+(Math.random()-.5)*T*.4,y+(Math.random()-.5)*T*.4);m.c=c;m.r=r;m.portals=-1;if(m.elite&&!m.aff)m.aff=pickAff(m.k)}}
 // ---------- the Rune Devourer: barely hurt by anything, it heals, it hunts your best heroes and eats your runes ----------
 // it takes at most CAP of its health per second, regrows REGEN per second, and every quarter of its health it sheds a shell
-const DEV={cap:.016,regen:.002,beat:7,beatP:.07,beatUp:.01,shell:3.5};
+const DEV={cap:.03,regen:.0015,beat:7,beatP:.04,beatUp:.005,shell:3.5};
 function finalTick(m,dt){const B=R.b;m.capT-=dt;if(m.capT<=0){m.capT=1;m.capLeft=m.max*DEV.cap*(m.phase>=3?.8:1)}if(m.capMsg>0)m.capMsg-=dt;
   m.stunT=Math.min(m.stunT,.12);m.rootT=Math.min(m.rootT,.12);m.sleepT=0;m.slowP=Math.max(m.slowP,.8);m.charmT=0;m.dots=m.dots.filter(o=>o.t>0).slice(0,3);
   if(m.hp<m.max)m.hp=Math.min(m.max,m.hp+m.max*DEV.regen*dt*(m.phase>=2?1.6:1));

@@ -1,16 +1,16 @@
 // ---------- game data: traits, heroes, monsters, acts, relics, research, achievements ----------
 // Traits: every hero has one origin and one class. Breakpoints work like an auto-battler: field more of a trait to power it up.
 const TRAITS={
-  kingdom:{n:'Kingdom',ic:'♛',col:'#6fb6ff',bp:[2,4,6],d:t=>`Kingdom heroes attack ${[20,45,80][t]}% faster.`},
-  wildwood:{n:'Wildwood',ic:'♣',col:'#7ddc6a',bp:[2,4,6],d:t=>`Wildwood hits slow monsters ${[15,25,35][t]}% for 1.5s${t>=2?' and deal +40% damage':''}.`},
-  shadow:{n:'Shadow',ic:'☾',col:'#b48cff',bp:[2,4,6],d:t=>`Shadow heroes deal +${[25,60,110][t]}% damage to monsters below half health.`},
-  guardian:{n:'Guardian',ic:'⛨',col:'#ffcf6a',bp:[2,4],d:t=>`Every 3rd Guardian hit stuns for ${[.4,.8][t]}s. Monsters next to a Guardian are ${[20,40][t]}% slower.`},
-  marksman:{n:'Marksman',ic:'➶',col:'#ff9a5a',bp:[2,4],d:t=>`Marksmen gain +${t+1} range and ${[15,35][t]}% attack speed.`},
-  sorcerer:{n:'Sorcerer',ic:'✦',col:'#5fe1ff',bp:[2,4,6],d:t=>`All heroes gain ${[2,5,10][t]} mana per second. Sorcerer spells hit ${[30,70,140][t]}% harder.`},
-  assassin:{n:'Assassin',ic:'✕',col:'#ff6a8a',bp:[2,4],d:t=>`Assassins crit ${[20,40][t]}% of the time for ${[2,2.5][t]}× damage.`},
-  beast:{n:'Beast',ic:'ᛒ',col:'#e0a050',bp:[2,4,6],d:t=>`Beasts deal +${[10,20,35][t]}% damage, plus +${[15,30,45][t]}% for every Beast on a touching hex.${t>=1?` Beast hits heal them ${t>=2?4:2}% health.`:''}`},
-  bruiser:{n:'Bruiser',ic:'ᚢ',col:'#ff8a5a',bp:[2,3,4],d:t=>`Bruiser hits knock monsters back ${['a quarter of','half','three quarters of'][t]} a hex (bosses a third as far), and Bruisers have +${[25,50,80][t]}% health.`},
-  plague:{n:'Plaguebringer',ic:'☣',col:'#a6e04a',bp:[2,3,4],d:t=>['Plaguebringer hits add a poison stack. Each stack eats 12% of the hero\'s damage every second for 4s (up to 12 stacks).','Poison stacks deal double damage.','Poison stacks deal double damage, and when a poisoned monster dies its stacks jump to monsters nearby.'][t]},
+  kingdom:{n:'Kingdom',ic:'♛',col:'#6fb6ff',bp:[2,4,6,8],d:t=>`Kingdom heroes attack ${[20,45,80,150][t]}% faster.${t>=3?' The whole court rallies: every hero attacks 25% faster.':''}`},
+  wildwood:{n:'Wildwood',ic:'♣',col:'#7ddc6a',bp:[2,4,6,8],d:t=>`Wildwood hits slow monsters ${[15,25,35,50][t]}% for 1.5s${t>=2?` and deal +${t>=3?120:40}% damage`:''}${t>=3?'; every 5th hit roots for 1s':''}.`},
+  shadow:{n:'Shadow',ic:'☾',col:'#b48cff',bp:[2,4,6,8],d:t=>`Shadow heroes deal +${[25,60,110,200][t]}% damage to monsters below half health.${t>=3?' Their hits execute anything but a boss below 15% health.':''}`},
+  guardian:{n:'Guardian',ic:'⛨',col:'#ffcf6a',bp:[2,4,6],d:t=>`Every 3rd Guardian hit stuns for ${[.4,.8,1.2][t]}s. Monsters next to a Guardian are ${[20,40,55][t]}% slower.${t>=2?' Guardians take 35% less damage.':''}`},
+  marksman:{n:'Marksman',ic:'➶',col:'#ff9a5a',bp:[2,4,6],d:t=>`Marksmen gain +${t+1} range and ${[15,35,80][t]}% attack speed.${t>=2?' Every 4th shot splits into three.':''}`},
+  sorcerer:{n:'Sorcerer',ic:'✦',col:'#5fe1ff',bp:[2,4,6,8,10],d:t=>`All heroes gain ${[2,5,10,18,30][t]} mana per second. Sorcerer spells hit ${[30,70,140,260,500][t]}% harder.${t>=3?` Sorcerer spells echo ${t>=4?'every time':'half the time'}: they cast again a moment later.`:''}`},
+  assassin:{n:'Assassin',ic:'✕',col:'#ff6a8a',bp:[2,4,6],d:t=>`Assassins crit ${[20,40,65][t]}% of the time for ${[2,2.5,3.5][t]}× damage.`},
+  beast:{n:'Beast',ic:'ᛒ',col:'#e0a050',bp:[2,4,6,8],d:t=>`Beasts deal +${[10,20,35,70][t]}% damage, plus +${[15,30,45,80][t]}% for every Beast on a touching hex.${t>=1?` Beast hits heal them ${[0,2,4,7][t]}% health.`:''}`},
+  bruiser:{n:'Bruiser',ic:'ᚢ',col:'#ff8a5a',bp:[2,3,4,6],d:t=>`Bruiser hits knock monsters back ${['a quarter of','half','three quarters of','a whole'][t]} a hex (bosses a third as far), and Bruisers have +${[25,50,80,160][t]}% health.${t>=3?' Their knockbacks also stun for 0.5s.':''}`},
+  plague:{n:'Plaguebringer',ic:'☣',col:'#a6e04a',bp:[2,3,4,6],d:t=>['Plaguebringer hits add a poison stack. Each stack eats 12% of the hero\'s damage every second for 4s (up to 12 stacks).','Poison stacks deal double damage.','Poison stacks deal double damage, and when a poisoned monster dies its stacks jump to monsters nearby.','Poison stacks deal four times the damage and pile up to 30; dying monsters pass on all their stacks.'][t]},
 };
 const TRAIT_ORDER=['kingdom','wildwood','shadow','plague','beast','guardian','marksman','sorcerer','assassin','bruiser'];
 // range in tiles, as = attacks per second, mana = cast threshold. Projectile kinds: melee, arrow, bolt, orb, fire, holy, claw.
@@ -50,13 +50,22 @@ const HEROES={
   stag:{n:'Elder Stag',c:3,fl:{k:'antler',n:'Antler Guard',d:'Neighbouring heroes have 20% more health.'},tr:['beast','guardian'],dmg:28,as:.8,rng:1.35,mana:70,dt:'p',proj:'melee',ab:{snd:'m_slam',k:'nova',n:'Stampede',r:1.4,m:2,stun:.8,kb:.8,self:1},d:'Stamps the ground: monsters around it are stunned for 0.8s and thrown back.'},
   orcraider:{n:'Orc Raider',c:3,fl:{k:'bloodrage',n:'Bloodrage',d:'Attacks 6% faster for every monster within 1.5 hexes (up to +48%).'},tr:['shadow','bruiser'],dmg:32,as:.85,rng:1.3,mana:70,dt:'p',proj:'melee',ab:{snd:'sp_slash',k:'nova',n:'Cleave',r:1.3,m:2.6,kb:.6,self:1},d:'Cleaves everything around him and shoves it back down the road.'},
   bull:{n:'Magma Bull',c:4,sz:.95,fl:{k:'gore',n:'Gore',d:'Every hit knocks its target back half a hex.'},tr:['beast','bruiser'],dmg:52,as:.7,rng:1.35,mana:80,dt:'p',proj:'melee',ab:{snd:'m_slam',k:'execute',n:'Trample',m:4,strong:1,kb:2,stun:1},d:'Tramples the strongest monster in reach for 4× damage, stunning it and hurling it two hexes back.'},
+  bombard:{n:'Grenadier',c:1,tr:['plague','bruiser'],dmg:12,as:.8,rng:2.5,mana:60,dt:'p',proj:'flask',ab:{snd:'sp_boom',k:'nova',n:'Rot Keg',r:1.1,m:1.4,psn:3,kb:.8},d:'Lobs a keg of rot that blasts a group back and leaves 3 poison stacks on each.'},
+  bastion:{n:'Bastion',c:2,fl:{k:'shieldwall',n:'Shield Wall',d:'Neighbouring heroes take 15% less damage.'},tr:['guardian','marksman'],dmg:15,as:.85,rng:2.75,mana:70,dt:'p',proj:'bolt',ab:{snd:'sp_volley',k:'pierce',n:'Pinning Bolt',m:2,stun:.8},d:'Fires a heavy bolt through a whole line of monsters, pinning each in place for 0.8s.'},
+  thorn:{n:'Thorn Warden',c:2,tr:['wildwood','plague'],dmg:12,as:.8,rng:2.75,mana:70,dt:'m',proj:'orb',ab:{snd:'sp_root',k:'nova',n:'Briar Snare',r:1.2,m:.9,psn:3,root:1.2},d:'Thorns burst from the road: monsters in a circle are rooted for 1.2s and take 3 poison stacks.'},
+  venom:{n:'Venom Stalker',c:3,fl:{k:'hamstring',n:'Crippling Venom',d:'Attacks slow monsters by 35% for 2s.'},tr:['plague','assassin'],dmg:26,as:1.15,rng:1.3,mana:60,dt:'p',proj:'melee',ab:{snd:'sp_poison',k:'execute',n:'Envenom',m:3.5,psn:6},d:'Stabs the weakest monster in reach for 3.5× damage and pumps 6 poison stacks into it.'},
+  breaker:{n:'Shieldbreaker',c:3,fl:{k:'brace',n:'Brace',d:'Neighbouring heroes have 25% more health.'},tr:['guardian','bruiser'],dmg:30,as:.8,rng:1.3,mana:70,dt:'p',proj:'melee',ab:{snd:'m_slam',k:'nova',n:'Shield Slam',r:1.3,m:2.2,stun:1,kb:1.2,self:1},d:'Slams his spiked shield down: everything around him is stunned for 1s and hurled back.'},
+  storm:{n:'Storm Shaman',c:4,tr:['sorcerer','bruiser'],dmg:34,as:.8,rng:3,mana:80,dt:'m',proj:'orb',ab:{snd:'sp_boom',k:'nova',n:'Thunderclap',r:1.6,m:3,stun:.8,kb:1.2},d:'Calls a thunderclap on the thickest group: it stuns them for 0.8s and throws them back down the road.'},
+  hunt:{n:'Huntmaster',c:4,fl:{k:'horn',n:'Hunting Horn',d:'Neighbouring heroes attack 15% faster; Beasts among them also hit 15% harder.'},tr:['beast','marksman'],dmg:36,as:.95,rng:3.25,mana:70,dt:'p',proj:'arrow',ab:{snd:'sp_volley',k:'fan',n:'Hunter\'s Mark',shots:7,m:1.4,mark:1},d:'Looses 7 arrows; every monster struck is marked and takes 25% more damage from everyone for 4s.'},
+  archmage:{n:'Archmage',c:5,lg:{n:'Arcane Echo',d:'While the Archmage stands on the field, every Sorcerer spell has a 35% chance to cast a second time.'},tr:['sorcerer','marksman'],dmg:48,as:.75,rng:3.5,mana:80,dt:'m',proj:'orb',ab:{snd:'sp_boom',k:'nova',n:'Starfall',r:2,m:4,burn:1,stun:.5},d:'Brings a rain of stars down on a wide circle: huge damage, a short stun, and the ground burns.'},
 };
 const HKEYS=Object.keys(HEROES);
 // shop odds per level (tiers 1-5) and copies in the pool
 const ODDS=[null,[100,0,0,0,0],[100,0,0,0,0],[75,25,0,0,0],[55,30,15,0,0],[45,33,20,2,0],[30,40,25,5,0],[19,30,40,10,1],[18,25,32,22,3],[10,20,25,35,10],[5,10,20,40,25]];
-const POOL=[0,22,20,17,10,9];
+const POOL=[0,30,26,24,22,20];// copies of each hero in the shared pool, by cost
+const COPIES=[0,1,3,9,18];// copies inside a hero of each star (two ★3 make a ★4)
 const XPNEED=[0,0,2,2,6,10,20,36,48,72,84];// xp to go from level i to i+1
-const STARM=[0,1,1.8,3.24];
+const STARM=[0,1,1.8,3.24,9];const STARH=[0,1,1.8,3.2,9];
 // monsters: hp in units of the wave base, sp in tiles/s, ar = physical armour, mr = magic resist, w = keep damage on leak
 const EPITHET={sporemother:'Queen of the Sunken Bog',colossus:'Warden of Frostpeak Pass',skyking:'Tyrant of the Sunscorch Dunes',necro:'Lord of the Hollow Crypts',mushking:'The Rot-Crowned Sovereign',dragon:'Scourge of the Ember Wastes',devourer:'The Hunger Beneath the World',herald:'Voice of the Devourer'};
 const MON={
@@ -77,7 +86,7 @@ const MON={
   ghost:{n:'Skull Wraith',beh:'phase',hp:.8,sp:1.1,ar:0,mr:.3,w:2,sz:.85,fly:1,atk:{k:'bolt',r:2,cd:2,m:.7}},
   armabee:{n:'Armabee',beh:'rush',hp:.85,sp:1.35,ar:.35,mr:0,w:2,sz:.8,fly:1},
   goleling:{n:'Goleling',hp:4.5,sp:.65,ar:.5,mr:.2,w:5,sz:1.2,fly:1,big:1,atk:{k:'slam',r:1.4,cd:3,m:2}},
-  devourer:{n:'The Rune Devourer',hp:240,sp:.17,ar:.35,mr:.35,w:999,sz:2.7,boss:1,final:1,atk:{k:'slam',r:2.3,cd:5,m:1}},
+  devourer:{n:'The Rune Devourer',hp:70,sp:.17,ar:.35,mr:.35,w:999,sz:2.7,boss:1,final:1,atk:{k:'slam',r:2.3,cd:5,m:1}},
   dragon:{n:'The Ember Dragon',hp:33,sp:.5,ar:.3,mr:.4,w:25,sz:2,boss:1,sig:{k:'firestorm',n:'Firestorm',d:'every 9s fire rains on three of your heroes for a quarter of their health'},fly:1,summon:'ghost',atk:{k:'breath',r:2.6,cd:3.5,m:1.6}},
   pinkblob:{n:'Pink Jelly',hp:.8,sp:1.2,ar:0,mr:.1,w:1,sz:.8,split:2},
   mushnub:{n:'Mushnub',hp:1,sp:.8,ar:.1,mr:.2,w:2,sz:.85,heal:1},
@@ -252,6 +261,7 @@ const ACH=[
   {id:'act2',n:'Kingslayer',d:'Defeat the Mushroom King',g:60},
   {id:'win',n:'Rune Warden',d:'Defeat the final boss of Act III and win a run',g:150},
   {id:'star3',n:'Legendary',d:'Get a ★3 hero',g:30},
+  {id:'star4',n:'Ascended',d:'Merge two ★3 heroes into a ★4',g:60},
   {id:'trait6',n:'Full Banner',d:'Activate a trait at its top breakpoint',g:40},
   {id:'lvl9',n:'Warlord',d:'Reach level 9',g:40},
   {id:'gold60',n:'Hoarder',d:'Hold 60 gold at once',g:25},
@@ -386,7 +396,7 @@ const affd=(m,a)=>m.aff===a||m.aff2===a;
 const WARDENS={
   castellan:{n:'The Castellan',fig:'paladin',col:'#6fb6ff',say:'A soldier of the old guard. Steady walls, steady hands.',perk:'The keep has 10 more health.',pw:{n:'Rally',ic:'flag',d:'Heroes attack 40% faster for 6 seconds.'},g:'banner'},
   runesmith:{n:'The Runesmith',fig:'tinker',col:'#9cc4ff',say:'Reads the old runes like others read weather.',perk:'Start with a ×2 rune stone and get another at every new act.',pw:{n:'Overcharge',ic:'rune',d:'Every rune multiplies by 1 more for 10 seconds.'},g:'oracle',un:{ach:'act1',d:'Defeat an Act I boss'}},
-  beastlord:{n:'The Beastlord',fig:'druid',col:'#d99a4a',say:'Raised by the pack, and still runs with it.',perk:'Start with a Dire Wolf. Your Beasts count as one more for the Beast trait.',pw:{n:'Stampede',ic:'paw',d:'Walking monsters are thrown back 2 hexes and stunned for 2 seconds.'},g:'dragon',un:{ach:'act2',d:'Defeat an Act II boss'}},
+  beastlord:{n:'The Beastlord',fig:'druid',col:'#d99a4a',say:'Raised by the pack, and still runs with it.',perk:'Start with a Dire Wolf. Your Beasts count as one more for the Beast trait and hit 15% harder.',pw:{n:'Stampede',ic:'paw',d:'Walking monsters are thrown back 2 hexes and stunned for 2 seconds.'},g:'dragon',un:{ach:'act2',d:'Defeat an Act II boss'}},
   gravewarden:{n:'The Gravewarden',fig:'necromancer',col:'#c9a8ff',say:'Keeps a ledger of the dead, and collects.',perk:'Every elite or boss slain repairs 3 keep health. The keep has 10 less health.',pw:{n:'Rise Again',ic:'skull',d:'Knocked-out heroes get back up at half health; the others heal 20%.'},g:'reaper',un:{ach:'win',d:'Win a run'}},
 };
 const WKEYS=Object.keys(WARDENS);

@@ -5,7 +5,7 @@ Raise heroes. Twist the road. Hold the keep.
 A fantasy roguelite tower defense for phones held either way: sideways, monsters march left to right; upright, they come down from the top to your keep at the bottom. Monsters pour out of a portal and march on your keep; the heroes you place are the maze. Buy heroes from an auto-battler shop, merge three copies into ★2 and ★3, stack traits, and steer monsters past × runes that multiply your shots or through × portals that split them for gold.
 
 - A 16×10 hex board in the style of auto-battlers; fielded heroes stand on raised plinths and are the maze. Portrait and landscape layouts switch as you turn the phone; zoom in and out with the − / + buttons, pinch or double-tap.
-- 35 heroes and 10 traits (Plaguebringer poison stacks, Beasts that hunt in packs, Bruisers that knock monsters back down the road); monsters fight back and can knock heroes out.
+- 43 heroes and 10 traits (Plaguebringer poison stacks, Beasts that hunt in packs, Bruisers that knock monsters back down the road), with breakpoints up to 8 (Sorcerer up to 10, where every spell echoes); two ★3 merge into an ascended ★4. Every hero has a limited number of copies in a shared pool. Monsters fight back and can knock heroes out; a boss that reaches the keep lays siege to it.
 - Monsters come through several gates: the west portal, gates on the top and bottom edges and breaches in the field, changing from wave to wave and shown before each fight. Terrain: high ground, mud, thorns and water.
 - Six biomes: every act rolls one of two, each with its own monsters, terrain, props, horizon and boss. Every boss has a signature move on a timer (Curse, Spore Cloud, Firestorm, Bloom, Deep Freeze, Tailwind), shown on its intro card and in the Bestiary.
 - Items: six components; two on one hero forge one of 21 finished items. They wait in the ITEMS rack beside the bench.
@@ -30,7 +30,7 @@ A fantasy roguelite tower defense for phones held either way: sideways, monsters
 node tools/build.js            # assemble www/index.html from src/
 node tools/sim.js --runs 6     # headless balance bot (traits, interest, mazing, rune stones, map rooms, items, potions)
                                # --asc N ascension, --bot simple|pacifist, --fuzz random relic piles,
-                               # --god gives the bot a ★3 board with items for the Devourer fight
+                               # --god gives the bot a ★3 board with items for the Devourer fight, --god4 a ★4 one
                                # --warden runesmith|beastlord|gravewarden plays that warden
                                # --challenge glass|zealot|council|pactbound|night|pauper plays a challenge run
                                # --nostars / --nopacts turn the bot's use of the Constellation or pacts off

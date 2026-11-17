@@ -38,11 +38,13 @@ const ICON={
   fist:['F:M6 9.5c0-1.4 1-2.5 2.3-2.5h8.4c1.8 0 3.3 1.5 3.3 3.3v4.2c0 3.3-2.7 6-6 6h-2C8.7 20.5 6 17.8 6 14.5z','K:M9.5 7h.9v4.5h-.9zM12.6 7h.9v4.5h-.9zM15.7 7h.9v4.5h-.9z','F:M3.5 11.5h3v4h-3z'],
   hammer:['M4 20l9-9','F:M11 4l6-1 4 4-1 6-3-3-3 3-4-4 3-3z'],
 };
-function icon(name,cls){const P=ICON[name];if(!P)return'';let s=`<svg class="icn${cls?' '+cls:''}" viewBox="0 0 24 24" aria-hidden="true">`;
+// some drawings sit off the middle of their 24-unit box: shift them so every icon is centred (measured from each drawing's bounds)
+const ICOFF={rod:[2,-1],moon:[1.1,0],heart:[0,.9],skull:[0,-1],question:[0,.9],scythe:[2.5,.5],bars:[.5,1],fist:[-.3,1.8]};
+function icon(name,cls){const P=ICON[name];if(!P)return'';const o=ICOFF[name]||[0,0];let s=`<svg class="icn${cls?' '+cls:''}" viewBox="${o[0]} ${o[1]} 24 24" aria-hidden="true">`;
   for(const p of P){if(p.startsWith('F:'))s+=`<path d="${p.slice(2)}" fill="currentColor"/>`;else if(p.startsWith('K:'))s+=`<path d="${p.slice(2)}" fill="#1a0d04"/>`;else s+=`<path d="${p}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`}
   return s+'</svg>'}
 const P2D={};
-function drawIcon(name,x,y,size,col){const P=ICON[name];if(!P||typeof Path2D==='undefined'||!ctx)return false;const k=size/24;ctx.save();ctx.translate(x-size/2,y-size/2);ctx.scale(k,k);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';
+function drawIcon(name,x,y,size,col){const P=ICON[name];if(!P||typeof Path2D==='undefined'||!ctx)return false;const k=size/24,o=ICOFF[name]||[0,0];ctx.save();ctx.translate(x-size/2-o[0]*k,y-size/2-o[1]*k);ctx.scale(k,k);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';
   for(const p of P){const d=p.startsWith('F:')||p.startsWith('K:')?p.slice(2):p,path=P2D[d]||(P2D[d]=new Path2D(d));if(p.startsWith('F:')){ctx.fillStyle=col;ctx.fill(path)}else if(p.startsWith('K:')){ctx.fillStyle='#1a0d04';ctx.fill(path)}else{ctx.strokeStyle=col;ctx.stroke(path)}}
   ctx.restore();return true}
 // data entries keep their old glyph in .glyph and get an SVG in .ic and an icon name in .icn

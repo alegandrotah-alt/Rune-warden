@@ -35,7 +35,7 @@ function runOnce(seed, opt) {
       if (R().phase === 'reward') { botRecruit(G); continue; }
       if (G.needMap()) { botMap(G); continue; }
       botCouncil(G, opt); plan(G, rand, opt);
-      if (GOD && R().final && !R().godDone) { R().godDone = 1; for (const h of R().board) { h.star = 3; h.it = [G.FINISHED[(rand() * G.FINISHED.length) | 0], G.FINISHED[(rand() * G.FINISHED.length) | 0], G.FINISHED[(rand() * G.FINISHED.length) | 0]]; } G.calcTraits(); }
+      if (GOD && R().final && !R().godDone) { R().godDone = 1; for (const h of R().board) { h.star = GOD4 ? 4 : 3; h.it = [G.FINISHED[(rand() * G.FINISHED.length) | 0], G.FINISHED[(rand() * G.FINISHED.length) | 0], G.FINISHED[(rand() * G.FINISHED.length) | 0]]; } G.calcTraits(); }
       nodes[R().node || 'battle'] = (nodes[R().node || 'battle'] || 0) + 1;
       if (!G.startWave()) { err = 'could not start wave ' + R().wave; break; }
       let t = 0, ko = 0; while (R().phase === 'wave' && t < 600) { G.battleTick(1 / 30); t += 1 / 30; if (R().b) { ko = R().b.ko; botPotion(G, t); } } kos += ko;
@@ -162,7 +162,7 @@ function botItems(G) { const R = G.R, H = G.HEROES, val = (h) => H[h.k].c * Math
 const results = []; const t0 = Date.now();
 const ASCN = +arg('asc', 0);
 const BOT = arg('bot', 'strong'); BOTKIND = BOT;
-const FUZZ = process.argv.includes('--fuzz'), GOD = process.argv.includes('--god');
+const FUZZ = process.argv.includes('--fuzz'), GOD4 = process.argv.includes('--god4'), GOD = GOD4 || process.argv.includes('--god');
 const WARDEN = arg('warden', ''), CH = arg('challenge', ''), NOSTARS = process.argv.includes('--nostars'), NOPACTS = process.argv.includes('--nopacts');
 for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN, bot: BOT, fuzz: FUZZ, warden: WARDEN, ch: CH, nostars: NOSTARS, nopacts: NOPACTS }));
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
