@@ -261,6 +261,7 @@ const ACH=[
   {id:'act2',n:'Kingslayer',d:'Defeat the Mushroom King',g:60},
   {id:'win',n:'Rune Warden',d:'Defeat the final boss of Act III and win a run',g:150},
   {id:'star3',n:'Legendary',d:'Get a ★3 hero',g:30},
+  {id:'finds',n:'Sky Salvager',d:'Claim 10 sky finds in one run',g:30},
   {id:'isle',n:'Skybuilder',d:'Raise 30 hexes of land in one run',g:30},
   {id:'star4',n:'Ascended',d:'Merge three ★3 heroes into a ★4',g:60},
   {id:'trait6',n:'Full Banner',d:'Activate a trait at its top breakpoint',g:40},

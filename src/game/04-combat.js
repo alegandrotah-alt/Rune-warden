@@ -79,7 +79,7 @@ function monTick(m,dt){
   if(m.fly){tx=FW+T;ty=FH/2}
   else{const cl=m.x<T*.15?null:cellOf(m.x,m.y);
     if(!cl&&m.c<0){// still outside: head for the nearest open entrance hex
-      let rr=SPAWN_ROWS.filter(q=>R.field.dist[q*COLS]>=0).sort((a,b)=>Math.abs(hy(a)-m.y)-Math.abs(hy(b)-m.y))[0];if(rr==null)rr=SPAWN_ROWS[0];tx=hx(0,rr);ty=hy(rr);if(Math.hypot(tx-m.x,ty-m.y)<T*.3){m.c=0;m.r=rr}}
+      let rr=SPAWN_ROWS.filter(q=>R.field.dist&&R.field.dist[q*COLS]>=0).sort((a,b)=>Math.abs(hy(a)-m.y)-Math.abs(hy(b)-m.y))[0];if(rr==null)rr=SPAWN_ROWS[0];tx=hx(0,rr);ty=hy(rr);if(Math.hypot(tx-m.x,ty-m.y)<T*.3){m.c=0;m.r=rr}}
     else if(m.x>FW-T*.2&&m.c>=0&&R.field.dist[m.r*COLS+m.c]===0){tx=FW+T;ty=m.y}
     else{const [c,r]=cl||[m.c,m.r];if(c!==m.c||r!==m.r){m.c=c;m.r=r;const p=portalAt(c,r),pi=p?R.field.portals.indexOf(p):-1;if(p&&!(m.portals>>pi&1)&&!m.boss)portalSplit(m,p,pi)}
       const d=R.field.dist[r*COLS+c];if(d===0){tx=FW+T;ty=hy(r)}else{const n=nextCell(c,r);if(n){tx=hx(n[0],n[1]);ty=hy(n[1])}else{tx=FW+T;ty=m.y}}}}

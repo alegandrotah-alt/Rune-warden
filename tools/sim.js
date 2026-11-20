@@ -72,8 +72,11 @@ function plan(G, rand, opt) {
     if (R.gold > reserve + (STRONG ? 4 : 12) && w > (STRONG ? 4 : 6) && (!STRONG || R.lvl >= wantLvl)) G.reroll(); else break;
   }
   // raise land: up to three chunks an act, beside the middle of the island, when the gold is spare
-  { const F = R.field; for (let k = 0; k < 3 && F.land && (F.grown || 0) < 3 && R.gold - G.expandCost() >= reserve + 2; k++) { let best = null, bs = -1e9;
-      for (let r = 0; r < G.ROWS; r++) for (let c = 3; c <= G.COLS - 4; c++) { if (!G.isleEdge(c, r)) continue; const sc = -Math.abs(c - 8) - Math.abs(r - 4.5) * .3 + rand() * .5; if (sc > bs) { bs = sc; best = [c, r]; } }
+  // sky finds first (an anchor only while the keep is healthy), then the middle of the island
+  { const F = R.field, hp = R.hp > R.hpMax * .6, want = (F.sky || []).filter((s) => !s.got && (s.k !== 'anchor' || hp && STRONG)), dist = (c, r, s) => Math.max(Math.abs(r - s.r), Math.abs(c - s.c) + Math.abs(r - s.r) / 2);
+    for (let k = 0; k < 4 && F.land && (F.grown || 0) < 5 && R.gold - G.expandCost() >= (want.some((s) => !s.got) ? Math.min(reserve, 10) : reserve + 2); k++) { let best = null, bs = -1e9;
+      const open = want.filter((s) => !s.got); if (!open.length && (F.grown || 0) >= 3) break;
+      for (let r = 0; r < G.ROWS; r++) for (let c = 1; c <= G.COLS - 2; c++) { if (!G.isleEdge(c, r)) continue; const sc = open.length ? -Math.min(...open.map((s) => dist(c, r, s))) * 3 + rand() * .3 : -Math.abs(c - 8) - Math.abs(r - 4.5) * .3 + rand() * .5; if (sc > bs) { bs = sc; best = [c, r]; } }
       if (!best || !G.expandAt(best[0], best[1])) break; WALL = null; } }
   // bench full: sell the least useful single copy
   while (R.bench.every(Boolean)) { const s = R.bench.slice().sort((a, b) => heroScore(G, a, F) - heroScore(G, b, F))[0]; G.sellHero(s); }

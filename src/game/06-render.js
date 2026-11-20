@@ -15,7 +15,7 @@ function benchSlot(i){const B=bottomLayout(),n=R.bench.length;return{x:B.cx+(i-(
 let BGN=0;
 // ---- floating island helpers ----
 const VLAND=[[16,3],[16,4],[16,5],[16,6],[17,4],[17,5]];// the keep's own rock, past the last column
-function landish(c,r){if(r<0||r>=ROWS||c<0)return false;if(c>=COLS)return VLAND.some(p=>p[0]===c&&p[1]===r);return !R||!R.field||isLand(c,r)}
+function landish(c,r){if(r<0||r>=ROWS||c<0)return false;if(c>=COLS)return VLAND.some(p=>p[0]===c&&p[1]===r);if(!R||!R.field)return true;const F=R.field;if(F.rise&&F.rise.some(q=>q.c===c&&q.r===r))return false;return isLand(c,r)}
 function landCells(){const o=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(landish(c,r))o.push([c,r]);return o.concat(VLAND)}
 // the hex across edge i (between corners i and i+1)
 function edgeNb(c,r,i){const a=(-60+60*i)*Math.PI/180,x=hx(c,r)+Math.cos(a)*T,y=hy(r)+Math.sin(a)*T,rr_=Math.round((y-T/2)/RS);return[Math.round(x/T-.5-(rr_&1)*.5),rr_]}
@@ -156,6 +156,38 @@ function edgeProps(g,act){const set=EDGE_SETS[actD(act).obs??act],sd=R?R.seed:0;
 function activeGates(){const q=R.b?R.b.gs:R.nextQ;const set=new Set();if(q)for(const e of q)set.add(e.g||0);if(!set.size)set.add(0);return set}
 function gateCount(id){const q=R.b?R.b.q:R.nextQ;let n=0;if(q)for(const e of q)if((e.g||0)===id)n++;return n}
 const GCOL=['255,240,200','215,160,255','160,220,255','255,170,140','190,255,170'];
+// ---- the sky, live ----
+// cloud banks drifting slowly through the sea of cloud under the island
+let CLOUDB=null;
+function drawClouds(){if(LQ())return;const A=actD(R.act),B=BACKS[A.bk]||BACKS[0];if(!CLOUDB||CLOUDB.n!==BGN){let lo=0;for(const [c,r] of landCells()){const p=scr(hx(c,r),hy(r));if(p[1]>lo)lo=p[1]}CLOUDB={n:BGN,y:Math.max(H*.55,lo+ss(T*.9))}}
+  if(CLOUDB.y>H)return;ctx.save();for(let i=0;i<7;i++){const h=hh(i,77,3),sp=6+(h%9),w=W*(.25+((h>>>4)%20)/100),x=((h%997)/997*(W+w*2)+TIME*sp)%(W+w*2)-w,y=CLOUDB.y+((h>>>9)%100)/100*Math.max(10,H-CLOUDB.y)*.8;
+    const g=ctx.createRadialGradient(x,y,0,x,y,w*.5);g.addColorStop(0,`rgba(${B.glow},.16)`);g.addColorStop(1,`rgba(${B.glow},0)`);ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(x,y,w*.5,w*.14,0,0,6.283);ctx.fill()}ctx.restore()}
+// raised land climbs up out of the sky before it joins the island
+function drawRise(){const F=R.field;if(!F.rise||!F.rise.length)return;const A=actD(R.act),S=ss(T);let done=true;
+  for(const q of F.rise){const e=Math.max(0,Math.min(1,(TIME-q.t0)/.8));if(e<1)done=false;const k=1-Math.pow(1-e,3),lift=-(1-k)*S*1.6;ctx.save();ctx.globalAlpha=Math.min(1,.35+e*3);
+    const pts=[];for(let i=0;i<6;i++){const a=(-90+60*i)*Math.PI/180,p=scr(hx(q.c,q.r)+Math.cos(a)*HR,hy(q.r)+Math.sin(a)*HR);pts.push([p[0],p[1]-lift])}
+    const xs=pts.map(p=>p[0]),x0=Math.min(...xs),x1=Math.max(...xs),yb=Math.max(...pts.map(p=>p[1])),cx=(x0+x1)/2;
+    ctx.fillStyle=mixHex('#3a3029',A.edge,.25);ctx.beginPath();ctx.moveTo(x0,yb-S*.2);ctx.lineTo(x1,yb-S*.2);ctx.lineTo(cx+S*.1,yb+S*1.2);ctx.closePath();ctx.fill();
+    ctx.fillStyle=mixHex('#7a6c5c',A.edge,.3);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]+S*.5):ctx.moveTo(p[0],p[1]+S*.5));ctx.closePath();ctx.fill();
+    ctx.fillStyle=A.ground[0];ctx.strokeStyle=shade(A.edge,-.1);ctx.lineWidth=Math.max(1,S*.035);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+    if(e>=1&&!q.dust){q.dust=1;fx({k:'ring',x:hx(q.c,q.r),y:hy(q.r),r:T*.8,col:'#e8d6a8',dur:.45})}}
+  if(done){F.rise=null;bgDirty=1}}
+// a ley hex glows and pulses under the hero on it
+function drawLey(){const L=R.field.ley;if(!L||!L.length)return;ctx.save();const p=.5+.5*Math.sin(TIME*2.4);
+  for(const q of L){hexPath(ctx,q.c,q.r,1.0);ctx.strokeStyle=`rgba(160,255,240,${.5+.4*p})`;ctx.lineWidth=Math.max(2,ss(4.5));ctx.stroke();hexPath(ctx,q.c,q.r,.88);ctx.fillStyle=`rgba(127,240,224,${.14+.12*p})`;ctx.fill();ctx.strokeStyle=`rgba(160,255,240,${.55+.35*p})`;ctx.lineWidth=Math.max(1.5,ss(3));ctx.stroke();hexPath(ctx,q.c,q.r,.62+.06*p);ctx.strokeStyle='rgba(200,255,250,.35)';ctx.lineWidth=Math.max(1,ss(1.5));ctx.stroke()}ctx.restore()}
+// unclaimed finds hang in the sky on little rocks, bobbing, each with its icon in a glowing medallion
+function drawSky(){const S=ss(T);if(R.field.ley&&!LQ())for(const q of R.field.ley){const [X,Y]=scr(hx(q.c,q.r),hy(q.r));ctx.save();ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<6;i++){const t=(TIME*.45+i/6)%1,a=i*1.7+TIME*.6,x=X+Math.cos(a)*S*.32,y=Y-t*S*1.3;ctx.fillStyle=`rgba(150,255,235,${(1-t)*.7})`;ctx.beginPath();ctx.arc(x,y,Math.max(1.2,S*.035*(1-t*.5)),0,6.283);ctx.fill()}ctx.restore()}
+  const L=R.field.sky;if(!L||!L.length)return;const A=actD(R.act);
+  for(const s of L){if(s.got)continue;const D=SKYF[s.k],h=hh(s.c,s.r,5),bob=Math.sin(TIME*1.5+h%7)*S*.06,[X,Y0]=scr(hx(s.c,s.r),hy(s.r)),Y=Y0+bob,w=S*.42;ctx.save();
+    ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(X,Y0+S*.75,w*.8,w*.2,0,0,6.283);ctx.fill();
+    const ug=ctx.createLinearGradient(0,Y,0,Y+w*1.7);ug.addColorStop(0,mixHex('#7a6c5c',A.edge,.3));ug.addColorStop(1,'rgba(40,32,28,0)');ctx.fillStyle=ug;ctx.beginPath();ctx.moveTo(X-w,Y);ctx.lineTo(X+w,Y);ctx.lineTo(X+w*.35,Y+w*.9);ctx.lineTo(X,Y+w*1.7);ctx.lineTo(X-w*.4,Y+w*.85);ctx.closePath();ctx.fill();
+    ctx.fillStyle=shade(A.ground[0],-.08);ctx.beginPath();ctx.ellipse(X,Y,w,w*.36,0,0,6.283);ctx.fill();ctx.fillStyle='rgba(255,255,255,.1)';ctx.beginPath();ctx.ellipse(X-w*.2,Y-w*.08,w*.55,w*.16,0,0,6.283);ctx.fill();
+    const my=Y-S*.38,mr=S*.24,gl=glow(hexRGB(D.col));if(gl){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.55+.25*Math.sin(TIME*3+h);ctx.drawImage(gl,X-mr*2.4,my-mr*2.4,mr*4.8,mr*4.8);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1}
+    if(s.k==='anchor'){ctx.strokeStyle=D.col;ctx.lineWidth=Math.max(1.5,S*.05);for(let k=0;k<3;k++){const a0=TIME*2+k*2.094;ctx.beginPath();ctx.arc(X,my,mr*1.25,a0,a0+1.3);ctx.stroke()}}
+    ctx.fillStyle='rgba(16,12,20,.88)';ctx.beginPath();ctx.arc(X,my,mr,0,6.283);ctx.fill();ctx.strokeStyle=D.col;ctx.lineWidth=Math.max(1.5,S*.04);ctx.stroke();drawIcon(D.ic,X,my,mr*1.25,D.col);
+    if(s.k==='cache'){ctx.font=`800 ${Math.max(9,S*.2)}px "Barlow Condensed",sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.8)';ctx.strokeText(s.v+'g',X,my+mr*1.45);ctx.fillStyle='#ffd76a';ctx.fillText(s.v+'g',X,my+mr*1.45)}
+    ctx.restore()}}
 // while choosing where to raise land: the sky hexes next to the island glow, with a + in each
 function drawExpand(){if(!UI.expand||R.phase!=='plan'||!R.field.land)return;ctx.save();const p=.5+.5*Math.sin(TIME*4);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){if(!isleEdge(c,r))continue;hexPath(ctx,c,r,.9);ctx.fillStyle=`rgba(255,215,120,${.12+.1*p})`;ctx.fill();ctx.setLineDash([ss(6),ss(5)]);ctx.strokeStyle='rgba(255,225,150,.85)';ctx.lineWidth=Math.max(1.5,ss(2.5));ctx.stroke();ctx.setLineDash([]);
@@ -324,7 +356,7 @@ function render(dt){
   if(!ctx||!R)return;TIME+=dt;if(bgDirty||!BG)buildBG();
   let shx=0,shy=0;if(SHK>0){shx=(Math.random()-.5)*SHK;shy=(Math.random()-.5)*SHK;SHK=Math.max(0,SHK-dt*40)}BASEM=[DPR,0,0,DPR,shx*DPR,shy*DPR];ctx.save();upr();
   if(BG)ctx.drawImage(BG,0,0,W,H);
-  gnd();drawLiveTerrain();drawRoute();drawPortals();drawRunes();drawExpand();
+  upr();drawClouds();drawRise();gnd();drawLiveTerrain();drawLey();drawRoute();drawPortals();drawRunes();drawExpand();upr();drawSky();gnd();
   if(R.b)for(const tp of R.b.traps){const x=sx(tp.x),y=sy(tp.y),s=ss(T*.35);ctx.strokeStyle='#9aff6a';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y,s,s*VY,0,0,6.283);ctx.stroke();for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(i*1.57+.78)*s,y+Math.sin(i*1.57+.78)*s*VY);ctx.stroke()}}
   if(R.b)for(const z of R.b.zones){const x=sx(z.x),y=sy(z.y),r=ss(z.r),a=Math.min(1,z.t);ctx.save();ctx.globalAlpha=.32*a;ctx.fillStyle='#7ac03a';ctx.beginPath();ctx.ellipse(x,y,r,r*VY,0,0,6.283);ctx.fill();ctx.globalAlpha=.6*a;ctx.strokeStyle='#b8f06a';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.lineDashOffset=TIME*12;ctx.stroke();ctx.setLineDash([]);
     if(!LQ())for(let i=0;i<5;i++){const ph=(TIME*.7+i*.2)%1,an=i*1.26+z.x;ctx.globalAlpha=a*(1-ph)*.8;ctx.fillStyle='#c8ff7a';ctx.beginPath();ctx.arc(x+Math.cos(an)*r*.55,y+Math.sin(an)*r*.55*VY-ph*ss(T*.5),Math.max(1.5,ss(3.5)),0,6.283);ctx.fill()}ctx.restore()}

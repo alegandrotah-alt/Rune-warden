@@ -162,7 +162,7 @@ function bindUI(){if(!DOM)return;bindPanels();bindTut();bindMap();bindRooms();bi
   $('quitB').addEventListener('click',()=>{togglePause(false);runOver(false)});
   $('playB').addEventListener('click',()=>startGame({asc:ASCSEL||0,warden:META.wd,ch:CHSEL}));bindCouncil();
   $('exB').addEventListener('click',()=>{if(R.phase!=='plan')return;if(UI.expand){UI.expand=false;uiRefresh();return}if(R.gold<expandCost()){toast(`Raising land costs ${expandCost()} gold.`);return}
-    UI.expand=true;sfx('click');toast(`Tap a glowing hex at the edge of the island to raise three hexes of land for ${expandCost()} gold. Land you raise also makes the next act's island bigger.`);uiRefresh()});
+    UI.expand=true;sfx('click');toast(`Tap a glowing hex at the edge of the island to raise three hexes of land for ${expandCost()} gold. Land that reaches a find in the sky claims it, and land you raise makes the next act's island bigger.`);uiRefresh()});
   $('pwB').addEventListener('click',()=>{const W=WARDENS[R.warden||'castellan'];if(R.phase==='wave'&&R.b&&!R.b.pw)usePower();else toast(R.phase==='wave'?`${W.pw.n} is spent for this fight`:`${W.pw.n}: ${W.pw.d} Once per fight.`)});
   $('copyB').addEventListener('click',()=>copyText(runText(META.hist[0])));$('copyHistB').addEventListener('click',()=>copyText((META.hist||[]).slice(0,10).map(runText).join('\n\n')));
   $('contB').addEventListener('click',()=>{if(loadRun()){$('ovStart').hidden=true;MUSMODE='game';bgDirty=1;uiRefresh();if(R.phase==='pick')showPick();else if(R.phase==='room')showRoom();else if(R.phase==='reward')showSpoils();else if(needMap())showMap()}});

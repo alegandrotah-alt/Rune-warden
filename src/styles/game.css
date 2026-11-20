@@ -260,7 +260,7 @@ body.side #info,body.side #dmgP,body.side #relP{right:calc(var(--shopW,150px) + 
 /* act map on an upright phone: the road runs down the screen */
 #mapGrid.vert{height:min(calc(100vh - 250px),620px);height:min(calc(100dvh - 250px),620px);min-height:330px;background:radial-gradient(ellipse at 50% 40%,rgba(255,230,180,.08),rgba(0,0,0,.25)),repeating-linear-gradient(180deg,rgba(255,255,255,.02) 0 2px,transparent 2px 40px)}
 #mapGrid.vert .mn{width:40px;height:40px}#mapGrid.vert .mn i{font-size:17px}#mapGrid.vert .mn.boss{width:54px;height:54px}#mapGrid.vert .mn.boss i{font-size:24px}
-#mapGrid.vert .mn small{top:50%;left:100%;transform:translateY(-50%);margin:0 0 0 3px;font-size:9px}
+#mapGrid.vert .mn small{top:100%;left:50%;transform:translateX(-50%);margin:3px 0 0;font-size:9px;background:rgba(20,14,10,.8);padding:0 4px;border-radius:5px;z-index:2}
 .rl .cnt{font-style:normal;font-size:11px;color:#bfffc8;background:rgba(120,255,160,.12);border-radius:8px;padding:0 5px;margin-left:4px;font-family:var(--cond)}
 
 /* ---------- war council: constellation, pacts, challenges ---------- */

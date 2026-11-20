@@ -17,7 +17,7 @@ function pdown(e){if(!R||R.phase==='over'||R.phase==='pick')return;ensureAudio()
   const h=heroUnder(px,py);if(h){DRAG={h,from:'board',x:px,y:py,sx:px,sy:py,locked:R.phase!=='plan'};startValid();return}
   {const K=keepPos(),[KX,KY]=scr(K.x,K.y);if(Math.abs(px-KX)<ss(T*.9)&&py<KY+ss(T*.6)&&py>KY-ss(T*2.4)){SEL=null;uiKeep();return}}
   if(R.b){const w=toWorld(px,py+ss(T*.3));let best=null,bd=T*.7;for(const m of R.b.mons){if(m.hp<=0)continue;const d=Math.hypot(m.x-w.x,(m.y-w.y))-(m.boss?T*.4:0);if(d<bd){bd=d;best=m}}if(best){SEL=null;uiMon(best);return}}
-  {const cl=cellAt(px,py);if(cl){const t=terAt(cl.c,cl.r),g=(R.field.gates||[]).find(q=>q.k!=='west'&&q.c===cl.c&&q.r===cl.r);
+  {const cl=cellAt(px,py),sf=cl&&skyAt(cl.c,cl.r);if(sf){toast(`${SKYF[sf.k].n}: ${SKYF[sf.k].d(sf)}`);return}if(cl&&isLey(cl.c,cl.r)&&!heroAt(cl.c,cl.r))toast('Ley hex: the hero standing here deals 40% more damage and its spells hit 25% harder.');if(cl){const t=terAt(cl.c,cl.r),g=(R.field.gates||[]).find(q=>q.k!=='west'&&q.c===cl.c&&q.r===cl.r);
     const ru=runeAt(cl.c,cl.r);if(ru&&!g)toast(ru.k?`${RKIND[ru.k].n} ×${runeMul(ru)}: ${RKIND[ru.k].d}`:`Rune ×${runeMul(ru)}: anything fired through it is multiplied.`);
     else if(g)toast((g.k==='breach'?'A breach in the field':'The '+g.k+' gate')+': monsters come through here when it glows. It always keeps a road to the keep.');
     else if(t)toast(TERN[t]+': '+['','shooters here get +1 range, melee heroes +20% damage.','monsters here are 35% slower.','monsters here bleed 1.4% of their health a second.','nothing can stand or walk here; shots fly over it.'][t])}}

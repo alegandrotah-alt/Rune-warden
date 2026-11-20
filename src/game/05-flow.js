@@ -15,7 +15,7 @@ function endWave(){
   floatText(FW/2,FH*.42+T*.7,`+${inc.base+inc.int+inc.st+inc.ex} gold`+(inc.int?`  (${inc.int} interest)`:'')+(inc.st?`  (${inc.st} streak)`:''),'#ffcf2e',1.1);
   sfx(won?'taken':'block',.6);
   // act boss down
-  if(boss)R.tp=(R.tp||0)+1;
+  if(boss)R.tp=(R.tp||0)+1+(R.field&&R.field.anchor?2:0);
   if(herald){R.leakAct=0;R.calm=0;banner('THE HERALD FALLS SILENT','#d6a8ff')}
   else if(boss){const a=w/10;if(R.leakAct===0)award('perfect');R.leakAct=0;R.calm=0;
     if(a===1){award('act1');if(R.rerolls===0)award('h_miser')}if(a===2)award('act2');
@@ -66,11 +66,11 @@ function runOver(win){
 function goEndless(){R.endless=true;R.final=0;R.rift=0;R.won=0;R.phase='plan';R.act=2;R.map=null;R.node='battle';R.room=null;R.queue=null;genField();rollShop(true);R.nextQ=waveList(R.wave);hideEnd();saveRun();uiRefresh()}
 // ---------- saving a run in progress (between waves) ----------
 // only a run the player actually started is saved: the placeholder run behind the menu must never overwrite it
-function saveRun(){if(!R||!R.live||R.phase==='over')return;try{const o=Object.assign({},R,{b:null,field:{obs:R.field.obs,runes:R.field.runes,portals:R.field.portals,gates:R.field.gates,ter:Array.from(R.field.ter||[]),blk:Array.from(R.field.blk).map(v=>v===2?2:0),land:R.field.land?Array.from(R.field.land):null,grown:R.field.grown||0}});localStorage.setItem('runewarden-run',JSON.stringify(o))}catch(e){}}
+function saveRun(){if(!R||!R.live||R.phase==='over')return;try{const o=Object.assign({},R,{b:null,field:{obs:R.field.obs,runes:R.field.runes,portals:R.field.portals,gates:R.field.gates,ter:Array.from(R.field.ter||[]),blk:Array.from(R.field.blk).map(v=>v===2?2:0),land:R.field.land?Array.from(R.field.land):null,grown:R.field.grown||0,sky:R.field.sky||[],ley:R.field.ley||[],anchor:R.field.anchor||0}});localStorage.setItem('runewarden-run',JSON.stringify(o))}catch(e){}}
 function loadRun(){try{const o=JSON.parse(localStorage.getItem('runewarden-run')||'null');if(!o||!o.field)return false;R=o;
   // runs saved on the smaller board get a fresh field; heroes keep their hexes where they still fit
   if(o.field.blk.length!==COLS*ROWS){R.field={runes:[]};R.board=R.board.filter(h=>{if(h.c<COLS&&h.r<ROWS)return true;const j=R.bench.indexOf(null);if(j>=0){h.c=h.r=-1;R.bench[j]=h}return false});R.board.forEach(h=>{});const keep=R.board.slice();R.board=[];genField();for(const h of keep){if(!placeHero(h,h.c,h.r)){const j=R.bench.indexOf(null);if(j>=0){h.c=h.r=-1;R.bench[j]=h}}}o.field=R.field;o.field.blk=Array.from(R.field.blk);o.field.ter=Array.from(R.field.ter)}
-  R.field.blk=Uint8Array.from(o.field.blk);R.field.ter=o.field.ter&&o.field.ter.length?Uint8Array.from(o.field.ter):new Uint8Array(COLS*ROWS);R.field.gates=o.field.gates||[{k:'west',c:0,r:4,id:0}];R.field.land=o.field.land&&o.field.land.length===COLS*ROWS?Uint8Array.from(o.field.land):new Uint8Array(COLS*ROWS).fill(1);R.field.grown=o.field.grown||0;for(let i=0;i<COLS*ROWS;i++)if(!R.field.land[i])R.field.blk[i]=3;R.isle=R.isle||0;R.b=null;if(R.phase==='wave')R.phase='plan';
+  R.field.blk=Uint8Array.from(o.field.blk);R.field.ter=o.field.ter&&o.field.ter.length?Uint8Array.from(o.field.ter):new Uint8Array(COLS*ROWS);R.field.gates=o.field.gates||[{k:'west',c:0,r:4,id:0}];R.field.land=o.field.land&&o.field.land.length===COLS*ROWS?Uint8Array.from(o.field.land):new Uint8Array(COLS*ROWS).fill(1);R.field.grown=o.field.grown||0;R.field.sky=o.field.sky||[];R.field.ley=o.field.ley||[];R.field.anchor=o.field.anchor||0;for(let i=0;i<COLS*ROWS;i++)if(!R.field.land[i])R.field.blk[i]=3;R.isle=R.isle||0;R.b=null;if(R.phase==='wave')R.phase='plan';
   UID=1+Math.max(0,...allHeroes().map(h=>h.uid||0));R.items=R.items||[];for(const h of allHeroes()){h.it=h.it||[];h.ko=0}for(const k of HKEYS)if(R.pool[k]==null)R.pool[k]=unlocked(k)?POOL[HEROES[k].c]:0;
   R.asc=R.asc||0;R.cnt=R.cnt||{};R.tree=(R.tree||[]).filter(id=>STARN[id]);R.tp=R.tp||0;R.pact=(R.pact||[]).filter(id=>PACT[id]);R.ch=CHALL[R.ch]?R.ch:null;modsDirty();R.warden=WARDENS[R.warden]?R.warden:'castellan';R.stats.elites=R.stats.elites||0;R.potions=R.potions||[];
   // runs saved before the branching map get a fresh map for the current act

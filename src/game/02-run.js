@@ -76,7 +76,7 @@ function genField(){
   put(F.portals,2,3,7,[0,1,8,9]);if(R.act>=1)put(F.portals,2,7,10,[0,1,8,9]);if(R.act>=2)put(F.portals,3,5,9,[1,8]);
   // heroes left on blocked tiles go back to the bench
   for(const h of R.board.slice())if(F.blk[h.r*COLS+h.c]||isGate(h.c,h.r)||F.runes.some(q=>q.c===h.c&&q.r===h.r)||F.portals.some(q=>q.c===h.c&&q.r===h.r))toBench(h);
-  rebuildBlk();fixRoads();if(typeof bgDirty!=='undefined')bgDirty=1;
+  genSky(F);rebuildBlk();fixRoads();if(typeof bgDirty!=='undefined')bgDirty=1;
 }
 // ---- the floating island ----
 // The field is a 16×10 grid, but only the island's hexes are land: the rest is open sky (blk 3), where nothing stands and no road runs.
@@ -106,9 +106,10 @@ const isLand=(c,r)=>c>=0&&r>=0&&c<COLS&&r<ROWS&&(!R.field.land||R.field.land[r*C
 const expandCost=()=>3+(R.field.grown||0)*2;
 function isleEdge(c,r){const F=R.field;return !!F.land&&c>=0&&r>=0&&c<COLS&&r<ROWS&&!F.land[r*COLS+c]&&nbrs(c,r).some(([a,b])=>F.land[b*COLS+a])}
 function expandChunk(c,r){const F=R.field,add=[[c,r]],d=(p)=>Math.hypot(hx(p[0],p[1])-hx(c,r),hy(p[1])-hy(r));
-  for(let k=0;k<2;k++){const cand=[];for(const [a,b] of add)for(const p of nbrs(a,b))if(!F.land[p[1]*COLS+p[0]]&&!add.some(o=>o[0]===p[0]&&o[1]===p[1])&&!cand.some(o=>o[0]===p[0]&&o[1]===p[1]))cand.push(p);if(!cand.length)break;cand.sort((p,q)=>d(p)-d(q));add.push(cand[0])}return add}
+  for(let k=0;k<2;k++){const cand=[];for(const [a,b] of add)for(const p of nbrs(a,b))if(!F.land[p[1]*COLS+p[0]]&&!add.some(o=>o[0]===p[0]&&o[1]===p[1])&&!cand.some(o=>o[0]===p[0]&&o[1]===p[1]))cand.push(p);if(!cand.length)break;const fd=(p)=>(F.sky||[]).some(s=>!s.got&&s.c===p[0]&&s.r===p[1])?-99:0;cand.sort((p,q)=>fd(p)-fd(q)||d(p)-d(q));add.push(cand[0])}return add}
 function expandAt(c,r){const F=R.field;if(R.phase!=='plan'||!isleEdge(c,r)||R.gold<expandCost())return false;R.gold-=expandCost();
-  const add=expandChunk(c,r);F.rise=F.rise||[];for(const [a,b] of add){const i=b*COLS+a;F.land[i]=1;F.blk[i]=0;F.rise.push({c:a,r:b,t:0})}
+  const add=expandChunk(c,r),t0=typeof TIME!=='undefined'?TIME:0;if(DOM)F.rise=F.rise||[];for(const [a,b] of add){const i=b*COLS+a;F.land[i]=1;F.blk[i]=0;if(F.rise)F.rise.push({c:a,r:b,t0:t0+F.rise.length*.07})}
+  for(const s of (F.sky||[]))if(!s.got&&add.some(p=>p[0]===s.c&&p[1]===s.r))skyClaim(s);
   F.grown=(F.grown||0)+1;R.isle=(R.isle||0)+add.length;R.stats.isle=(R.stats.isle||0)+add.length;rebuildBlk();if(typeof bgDirty!=='undefined')bgDirty=1;
   if(typeof sfx==='function')sfx('level',.5);if(typeof fx==='function')for(const [a,b] of add)fx({k:'ring',x:hx(a,b),y:hy(b),r:T*.7,col:'#e8d6a8',dur:.5});if(R.isle>=30)award('isle');return true}
 // heroes kept from the last act may wall off a new gate: lift the ones nearest the gates until every road is open,
@@ -116,6 +117,10 @@ function expandAt(c,r){const F=R.field;if(R.phase!=='plan'||!isleEdge(c,r)||R.go
 function fixRoads(){const F=R.field;if(F.dist)return;const G=(F.gates||[]).filter(g=>g.k!=='west'),lift=[];
   const gd=h=>Math.min(99,...G.map(g=>Math.hypot(hx(g.c,g.r)-hx(h.c,h.r),hy(g.r)-hy(h.r))),Math.hypot(hx(h.c,h.r),hy(h.r)-hy(SPAWN_ROWS[0])));
   while(!F.dist&&R.board.length){const h=R.board.slice().sort((a,b)=>gd(a)-gd(b))[0];R.board.splice(R.board.indexOf(h),1);lift.push(h);rebuildBlk()}
+  // still no road (rocks or water sealing a gate on the island's rim): clear the rock nearest a gate, then give up on that gate
+  for(let k=0;k<40&&!F.dist;k++){let best=-1,bd=1e9;for(let i=0;i<COLS*ROWS;i++){if(F.blk[i]!==2)continue;const c=i%COLS,r=(i/COLS)|0,d=gd({c,r});if(d<bd){bd=d;best=i}}
+    if(best<0)break;F.blk[best]=0;if(F.ter&&F.ter[best]===4)F.ter[best]=0;F.obs=F.obs.filter(o=>o.c+o.r*COLS!==best);rebuildBlk()}
+  while(!F.dist&&F.gates.length>1){F.gates.pop();rebuildBlk()}
   for(const h of lift){const c0=h.c,r0=h.r;let best=null,bd=1e9;for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){if(!canPlace(c,r))continue;const d=Math.hypot(hx(c,r)-hx(c0,r0),hy(r)-hy(r0));if(d<bd){bd=d;best=[c,r]}}
     if(best){h.c=best[0];h.r=best[1];R.board.push(h);rebuildBlk();continue}
     h.c=h.r=-1;const j=R.bench.indexOf(null);if(j>=0)R.bench[j]=h;else{R.gold+=sellValue(h);R.pool[h.k]+=COPIES[h.star];for(const it of h.it||[])stashItem(it)}}}
@@ -145,9 +150,10 @@ function gatePlan(w){const F=R.field,G=F&&F.gates||[{k:'west',id:0}];if(G.length
   // a breach in the middle of the field only opens once the act has warmed up
   const others=G.slice(1).filter(g=>g.k!=='breach'||wi>=5||rf).map(g=>g.id);const out=[0];while(out.length<n&&others.length)out.push(others.splice((rng()*others.length)|0,1)[0]);
   // sometimes the west gate stays shut and every monster comes from the others
-  if(out.length>2&&rng()<.3)out.shift();if((has('sealstone')?1:0)+(R.seal>0?1:0)){for(let k=(has('sealstone')?1:0)+(R.seal>0?1:0);k>0&&out.length>1;k--)out.pop()}return out}
+  if(out.length>2&&rng()<.3)out.shift();if((has('sealstone')?1:0)+(R.seal>0?1:0)){for(let k=(has('sealstone')?1:0)+(R.seal>0?1:0);k>0&&out.length>1;k--)out.pop()}
+  const an=G.find(g=>g.k==='anchor');if(an&&!out.includes(an.id))out.push(an.id);return out}
 // hand out the wave's monsters to its gates in runs of a few, so each gate sends a little pack
-function tagGates(q,w){const P=gatePlan(w);let gi=0,run=0;for(const e of q){if(MON[e.k]&&MON[e.k].boss){e.g=P.includes(0)?0:P[0];continue}if(run<=0){gi=P[(rng()*P.length)|0];run=2+((rng()*4)|0)}e.g=gi;run--}return q}
+function tagGates(q,w){const P=gatePlan(w);let gi=0,run=0;for(const e of q){if(MON[e.k]&&MON[e.k].boss){e.g=P.includes(0)?0:P[0];continue}if(run<=0){gi=P[(rng()*P.length)|0];run=2+((rng()*4)|0)}e.g=gi;run--}return anchorQ(q)}
 const runeAt=(c,r)=>R.field.runes.find(q=>q.c===c&&q.r===r);
 const portalAt=(c,r)=>R.field.portals.find(q=>q.c===c&&q.r===r);
 const runeMul=q=>q.v+mods().rune+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0)+(hasGuard('oracle')?1:0)+(R.b&&R.b.surgeT>0?1:0);
@@ -211,6 +217,7 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
   if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
   if(has('tally'))s.dmg*=1+Math.min(.6,((R.stats.kills/25)|0)*.01);if(has('idol'))s.dmg*=1+Math.min(.4,((R.gold/4)|0)*.01);if(has('ouro'))s.as*=1+Math.min(.4,(R.cnt.rr||0)*.005);if(has('ledger'))s.dmg*=1+Math.min(1,(R.cnt.big||0)*.04);if(has('sands')&&R.b)s.dmg*=1+Math.min(.8,R.b.t*.02);if(has('flawless'))s.dmg*=1+Math.min(.6,(R.cnt.fl||0)*.03);
+  if(h.c>=0&&isLey(h.c,h.r)){s.dmg*=1.4;s.spell*=1.25}
   // ★4: ascended heroes attack faster, cast harder and reach further
   if(h.star>=4){s.as*=1.5;s.spell*=1.6;if(!isFront(h.k))s.rng+=1}
   if(h.buffT>0)s.as*=h.buffAs||2;
