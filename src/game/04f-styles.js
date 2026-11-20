@@ -33,7 +33,7 @@ function styleStats(h,s){const st=styleOf(h.k),P=h.path,rc=reachOf(h.k);
 const slowM=(m,p,t)=>{if(frenzy())return;m.slowT=Math.max(m.slowT,t);m.slowP=Math.min(m.slowP,p)};
 // the basic attack, by style; strike() is the hero's plain hit or shot
 function styleAttack(h,s,p,best,dmg,crit,strike){const st=styleOf(h.k),P=h.path,B=R.b,rr=s.rng*T+T*.3,D=HEROES[h.k],melee=D.proj==='melee'||D.proj==='claw';
-  const near=(x,y,r)=>B.mons.filter(m=>m.hp>0&&targetable(m)&&Math.hypot(m.x-x,m.y-y)<r);
+  const near=(x,y,r)=>B.mons.filter(m=>m.hp>0&&targetable(m)&&canHit(h,m)&&Math.hypot(m.x-x,m.y-y)<r);
   const vg=tier('vanguard')>=2&&reachOf(h.k)==='vanguard',ar=tier('artillery')>=2&&reachOf(h.k)==='artillery';
   // Vanguard 6 and Artillery 6: every attack also bursts around the monster it hits
   const burst=(m)=>{if(!vg&&!ar)return;for(const o of near(m.x,m.y,T*(vg?.7:.6)))if(o!==m)hit(o,dmg*(vg?.3:.25),h,{})};
@@ -57,3 +57,16 @@ function styleAttack(h,s,p,best,dmg,crit,strike){const st=styleOf(h.k),P=h.path,
     if(!on.some(o=>o.m===best))on.unshift({m:best,t:0});for(const o of on){hit(o.m,dmg,h,{crit:crit&&o.m===best});if(P===1&&o.m.hp>0)poison(o.m,h,2,s)}
     fx({k:'line',x:p.x,y:p.y,x1:p.x+ux*L,y1:p.y+uy*L,dur:.18,col:D.proj==='ice'?'#bfe8ff':'#fff2c8'});burst(best)}
   if(melee||st==='aura')sfx('hit',.18,1.1+Math.random()*.3)}
+
+// ---------- monsters that counter attack shapes (Bloons-style properties) ----------
+// Flying: ground attacks (strikes, swipes, shoves and lobbed shells) cannot reach it.
+// Plated: shots, piercing bolts and chain bolts do only 30% (spells and everything else hit normally).
+// Veiled: heroes see it only from 2 hexes away, until an aura, a chain or a spell hits it (revealed for 3s).
+const GROUND={strike:1,swipe:1,push:1,lob:1},PIERCERS={shot:1,pierce:1,chain:1},REVEAL={aura:1,chain:1};
+for(const k of ['golem','orcskull','goleling','spiky','brute','maw','colossus'])if(MON[k])MON[k].plate=1;
+for(const k of ['srogue','tribal','frog','frostorc','dino','shade'])if(MON[k])MON[k].veil=1;
+const canHit=(h,m)=>!(m.fly&&GROUND[styleOf(h.k)]);
+const canSee=(h,m,d)=>!(m.veil&&!(m.revT>0)&&d>T*2);
+// what a basic attack loses or gains against the monster's properties
+function propMul(m,src,opt){if(!src||!HEROES[src.k])return 1;const st=styleOf(src.k);if(!opt.spell&&m.plate&&PIERCERS[st])return .3;return 1}
+function propReveal(m,src,opt){if(m.veil&&(opt.spell||src&&HEROES[src.k]&&REVEAL[styleOf(src.k)]))m.revT=3}

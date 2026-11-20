@@ -156,11 +156,18 @@ function gatePlan(w){const F=R.field,G=F&&F.gates||[{k:'west',id:0}];if(G.length
 function tagGates(q,w){const P=gatePlan(w);let gi=0,run=0;for(const e of q){if(MON[e.k]&&MON[e.k].boss){e.g=P.includes(0)?0:P[0];continue}if(run<=0){gi=P[(rng()*P.length)|0];run=2+((rng()*4)|0)}e.g=gi;run--}return anchorQ(q)}
 const runeAt=(c,r)=>R.field.runes.find(q=>q.c===c&&q.r===r);
 const portalAt=(c,r)=>R.field.portals.find(q=>q.c===c&&q.r===r);
-const runeMul=q=>q.v+mods().rune+(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?2:0)+(R.ink?1:0)+(hasGuard('oracle')?1:0)+(R.b&&R.b.surgeT>0?1:0);
+// rune relics add at most +2 between them
+const runeMul=q=>q.v+mods().rune+Math.min(2,(has('runesmith')?1:0)+(has('heart')?2:0)+(has('dome')?1:0))+(R.ink?1:0)+(hasGuard('oracle')?1:0)+(R.b&&R.b.surgeT>0?1:0);
 const portalMul=q=>q.v+(has('riftlord')?1:0);
 // ---------- heroes: bench, field, merging ----------
 const boardMax=()=>Math.min(mods().cap||99,boardMax0());
-const boardMax0=()=>R.lvl+(has('recruit')?1:0)+(has('kingmaker')?2:0)+['crown','ecto','sozu','coffee','fusion'].filter(has).length;
+// extra field slots from relics stop at +1: more heroes is the strongest thing a relic can give, so once you have one no more are offered
+const SLOTREL=['recruit','kingmaker','crown','ecto','sozu','coffee','fusion'];
+const relicSlots=()=>Math.min(1,SLOTREL.filter(has).length);
+const boardMax0=()=>R.lvl+relicSlots();
+const RELDMG_CAP=.6;
+function relicDmg(){let b=0;if(has('collector'))b+=Math.min(.45,.03*R.relics.length);if(has('tally'))b+=Math.min(.3,((R.stats.kills/40)|0)*.01);if(has('idol'))b+=Math.min(.25,((R.gold/4)|0)*.01);
+  if(has('ledger'))b+=Math.min(.5,(R.cnt.big||0)*.03);if(has('sands')&&R.b)b+=Math.min(.6,R.b.t*.015);if(has('flawless'))b+=Math.min(.45,(R.cnt.fl||0)*.03);if(has('philo'))b+=.3;return Math.min(RELDMG_CAP,b)}
 function heroAt(c,r){return R.board.find(h=>h.c===c&&h.r===r)}
 function mkHero(k,star){return{uid:UID++,k,star,mana:0,cd:Math.random()*.5,atk:0,face:1,hits:0,buffT:0,c:-1,r:-1,it:[]}}
 function addHero(k,star,free,ed){
@@ -215,15 +222,16 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(h.k==='orcraider'&&R.b&&h.c>=0){const p=heroPos(h);let n=0;for(const m of R.b.mons)if(m.hp>0&&!m.fly&&Math.hypot(m.x-p.x,m.y-p.y)<T*1.5)n++;s.as*=1+Math.min(.48,.06*n)}
   if(h.c>=0&&R.field&&R.field.ter&&R.field.ter[h.r*COLS+h.c]===1){if(isFront(h.k))s.dmg*=has('surveyor')?1.4:1.2;else s.rng+=has('surveyor')?2:1}
   if(has('warhorn')&&R.b&&R.b.t<6)s.as*=1.4;
-  if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
-  if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
-  if(has('tally'))s.dmg*=1+Math.min(.6,((R.stats.kills/25)|0)*.01);if(has('idol'))s.dmg*=1+Math.min(.4,((R.gold/4)|0)*.01);if(has('ouro'))s.as*=1+Math.min(.4,(R.cnt.rr||0)*.005);if(has('ledger'))s.dmg*=1+Math.min(1,(R.cnt.big||0)*.04);if(has('sands')&&R.b)s.dmg*=1+Math.min(.8,R.b.t*.02);if(has('flawless'))s.dmg*=1+Math.min(.6,(R.cnt.fl||0)*.03);
+  // build-around relics: each pays off only for the heroes it names
+  {const st=styleOf(h.k),rc=reachOf(h.k);if(has('crit')&&(st==='strike'||st==='swipe'||st==='push'))s.crit=1-(1-s.crit)*.75;if(has('haste')&&(st==='shot'||st==='beam'||st==='chain'||st==='pierce'))s.as*=1.2;if(has('eagle')&&rc==='artillery')s.rng+=1}
+  // relic damage bonuses add together and are capped (+100%), so a pile of relics cannot multiply into a win on its own
+  s.dmg*=1+relicDmg();if(has('ouro'))s.as*=1+Math.min(.3,(R.cnt.rr||0)*.005);
   styleStats(h,s);
   if(h.c>=0&&isLey(h.c,h.r)){s.dmg*=1.4;s.spell*=1.25}
   // ★4: ascended heroes attack faster, cast harder and reach further
   if(h.star>=4){s.as*=1.5;s.spell*=1.6;if(!isFront(h.k))s.rng+=1}
   if(h.buffT>0)s.as*=h.buffAs||2;
-  if(h.vet)s.dmg*=1+.25*h.vet;if(h.au){s.as*=1+h.au.as;s.dmg*=1+h.au.dmg}if(h.hoard)s.dmg*=1+.005*h.hoard;if(has('philo'))s.dmg*=1.3;if(R.b&&R.b.rageT>0)s.as*=1.6;if(R.b&&R.b.rallyT>0)s.as*=1.4;
+  if(h.vet)s.dmg*=1+.25*h.vet;if(h.au){s.as*=1+h.au.as;s.dmg*=1+h.au.dmg}if(h.hoard)s.dmg*=1+.005*h.hoard;if(R.b&&R.b.rageT>0)s.as*=1.6;if(R.b&&R.b.rallyT>0)s.as*=1.4;
   // items
   const I=itemStats(h);s.dmg*=1+I.dmg;s.as*=1+I.as;s.spell*=1+I.sp;s.crit=1-(1-s.crit)*(1-I.crit);s.rng+=I.rng||0;
   if(hasIt(h,'edge'))s.cm+=.5;if(hasIt(h,'titan'))s.dmg*=1+Math.min(.8,.04*(h.stk||0));if(hasIt(h,'rage'))s.as*=1+Math.min(2,.04*(h.stk||0));

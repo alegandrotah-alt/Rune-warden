@@ -7,7 +7,7 @@ const canAdd=k=>R.bench.includes(null)||allHeroes().filter(h=>h.k===k&&h.star===
 function trainable(){return allHeroes().filter(h=>(h.vet||0)<2)}
 function train(h){h.vet=(h.vet||0)+1;fxStar(h);sfx('level',.6);toast(`${HEROES[h.k].n} is now a veteran${h.vet>1?' (rank 2)':''}: +25% damage and health`);if(h.vet>=2)award('vet2')}
 const cost=n=>Math.max(1,Math.round(n*(has('membership')?.7:1)*(1-.15*rank('merchant'))));
-function relicPool(t){const own=new Set(R.relics);return RELICS.filter(r=>r.t===t&&!own.has(r.id)&&!(t<4&&r.id==='belt'&&has('sozu')))}
+function relicPool(t){const own=new Set(R.relics),slot=relicSlots()>=1;return RELICS.filter(r=>r.t===t&&!own.has(r.id)&&!(t<4&&r.id==='belt'&&has('sozu'))&&!(slot&&SLOTREL.includes(r.id)))}
 function randomRelic(t){const p=relicPool(t);return p.length?rndS(p).id:null}
 function gainRelic(id){if(!id)return;R.relics.push(id);applyRelic(id);calcTraits();toast('Relic: '+RELIC[id].n);if(R.relics.filter(r=>RELIC[r].t===4).length>=2)award('boss4')}
 function heroLine(h){return`${HEROES[h.k].n} ${'★'.repeat(h.star)}${h.vet?' · veteran '+h.vet:''}`}

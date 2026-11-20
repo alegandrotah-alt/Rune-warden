@@ -37,7 +37,7 @@ function takeRelic(id){
   calcTraits();uiRefresh();advance()}
 function applyRelic(id){
   if(id==='armory'){dropItem(rndS(COMPS));dropItem(rndS(COMPS))}if(id==='smith'){dropItem(randomFinished());dropItem(randomFinished())}
-  if(id==='stones')R.stones.push(2,2);if(id==='prism')R.stones.push(kindStone(2),kindStone(2));if(id==='heart')R.stones.push(3);if(id==='treasury')R.gold+=45;if(id==='egg')R.egg=6;
+  if(id==='stones')R.stones.push(2,2);if(id==='prism')R.stones.push(kindStone(2),kindStone(2));if(id==='heart')R.stones.push(3);if(id==='treasury')R.gold+=45;if(id==='kingmaker')R.gold+=20;if(id==='egg')R.egg=6;
   if(id==='masons'){R.hpMax+=20;R.hp=R.hpMax}
   if(id==='ascend'){for(const s of [2,1]){const c=R.board.filter(h=>h.star===s).sort((a,b)=>HEROES[b.k].c-HEROES[a.k].c)[0];if(c){c.star++;fxStar(c)}}}
   if(id==='belt')gainPotion();
