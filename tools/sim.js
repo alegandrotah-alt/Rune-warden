@@ -11,7 +11,7 @@ const RUNS = +arg('runs', 6);
 
 const frag = buildFragment();
 let src = frag.slice(frag.indexOf('<script>') + 8, frag.lastIndexOf('</script>'));
-src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={expandAt,isleEdge,expandCost,starTake,starOpen,pactOffer,pactToggle,PACT,mods,usePower,WARDENS,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
+src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={pathPick,expandAt,isleEdge,expandCost,starTake,starOpen,pactOffer,pactToggle,PACT,mods,usePower,WARDENS,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
 const script = new vm.Script(src, { filename: 'game.js' });
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -78,6 +78,8 @@ function plan(G, rand, opt) {
       const open = want.filter((s) => !s.got); if (!open.length && (F.grown || 0) >= 3) break;
       for (let r = 0; r < G.ROWS; r++) for (let c = 1; c <= G.COLS - 2; c++) { if (!G.isleEdge(c, r)) continue; const sc = open.length ? -Math.min(...open.map((s) => dist(c, r, s))) * 3 + rand() * .3 : -Math.abs(c - 8) - Math.abs(r - 4.5) * .3 + rand() * .5; if (sc > bs) { bs = sc; best = [c, r]; } }
       if (!best || !G.expandAt(best[0], best[1])) break; WALL = null; } }
+  // paths: a coin flip for every hero that reached ★2
+  for (const h of G.allHeroes()) if (h.star >= 2 && h.path == null) G.pathPick(h, rand() < .5 ? 0 : 1);
   // bench full: sell the least useful single copy
   while (R.bench.every(Boolean)) { const s = R.bench.slice().sort((a, b) => heroScore(G, a, F) - heroScore(G, b, F))[0]; G.sellHero(s); }
   // field the best heroes: value, stars, focus traits and items

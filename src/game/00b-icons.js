@@ -50,7 +50,7 @@ function drawIcon(name,x,y,size,col){const P=ICON[name];if(!P||typeof Path2D==='
   ctx.restore();return true}
 // data entries keep their old glyph in .glyph and get an SVG in .ic and an icon name in .icn
 function applyIcons(){const set=(o,n)=>{if(!o)return;o.glyph=o.glyph||o.ic;o.icn=n;o.ic=icon(n)};
-  const TR={kingdom:'crown',wildwood:'leaf',shadow:'moon',plague:'bio',guardian:'shield',marksman:'arrow',sorcerer:'star',assassin:'daggers',beast:'paw',bruiser:'fist'};for(const k in TR)set(TRAITS[k],TR[k]);
+  const TR={kingdom:'crown',wildwood:'leaf',shadow:'moon',plague:'bio',guardian:'shield',marksman:'arrow',sorcerer:'star',assassin:'daggers',beast:'paw',bruiser:'fist',vanguard:'swords',artillery:'boulder'};for(const k in TR)set(TRAITS[k],TR[k]);
   const IT={sword:'sword',bow:'bow',rod:'rod',tear:'drop',cloak:'moon',belt:'heart'};for(const k in IT)set(ITEMS[k],IT[k]);
   for(const k in ITEMS){const I=ITEMS[k];if(I.c){I.glyph=ITEMS[I.c[0]].glyph+ITEMS[I.c[1]].glyph;I.ic=ITEMS[I.c[0]].ic+ITEMS[I.c[1]].ic}}
   const ND={battle:'swords',elite:'skull',event:'question',rest:'fire',merchant:'scales',treasure:'chest',boss:'crown'};for(const k in ND)set(NODES[k],ND[k]);

@@ -176,8 +176,9 @@ function merge(h){
   const same=allHeroes().filter(x=>x.k===h.k&&x.star===h.star);if(h.tmp&&!same.includes(h))same.push(h);
   const need=3;if(same.length<need||h.star>=4){if(h.tmp)delete h.tmp;return}
   const keep=same.find(x=>R.board.includes(x))||same.find(x=>!x.tmp)||same[0];
-  for(const x of same.slice(0,need)){if(x===keep)continue;removeHero(x);keep.vet=Math.max(keep.vet||0,x.vet||0);if(!keep.ed&&x.ed)keep.ed=x.ed;for(const it of x.it||[])giveItem(keep,it)}
+  for(const x of same.slice(0,need)){if(x===keep)continue;if(keep.path==null&&x.path!=null)keep.path=x.path;removeHero(x);keep.vet=Math.max(keep.vet||0,x.vet||0);if(!keep.ed&&x.ed)keep.ed=x.ed;for(const it of x.it||[])giveItem(keep,it)}
   delete keep.tmp;keep.star++;keep.mana=0;fxStar(keep);if(keep.star===3){award('star3');if(keep.k==='wyrm')award('h_dragon');if(R.board.filter(x=>x.star===3).length>=3)award('h_three')}if(keep.star===4){award('star4');banner(HEROES[keep.k].n.toUpperCase()+' ASCENDS','#ff9ad8')}
+  if(keep.star===2&&keep.path==null&&typeof pathPrompt==='function')pathPrompt(keep);
   merge(keep)}
 function removeHero(h){const i=R.board.indexOf(h);if(i>=0){R.board.splice(i,1);rebuildBlk()}const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null}
 function toBench(h){const j=R.bench.indexOf(null);if(j<0)return false;const i=R.board.indexOf(h);if(i>=0)R.board.splice(i,1);R.bench[j]=h;h.c=h.r=-1;rebuildBlk();return true}
@@ -188,7 +189,7 @@ const sellValue=h=>HEROES[h.k].c*COPIES[h.star]-(h.star>1&&HEROES[h.k].c>1?1:0);
 function sellHero(h){R.gold+=sellValue(h);R.pool[h.k]+=COPIES[h.star];removeHero(h);for(const it of h.it||[])stashItem(it);h.it=[];sfx('coin',.5)}
 // ---------- traits and hero stats ----------
 let SYN={};
-function calcTraits(){const seen={},cnt={};for(const h of R.board){if(seen[h.k])continue;seen[h.k]=1;for(const t of HEROES[h.k].tr)cnt[t]=(cnt[t]||0)+1}
+function calcTraits(){const seen={},cnt={};for(const h of R.board){if(seen[h.k])continue;seen[h.k]=1;for(const t of HEROES[h.k].tr)cnt[t]=(cnt[t]||0)+1;const rc=reachOf(h.k);if(rc)cnt[rc]=(cnt[rc]||0)+1}
   for(const r of R.relics){const em=RELIC[r].em;if(em)cnt[em]=(cnt[em]||0)+1}
   for(const g of R.guards||[])for(const t of GUARDS[g.k].tr)cnt[t]=(cnt[t]||0)+1;
   if(R.warden==='beastlord'&&cnt.beast)cnt.beast++;
@@ -217,6 +218,7 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(has('crit'))s.crit=1-(1-s.crit)*.85;if(has('haste'))s.as*=1.15;if(has('eagle'))s.rng+=1;
   if(has('collector'))s.dmg*=Math.pow(1.06,R.relics.length);
   if(has('tally'))s.dmg*=1+Math.min(.6,((R.stats.kills/25)|0)*.01);if(has('idol'))s.dmg*=1+Math.min(.4,((R.gold/4)|0)*.01);if(has('ouro'))s.as*=1+Math.min(.4,(R.cnt.rr||0)*.005);if(has('ledger'))s.dmg*=1+Math.min(1,(R.cnt.big||0)*.04);if(has('sands')&&R.b)s.dmg*=1+Math.min(.8,R.b.t*.02);if(has('flawless'))s.dmg*=1+Math.min(.6,(R.cnt.fl||0)*.03);
+  styleStats(h,s);
   if(h.c>=0&&isLey(h.c,h.r)){s.dmg*=1.4;s.spell*=1.25}
   // ★4: ascended heroes attack faster, cast harder and reach further
   if(h.star>=4){s.as*=1.5;s.spell*=1.6;if(!isFront(h.k))s.rng+=1}

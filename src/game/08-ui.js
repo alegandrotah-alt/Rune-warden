@@ -41,6 +41,13 @@ function uiItem(id){if(!DOM||!id)return;const el=$('info'),I=ITEMS[id];let rec='
   el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3><span style="color:${I.col}">${I.ic}</span> ${I.n}</h3><div class="ab">${I.d}</div>${rec}<p class="sub" style="text-align:left;margin:6px 0 0">Drag it onto a hero. Two components on one hero combine. Three items per hero.</p>`;
   el.querySelector('.x').addEventListener('click',()=>{el.hidden=true});el.hidden=false}
 // what a hero does: stats, ability, role, items (with what each does), traits it feeds. A shop card shows the same, plus a Buy button.
+// a hero that just reached ★2 opens its panel so a path can be picked
+function pathPrompt(h){if(!DOM)return;setTimeout(()=>{if(h.path!=null||!allHeroes().includes(h))return;SEL=h;uiInfo(h);toast(`${HEROES[h.k].n} reached ★2: pick a path for its ${STYLE[styleOf(h.k)].n.toLowerCase()}.`)},60)}
+function styleHTML(h){const st=styleOf(h.k),S=STYLE[st],rc=reachOf(h.k),RC=rc?TRAITS[rc]:null,P=h.path;
+  const head=`<b>${icon(S.ic)} ${S.n}</b>${RC?` <span class="rch" style="color:${RC.col}">${RC.ic} ${RC.n}</span>`:''}: ${S.d}`;
+  if(h.preview||h.star<2)return`<div class="ab sty">${head}<small>At ★2 it takes a path: <b>${S.p[0].n}</b> (${S.p[0].d}) or <b>${S.p[1].n}</b> (${S.p[1].d})</small></div>`;
+  if(P!=null)return`<div class="ab sty">${head}<small>Path: <b>${S.p[P].n}</b>: ${S.p[P].d}</small></div>`;
+  return`<div class="ab sty pick">${head}<small>Pick a path:</small><div class="paths">${S.p.map((q,i)=>`<button type="button" data-path="${i}"><b>${q.n}</b><small>${q.d}</small></button>`).join('')}</div></div>`}
 function uiInfo(h){if(!DOM)return;const el=$('info');if(!h){el.hidden=true;if(SHOPSEL>=0){SHOPSEL=-1;markShopSel()}return}const D=HEROES[h.k],s=h.preview?{dmg:D.dmg,as:D.as,rng:D.rng,crit:0}:heroStats(h);
   if(h.shop==null&&SHOPSEL>=0){SHOPSEL=-1;markShopSel()}
   const items=h.preview?'':`<div class="its">${(h.it||[]).map(id=>{const I=ITEMS[id];return`<div class="it" style="--c:${I.col}"><span class="ii">${I.ic}</span><div><b style="color:${I.col}">${I.n}</b><small>${I.d}</small></div></div>`}).join('')||'<small>No items yet. Drag items from the ITEMS rack onto a hero; it holds up to three.</small>'}</div>`;
@@ -49,11 +56,12 @@ function uiInfo(h){if(!DOM)return;const el=$('info');if(!h){el.hidden=true;if(SH
   const buy=h.shop!=null?`<div class="buy"><button type="button" class="primary" ${R.gold<D.c?'disabled':''}>Buy ${D.c}g</button><small>${R.gold<D.c?'Not enough gold.':owned===2?'You have two: buying makes a ★2!':owned?`You have ${owned}. Three make a ★2.`:'Or tap the card again to buy.'} ${R.pool[h.k]} more in the pool.</small></div>`:'';
   el.innerHTML=`<button class="x" type="button" aria-label="Close">×</button><h3>${D.n} ${'★'.repeat(h.star)}${h.vet?` <span class="vet">${'❯'.repeat(h.vet)} veteran</span>`:''}</h3><div class="tags"><span style="color:${TIERCOL[D.c]}">${D.c} gold</span>${D.tr.map(t=>`<span style="color:${TRAITS[t].col}">${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join('')}</div>
    <div class="st"><div><small>Damage</small>${fmt(s.dmg)}</div><div><small>Speed</small>${s.as.toFixed(2)}</div><div><small>Range</small>${s.rng.toFixed(1)}</div><div><small>${D.dt==='m'?'Magic':'Physical'}</small>${s.crit?Math.round(s.crit*100)+'% crit':'—'}</div></div>${buy}${h.ed&&MARKS[h.ed]?`<div class="ab mkd" style="--m:${MARKS[h.ed].col}"><b>${MARKS[h.ed].n}</b>: this hero ${MARKS[h.ed].d}</div>`:''}${items}
-   <div class="ab"><b>${D.ab.n}</b> (${D.mana} mana): ${D.d}</div>
+   ${styleHTML(h)}<div class="ab"><b>${D.ab.n}</b> (${D.mana} mana): ${D.d}</div>
    <div class="ab rl2"><b style="color:${isFront(h.k)?'#ffc08a':'#a8d4ff'}">${icon(isFront(h.k)?'sword':'bow')} ${isFront(h.k)?'Frontline':'Backline'}</b>: ${isFront(h.k)?'tough (+35% health), slows monsters near it by 15%.':'deals the damage from behind the line.'}${D.fl?` <b>${D.fl.n}</b>: ${D.fl.d}`:''}</div>${D.lg?`<div class="ab lg"><b>Legend · ${D.lg.n}</b>: ${D.lg.d}${h.hoard?` (${h.hoard} stacks)`:''}</div>`:''}${trn}
    ${h.preview?'':`<p class="sub" style="text-align:left;margin:6px 0 0">Health ${h.hpMax&&R.phase==='wave'?fmt(h.hp)+' / ':''}${fmt(heroMaxHp(h))}. Sells for ${sellValue(h)} gold: drag onto the shop. ${h.star<4?'Three of a kind merge into the next star':'Ascended: attacks 50% faster, spells hit 60% harder, starts every fight with full mana'}; ${R.pool[h.k]} copies left in the pool.</p>`}`;
   el.scrollTop=0;el.querySelector('.x').addEventListener('click',()=>{SEL=null;el.hidden=true;if(SHOPSEL>=0){SHOPSEL=-1;markShopSel()}});
-  const bb=el.querySelector('.buy button');if(bb)bb.addEventListener('click',()=>shopBuy(h.shop));el.hidden=false}
+  const bb=el.querySelector('.buy button');if(bb)bb.addEventListener('click',()=>shopBuy(h.shop));
+  for(const b of el.querySelectorAll('[data-path]'))b.addEventListener('click',()=>{if(pathPick(h,+b.dataset.path)){sfx('level',.4);saveRun();uiInfo(h);uiRefresh()}});el.hidden=false}
 // shop cards: the first tap shows the hero, a second tap (or Buy) buys it
 let SHOPSEL=-1;
 function markShopSel(){const box=$('cards');if(!box)return;[...box.children].forEach((b,i)=>{b.classList.toggle('sel',i===SHOPSEL);const t=b.querySelector('.tapb');if(i===SHOPSEL&&!t){const s=document.createElement('span');s.className='tapb';s.textContent='Tap to buy';b.appendChild(s)}else if(i!==SHOPSEL&&t)t.remove()})}

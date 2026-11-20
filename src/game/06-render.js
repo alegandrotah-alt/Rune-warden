@@ -287,6 +287,7 @@ function drawHeroAt(h,x,y,size,ghost,live){
   else{ctx.fillStyle=TIERCOL[HEROES[h.k].c];ctx.beginPath();ctx.arc(x,y-size*.35,size*.22,0,6.283);ctx.fill()}
   ctx.globalAlpha=1;
   // stars, cost colour
+  if(h.star>=2&&h.path==null&&R.phase!=='wave'){const br=Math.max(8,size*.12),bx=x+size*.28,by=y-size*.95,pu=1+.1*Math.sin(TIME*6);ctx.save();ctx.fillStyle='#ffd76a';ctx.beginPath();ctx.arc(bx,by,br*pu,0,6.283);ctx.fill();ctx.strokeStyle='#3a2410';ctx.lineWidth=2;ctx.stroke();drawIcon('question',bx,by,br*1.5,'#3a2410');ctx.restore()}
   drawStars(h.star,x,y+Math.max(9,size*.16)*.55,Math.max(9,size*.16),h.star>=4?'#ff9ad8':h.star===3?'#ffd76a':h.star===2?'#cfe6ff':TIERCOL[HEROES[h.k].c])}
 // a row of drawn stars on a dark pill, centred on x (the ★ glyph sat off-centre in most fonts)
 function drawStars(n,x,y,s,col){const gap=s*.92,w=gap*(n-1)+s*1.1;ctx.save();ctx.fillStyle='rgba(10,8,6,.62)';rr(x-w/2,y-s*.6,w,s*1.2,s*.6);ctx.fill();for(let i=0;i<n;i++)drawIcon('star',x+(i-(n-1)/2)*gap,y,s*1.02,col);ctx.restore()}
@@ -313,7 +314,7 @@ function drawMon(m){
     if(m.boss){ctx.font=`700 ${Math.max(10,ss(12))}px Cinzel,serif`;ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#fff';ctx.fillText(MON[m.k].n,x,by-2)}
     else if(m.aff){const A=m.aff2?{n:AFFIX[m.aff].n+' · '+AFFIX[m.aff2].n,col:AFFIX[m.aff].col}:AFFIX[m.aff];ctx.font=`800 ${Math.max(9,ss(11))}px "Barlow Condensed",sans-serif`;ctx.textAlign='center';ctx.textBaseline='bottom';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.strokeText(A.n,x,by-3);ctx.fillStyle=A.col;ctx.fillText(A.n,x,by-3)}}
 }
-function drawProj(q){const P0=scr(q.x,q.y),x=P0[0],y=P0[1]-ss(T*.35),big=q.mult>1,s=ss(T)*(big?1.25:1);
+function drawProj(q){const P0=scr(q.x,q.y),x=P0[0],y=P0[1]-ss(T*.35)-(q.lob?Math.sin(Math.PI*Math.max(0,Math.min(1,1-Math.hypot(q.tx-q.x,q.ty-q.y)/q.d0)))*ss(T*1.1):0),big=q.mult>1,s=ss(T)*(big?1.25:1);
   // a fading trail behind every shot, tinted by what it is
   if(!LQ()&&q.kind!=='boulder'&&q.kind!=='flask'){const tr=q.tr||(q.tr=[]);tr.push(x,y);if(tr.length>12)tr.splice(0,2);if(tr.length>=4){const tc=q.kind==='fire'?'255,140,60':q.kind==='ice'?'170,225,255':q.kind==='holy'?'255,230,150':q.kind==='arrow'||q.kind==='bolt'||q.kind==='star'?'255,245,220':q.src&&HEROES[q.src.k]&&HEROES[q.src.k].tr.includes('shadow')?'190,120,255':'120,200,255';
     ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';for(let i=2;i<tr.length;i+=2){const t=i/tr.length;ctx.strokeStyle=`rgba(${tc},${t*.55})`;ctx.lineWidth=Math.max(1,ss(q.kind==='arrow'||q.kind==='bolt'?2:5)*t*(big?1.5:1));ctx.beginPath();ctx.moveTo(tr[i-2],tr[i-1]);ctx.lineTo(tr[i],tr[i+1]);ctx.stroke()}ctx.restore()}}
@@ -349,6 +350,8 @@ function drawFx(dt){
       else{const Q=scr(f.x1,f.y1);ctx.moveTo(x,y-ss(T*.35));ctx.lineTo(Q[0],Q[1]-ss(T*.35))}ctx.stroke();
       if(f.k==='beam'){ctx.strokeStyle='#ffffff';ctx.lineWidth=Math.max(1,ss(5))*a;ctx.stroke()}
       if(f.mult>1){ctx.font=`900 ${Math.max(12,ss(18))}px Cinzel,serif`;ctx.fillStyle='#e6dcff';ctx.textAlign='center';{const Q=scr((f.x+f.x1)/2,(f.y+f.y1)/2);ctx.fillText('×'+fmt(f.mult),Q[0],Q[1]-ss(T*.6))}}ctx.restore()}
+    else if(f.k==='swipe'){const Q=scr(f.x+Math.cos(f.a)*T,f.y+Math.sin(f.a)*T),an=Math.atan2(Q[1]-y,Q[0]-x),r=ss(f.r)*(.75+.25*p);ctx.save();ctx.translate(x,y-ss(T*.3));ctx.globalAlpha=a*.9;ctx.strokeStyle=f.col;ctx.lineCap='round';
+      const w=f.full?Math.PI:1.05,a0=f.full?an+p*6.283:an-w+p*w*.4,sw=f.full?5.5:w*1.6;ctx.lineWidth=Math.max(3,ss(T*.16))*(1-p*.5);ctx.beginPath();ctx.ellipse(0,0,r,r*VY,0,a0,a0+sw);ctx.stroke();ctx.globalAlpha=a*.25;ctx.fillStyle=f.col;ctx.beginPath();ctx.moveTo(0,0);ctx.ellipse(0,0,r,r*VY,0,a0,a0+sw);ctx.closePath();ctx.fill();ctx.restore()}
     else if(f.k==='cone'){ctx.save();ctx.globalAlpha=a*.7;ctx.translate(x,y);ctx.scale(1,VY);ctx.fillStyle='rgba(255,120,40,.55)';ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,ss(f.r)*(.6+.4*p),f.a-.65,f.a+.65);ctx.closePath();ctx.fill();ctx.restore()}
     else if(f.k==='star'){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a;const gl=glow('255,215,100');if(gl)ctx.drawImage(gl,x-ss(T)*(1+p),y-ss(T)*(1.4+p),ss(T*2)*(1+p),ss(T*2)*(1+p));ctx.restore()}}
   upr();for(let i=FXL.length-1;i>=0;i--)if(FXL[i].t>=FXL[i].dur)FXL.splice(i,1)}

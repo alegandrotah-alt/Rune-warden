@@ -10,9 +10,11 @@ const TRAITS={
   assassin:{n:'Assassin',ic:'✕',col:'#ff6a8a',bp:[2,4,6],d:t=>`Assassins crit ${[20,40,65][t]}% of the time for ${[2,2.5,3.5][t]}× damage.`},
   beast:{n:'Beast',ic:'ᛒ',col:'#e0a050',bp:[2,4,6,8],d:t=>`Beasts deal +${[10,20,35,70][t]}% damage, plus +${[15,30,45,80][t]}% for every Beast on a touching hex.${t>=1?` Beast hits heal them ${[0,2,4,7][t]}% health.`:''}`},
   bruiser:{n:'Bruiser',ic:'ᚢ',col:'#ff8a5a',bp:[2,3,4,6],d:t=>`Bruiser hits knock monsters back ${['a quarter of','half','three quarters of','a whole'][t]} a hex (bosses a third as far), and Bruisers have +${[25,50,80,160][t]}% health.${t>=3?' Their knockbacks also stun for 0.5s.':''}`},
+  vanguard:{n:'Vanguard',ic:'⚔',col:'#ffb070',bp:[2,4,6],auto:1,d:t=>`Every hero that fights up close (strikes, swipes, shoves and auras) deals ${[10,20,35][t]}% more damage and takes ${[5,12,20][t]}% less.${t>=2?' Their attacks also burst around the monster they hit for 30%.':''}`},
+  artillery:{n:'Artillery',ic:'➹',col:'#9cc4ff',bp:[2,4,6],auto:1,d:t=>`Every hero that hits from 2.75 hexes or more gains ${[.25,.5,1][t]} range and deals ${[8,16,30][t]}% more damage.${t>=2?' Their attacks also burst around the monster they hit for 25%.':''}`},
   plague:{n:'Plaguebringer',ic:'☣',col:'#a6e04a',bp:[2,3,4,6],d:t=>['Plaguebringer hits add a poison stack. Each stack eats 12% of the hero\'s damage every second for 4s (up to 12 stacks).','Poison stacks deal double damage.','Poison stacks deal double damage, and when a poisoned monster dies its stacks jump to monsters nearby.','Poison stacks deal four times the damage and pile up to 30; dying monsters pass on all their stacks.'][t]},
 };
-const TRAIT_ORDER=['kingdom','wildwood','shadow','plague','beast','guardian','marksman','sorcerer','assassin','bruiser'];
+const TRAIT_ORDER=['kingdom','wildwood','shadow','plague','beast','guardian','marksman','sorcerer','assassin','bruiser','vanguard','artillery'];
 // range in tiles, as = attacks per second, mana = cast threshold. Projectile kinds: melee, arrow, bolt, orb, fire, holy, claw.
 const HEROES={
   squire:{n:'Squire',c:1,fl:{k:'rally',n:'Rally',d:'Neighbouring heroes attack 15% faster.'},tr:['kingdom','guardian'],dmg:14,as:.9,rng:1.25,mana:60,dt:'p',proj:'melee',ab:{snd:'sp_slash',k:'nova',n:'Shield Bash',r:.9,m:2,stun:1},d:'Bashes everything around his target, stunning them for 1s.'},
