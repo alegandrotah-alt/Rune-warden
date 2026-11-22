@@ -146,7 +146,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment2.outputs.page_url }}
     concurrency:
       group: pages
       cancel-in-progress: true
@@ -164,7 +164,9 @@ jobs:
         run: python3 tools/fetch_fonts.py
 
       - name: Stamp the offline cache with this build
-        run: sed -i "s/const CACHE = 'rune-warden-v1'/const CACHE = 'rune-warden-${{ github.run_number }}'/" www/sw.js
+        run: |
+          sed -i -E "s/const CACHE = 'rune-warden-[^']*'/const CACHE = 'rune-warden-${{ github.run_number }}'/" www/sw.js
+          grep -q "rune-warden-${{ github.run_number }}'" www/sw.js
 
       - uses: actions/configure-pages@v5
 
@@ -172,5 +174,18 @@ jobs:
         with:
           path: www
 
+      # the deploy sometimes asks for the artifact before GitHub lists it: wait, and try once more if it fails
+      - name: Let the artifact settle
+        run: sleep 15
+
       - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Wait before retrying the deploy
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 45
+
+      - id: deployment2
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
