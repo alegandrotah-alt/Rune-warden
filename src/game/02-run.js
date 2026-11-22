@@ -223,9 +223,9 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(tr.includes('wildwood')&&tier('wildwood')>=2)s.dmg*=tier('wildwood')>=3?2.2:1.4;
   if(tr.includes('beast')&&tier('beast')>=0){const t=tier('beast');s.dmg*=1+[.1,.2,.35,.7][t]+[.15,.3,.45,.8][t]*(h.pack||0)}
   {const d=DY();if(d){
-    if(d===DEITIES.aurion&&tr.includes('marksman'))s.rng+=.5;if(d===DEITIES.hessa){if(tr.includes('beast'))s.as*=1.2;if(tr.includes('marksman'))s.crit=1-(1-s.crit)*.85}
+    if(d===DEITIES.aurion&&tr.includes('marksman'))s.rng+=.5;if(d===DEITIES.hessa){if(tr.includes('beast'))s.as*=1.1;if(tr.includes('marksman'))s.crit=1-(1-s.crit)*.85}
     if(d===DEITIES.grakka&&(tr.includes('assassin')||tr.includes('bruiser')))s.as*=1.25;
-    if(R.b&&R.b.huntT>0&&(tr.includes('marksman')||tr.includes('beast')))s.as*=2;if(R.b&&R.b.lustT>0)s.dmg*=1.5}}
+    if(R.b&&R.b.huntT>0&&(tr.includes('marksman')||tr.includes('beast')))s.as*=1.6;if(R.b&&R.b.lustT>0)s.dmg*=1.5}}
   if(tr.includes('beast')&&R.b&&R.b.moon)s.as*=1+.04*R.b.moon;
   if(h.k==='orcraider'&&R.b&&h.c>=0){const p=heroPos(h);let n=0;for(const m of R.b.mons)if(m.hp>0&&!m.fly&&Math.hypot(m.x-p.x,m.y-p.y)<T*1.5)n++;s.as*=1+Math.min(.48,.06*n)}
   if(h.c>=0&&R.field&&R.field.ter&&R.field.ter[h.r*COLS+h.c]===1){if(isFront(h.k))s.dmg*=has('surveyor')?1.4:1.2;else s.rng+=has('surveyor')?2:1}
@@ -250,4 +250,4 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   return s}
 // hero health: bigger heroes, stars and Guardians are tougher; it refills every wave
 function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*STARH[h.star]*(D.tr.includes('guardian')?1.5:1)*(D.tr.includes('bruiser')&&tier('bruiser')>=0?[1.25,1.5,1.8,2.6][tier('bruiser')]:1)*(isFront(h.k)?1.35:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0))*(1+(h.au?h.au.hp:0))*mods().hp*deityHp(h))}
-function deityHp(h){const d=DY();if(!d)return 1;const tr=HEROES[h.k].tr;let m=tr.some(t=>d.bless.includes(t))?1.1:1;if(d===DEITIES.solenne)m*=1.2;if(d===DEITIES.korrun&&(tr.includes('guardian')||tr.includes('bruiser')))m*=1.25;return m}
+function deityHp(h){const d=DY();if(!d)return 1;const tr=HEROES[h.k].tr;let m=tr.some(t=>d.bless.includes(t))?1.1:1;if(d===DEITIES.solenne)m*=1.2;if(d===DEITIES.korrun&&(tr.includes('guardian')||tr.includes('bruiser')))m*=1.15;return m}

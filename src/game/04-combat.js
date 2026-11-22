@@ -25,7 +25,7 @@ function startWave(){
   mapEnter();
   R.phase='wave';R.b={mons:[],projs:[],fx:[],traps:[],zones:[],q:(R.nextQ&&R.nextQ.length?R.nextQ:waveList(R.wave)).map(e=>Object.assign({},e)),gs:null,qT:.3,t:0,leaked:0,kills:0,big:0,ko:0,drops:0};
   pactOffer();pactStart(R.b.q);R.b.gs=R.b.q.map(e=>({g:e.g||0}));
-  for(const h of R.board){const I=itemStats(h);h.mana=(I.mana||0)+mods().mana0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0;h.stk=0;h.ac=0;h.ko=0;h.chillT=0;h.tauntT=0;h.hurtT=0;h.seizT=0;h.hpMax=heroMaxHp(h);h.hp=h.hpMax;if(h.star>=4)h.mana=HEROES[h.k].mana;else if(isD('aurion')&&HEROES[h.k].tr.includes('sorcerer'))h.mana=Math.max(h.mana,HEROES[h.k].mana*.5);if(R.hymn)h.mana=HEROES[h.k].mana}R.hymn=0;
+  for(const h of R.board){const I=itemStats(h);h.mana=(I.mana||0)+mods().mana0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0;h.stk=0;h.ac=0;h.ko=0;h.chillT=0;h.tauntT=0;h.hurtT=0;h.seizT=0;h.hpMax=heroMaxHp(h);h.hp=h.hpMax;if(h.star>=4)h.mana=HEROES[h.k].mana;else if(isD('aurion')&&HEROES[h.k].tr.includes('sorcerer'))h.mana=Math.max(h.mana,HEROES[h.k].mana*.33);if(R.hymn)h.mana=HEROES[h.k].mana}R.hymn=0;
   if(R.board.filter(h=>h.ed).length>=3)award('marked3');
   calcTraits();guardWave();if(R.final||bossWave(R.wave))sfx('elite',.8);else sfx('ready',.5);
   return true}
@@ -106,7 +106,7 @@ function monAttack(m,dt){const A=MON[m.k].atk;if(!A||m.x<0||m.x>FW)return;m.atkT
   else if(A.k==='bolt'){hurtHero(best,dmg,m);if(A.chill)best.chillT=2.5;fx({k:'mbolt',x:m.x,y:m.y,x1:p.x,y1:p.y,dur:.3,col:A.chill?'#8ad8ff':m.k==='ghost'?'#b8ffd8':'#c07aff'});sfx('sp_arcane',.12,1.3)}
   else if(A.k==='slam'){for(const h of R.board){if(!heroUp(h))continue;const q=heroPos(h);if(Math.hypot(q.x-m.x,q.y-m.y)<=rr)hurtHero(h,dmg,m)}fx({k:'ring',x:m.x,y:m.y,r:rr,col:'#d8a060',dur:.4});shake(m.boss?6:3);sfx('m_slam',.35,.8+Math.random()*.2)}
   else if(A.k==='breath'){const a=Math.atan2(p.y-m.y,p.x-m.x);for(const h of R.board){if(!heroUp(h))continue;const q=heroPos(h),dx=q.x-m.x,dy=q.y-m.y;if(Math.hypot(dx,dy)>rr)continue;let da=Math.atan2(dy,dx)-a;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)<.6)hurtHero(h,dmg,m)}fx({k:'cone',x:m.x,y:m.y,a,r:rr,dur:.6,col:'#ff7a2a'});shake(5);sfx('sp_breath',.4,.8)}}
-function hurtHero(h,d,m){if(!heroUp(h))return;if(R.b&&R.b.ironT>0)return;let dr=h.au?h.au.dr:0;if(tier('vanguard')>=0&&reachOf(h.k)==='vanguard')dr+=[.05,.12,.2][tier('vanguard')];if(tier('guardian')>=2&&HEROES[h.k].tr.includes('guardian'))dr+=.35;if(HEROES[h.k].fl&&HEROES[h.k].fl.k==='taunt')dr+=.3;if(R.b&&R.b.fl&&R.b.fl.some(f=>f.sanct&&Math.hypot(f.x-hx(h.c,h.r),f.y-hy(h.r))<T*2.1))dr+=.25;
+function hurtHero(h,d,m){if(!heroUp(h))return;let dr=h.au?h.au.dr:0;if(R.b&&R.b.ironT>0)d*=.4;if(tier('vanguard')>=0&&reachOf(h.k)==='vanguard')dr+=[.05,.12,.2][tier('vanguard')];if(tier('guardian')>=2&&HEROES[h.k].tr.includes('guardian'))dr+=.35;if(HEROES[h.k].fl&&HEROES[h.k].fl.k==='taunt')dr+=.3;if(R.b&&R.b.fl&&R.b.fl.some(f=>f.sanct&&Math.hypot(f.x-hx(h.c,h.r),f.y-hy(h.r))<T*2.1))dr+=.25;
   d*=1-Math.min(.75,dr);h.hp-=d;h.hurtT=.18;
   if(m&&hasIt(h,'bramble')&&m.hp>0)dealRaw(m,heroStats(h).dmg*2,h,1);
   if(h.hp<=0&&priestessSave(h))return;
@@ -127,7 +127,7 @@ function poison(m,src,n,s){if(m.hp<=0||!(n>0))return;const per=(s||heroStats(src
 // ---------- damage ----------
 function hit(m,amt,src,opt){
   if(m.hp<=0||m.phased)return 0;opt=opt||{};const D=src?HEROES[src.k]:null,tr=D?D.tr:[];amt*=propMul(m,src,opt);propReveal(m,src,opt);
-  if(isD('vexis')&&opt.spell&&m.psn&&m.psn.n>0&&m.psn.t>0)amt*=1.3;
+  if(isD('vexis')&&opt.spell&&m.psn&&m.psn.n>0&&m.psn.t>0)amt*=1.2;
   if(isD('morrow')&&opt.crit&&D&&(tr.includes('shadow')||tr.includes('assassin'))&&!m.boss&&m.hp-amt<m.max*.2)amt=Math.max(amt,m.hp+1);
   if(src&&!opt.spell&&D.fl){const F=D.fl.k,uc=MON[m.k].final?.2:m.boss?.4:1;if(F==='hamstring'){m.slowT=Math.max(m.slowT,2);m.slowP=Math.min(m.slowP,.65)}if(F==='bulwark')m.stunT=Math.max(m.stunT,.5*uc);if(F==='sleep'&&src.ac%4===0&&!(m.sleepT>0)){m.sleepT=2.5*uc;m.sleepHp=m.hp;fx({k:'zz',x:m.x,y:m.y,dur:1})}}
   if(src&&tr.includes('shadow')&&tier('shadow')>=0&&m.hp<m.max/2){amt*=1+[.25,.6,1.1,2][tier('shadow')];if(tier('shadow')>=3&&!m.boss&&m.hp-amt<m.max*.15){amt=m.hp+1;if(Math.random()<.3)floatText(m.x,m.y-T*.8,'EXECUTED','#b48cff',.8)}}

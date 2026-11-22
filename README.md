@@ -21,6 +21,7 @@ A fantasy roguelite tower defense for phones held either way: sideways, monsters
 - Six challenge runs with their own rules, unlocked by the first win.
 - Eight deities (Solenne, Morrow, Sylvara, Vexis, Aurion, Korrun, Hessa, Grakka): each run three offer a blessing; the chosen god bans two traits from the shop, blesses two, adds a synergy and gives a power used once per fight, so every run steers you toward a different build. 51 heroes across ten traits keep the pool deep even with two traits banned.
 - Elite champions carry one of ten twists (two in the Rift and in endless); room screens are illustrated with scenes built from the game's sprites, and some events run over several steps.
+- A dark theme with animated pixel fire: every menu, room, reward and map screen burns along its edges in the colour of each choice, with drifting embers.
 - Monsters have attack and death animations; big blows freeze the fight for a blink, and bosses telegraph their signature move.
 - A run history with a copyable plain-text summary of every run (Records tab and end screen), and an optional frame-rate display.
 - Three acts, three bosses, then act IV: the Rift (five floors of void-born monsters and the Rift Herald) leading to an optional brutal final boss (the Rune Devourer: damage cap, regeneration, immune shells, an escalating heartbeat, rune eating and breaches), then endless mode. Ten ascension levels, a seeded daily challenge, hero unlocks and keep skins.
