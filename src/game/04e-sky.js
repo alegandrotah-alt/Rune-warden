@@ -7,6 +7,7 @@ const SKYF={
   forge:{n:'Sky forge',ic:'sword',col:'#ffb070',d:()=>'Raise land onto it to claim an item part.'},
   stone:{n:'Fallen rune stone',ic:'rune',col:'#9cc4ff',d:()=>'Raise land onto it to claim a ×2 rune stone for your rack.'},
   shrine:{n:'Ley shrine',ic:'star',col:'#7ff0e0',d:()=>'Raise land onto it and it becomes a ley hex for the rest of the act: the hero standing there deals 40% more damage and its spells hit 25% harder.'},
+  altar:{n:'Guardian altar',ic:'shield',col:'#b8c2cc',d:()=>'Raise land onto it and a keep guardian is gifted for the rest of the run (or one you have rises a level).'},
   anchor:{n:'Rift anchor',ic:'eye',col:'#c890ff',d:()=>'Raise land onto it to open a new gate for the rest of the act. More monsters come, but every fight pays 6 extra gold and the act boss gives 2 extra star points.'},
 };
 function genSky(F){F.sky=[];F.ley=[];F.anchor=0;if(!F.land)return;
@@ -17,7 +18,7 @@ function genSky(F){F.sky=[];F.ley=[];F.anchor=0;if(!F.land)return;
     if(!o.length)return;const [c,r,dd]=o[(rng()*o.length)|0];F.sky.push({k,c,r,d:dd,v:k==='cache'?6+R.act*3+dd*3:0})};
   // an anchor is a gate, so it keeps to the far half of the field like every other gate
   if(R.act>=1||R.endless)pick('anchor',1,3,7);
-  pick('cache',1,2,COLS-2);pick('cache',2,3,COLS-2);pick(rng()<.5?'forge':'stone',2,3,COLS-2);pick('shrine',1,3,COLS-3)}
+  if(R.act>=1&&!R.daily&&stage()>=2)pick('altar',2,3,COLS-2);pick('cache',1,2,COLS-2);pick('cache',2,3,COLS-2);pick(rng()<.5?'forge':'stone',2,3,COLS-2);pick('shrine',1,3,COLS-3)}
 const skyAt=(c,r)=>(R.field.sky||[]).find(s=>!s.got&&s.c===c&&s.r===r);
 const isLey=(c,r)=>!!(R.field&&R.field.ley&&R.field.ley.some(q=>q.c===c&&q.r===r));
 function skyClaim(s){const F=R.field,x=hx(s.c,s.r),y=hy(s.r),ft=(t,col)=>{if(typeof floatText==='function')floatText(x,y-T*.4,t,col,1.2)};s.got=1;R.stats.finds=(R.stats.finds||0)+1;
@@ -25,6 +26,7 @@ function skyClaim(s){const F=R.field,x=hx(s.c,s.r),y=hy(s.r),ft=(t,col)=>{if(typ
   else if(s.k==='forge'){const id=rndS(COMPS);stashItem(id);ft(ITEMS[id].n,'#ffb070')}
   else if(s.k==='stone'){R.stones.push(2);ft('Rune stone ×2','#9cc4ff')}
   else if(s.k==='shrine'){F.ley.push({c:s.c,r:s.r});ft('Ley hex','#7ff0e0')}
+  else if(s.k==='altar'){if(!giftGuard())R.gold+=10}
   else if(s.k==='anchor'){F.gates.push({k:'anchor',c:s.c,r:s.r,id:F.gates.length});F.anchor=1;rebuildBlk();fixRoads();R.nextQ=anchorQ(R.nextQ);if(typeof banner==='function')banner('A RIFT ANCHOR OPENS','#c890ff')}
   if(typeof sfx==='function')sfx(s.k==='anchor'?'elite':'coin',.6);if(R.stats.finds>=10)award('finds')}
 // an open anchor sends its own pack on top of the wave: about a third more monsters

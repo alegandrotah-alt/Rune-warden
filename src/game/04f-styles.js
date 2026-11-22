@@ -15,7 +15,7 @@ const STYLE={
   pierce:{n:'Piercing bolt',ic:'arrow',d:'Its bolt flies through up to 3 monsters in a line.',p:[{n:'Lance',d:'flies through every monster in its line, and +1 range.'},{n:'Barbed',d:'every monster it hits takes 2 poison stacks.'}]},
 };
 const ATK={squire:'push',cutpurse:'strike',berserker:'swipe',paladin:'aura',ninja:'strike',werewolf:'swipe',blackknight:'swipe',vampire:'aura',duelist:'strike',plague:'aura',warlord:'swipe',destrier:'push',fenrir:'swipe',wolf:'strike',husky:'push',stag:'push',orcraider:'swipe',bull:'push',venom:'strike',breaker:'push',
-  archer:'shot',apprentice:'shot',tinker:'pierce',hexwitch:'chain',scout:'shot',nightblade:'pierce',druid:'lob',tiefling:'lob',templar:'beam',wyrm:'beam',alchemist:'lob',bogwitch:'chain',frostmage:'pierce',necromancer:'chain',alpaca:'shot',doe:'aura',fox:'chain',bombard:'lob',bastion:'pierce',thorn:'aura',storm:'chain',hunt:'shot',archmage:'beam'};
+  archer:'shot',apprentice:'shot',tinker:'pierce',hexwitch:'chain',scout:'shot',nightblade:'pierce',druid:'lob',tiefling:'lob',templar:'beam',wyrm:'beam',alchemist:'lob',bogwitch:'chain',frostmage:'pierce',necromancer:'chain',alpaca:'shot',doe:'aura',fox:'chain',bombard:'lob',bastion:'pierce',thorn:'aura',storm:'chain',hunt:'shot',archmage:'beam',shieldmaiden:'push',gravebrute:'swipe',oakheart:'push',blightarcher:'shot',spy:'strike',hound:'strike',physician:'lob',rotking:'aura'};
 const styleOf=k=>ATK[k]||(HEROES[k].proj==='melee'||HEROES[k].proj==='claw'?'strike':'shot');
 const AURAR=1.8;
 // Vanguard: everything that fights up close (strikes, swipes, shoves, auras); Artillery: everything that hits from 2.75 hexes or more

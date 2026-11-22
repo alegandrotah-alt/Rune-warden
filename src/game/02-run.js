@@ -14,28 +14,32 @@ const isFront=k=>HEROES[k].rng<2;
 function actD(a){a=Math.max(0,Math.min(3,a|0));if(a===3)return RIFT;const b=R&&R.bio&&typeof BIOMES!=='undefined'?BIOMES[R.bio[a]]:null;return b?Object.assign({},ACTS[a],b):ACTS[a]}
 // a floor that ends in a boss: the tenth of each act, or the last of the Rift
 const bossWave=w=>R&&R.rift?w===30+RIFTN:w%10===0&&w<=30;
-function newRun(o){o=o||{};const A=o.daily?2:CHALL[o.ch]?0:clamp(o.asc||0,0,10),wk=!o.daily&&WARDENS[o.warden]&&wardenOpen(o.warden)?o.warden:'castellan',hp=100+10*rank('keep')-(A>=5?20:0)+({castellan:10,gravewarden:-10}[wk]||0);
+// the chosen deity: its banned traits leave the shop for good, and banned heroes you already hold are swapped out
+function chooseDeity(k){if(!DEITIES[k])return;R.deity=k;const had=R.shop&&R.shop.some(Boolean);for(const q of R.shop||[])if(q)R.pool[q]++;R.shop=[];for(const q of HKEYS)if(banned(q))R.pool[q]=0;
+  for(const h of allHeroes().slice()){if(!banned(h.k))continue;const opts=HKEYS.filter(q=>HEROES[q].c===HEROES[h.k].c&&R.pool[q]>0);if(!opts.length)continue;const nk=rndS(opts);h.k=nk;R.pool[nk]--;h.path=null}
+  if(had)rollShop(1);calcTraits();modsDirty()}
+function newRun(o){o=o||{};const A=o.daily?2:CHALL[o.ch]?0:clamp(o.asc||0,0,10),hp=110+10*rank('keep')-(A>=5?20:0);
   R={act:0,wave:1,gold:8+2*rank('gold')-(A>=3?3:0),lvl:2,xp:0,hp,hpMax:hp,bench:new Array(8+rank('bench')).fill(null),board:[],items:[],
     shop:[],relics:[],stones:rank('stone')?[2]:[],streak:0,phase:'plan',rerolls:0,freeRoll:0,portalGold:0,goldFrac:0,egg:-1,pool:{},picks:[],leakAct:0,
-    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null,warden:wk,t0:Date.now(),secs:0,cnt:{},tree:[],tp:0,pact:[],pacts:null,ch:!o.daily&&CHALL[o.ch]?o.ch:null};modsDirty();
-  R.guards=o.daily?[{k:'archers',l:1,t:1}]:stage()<2?[]:guardLoadout();
-  // the warden's favoured guardian fights one level higher when it is stationed
-  if(!o.daily)for(const g of R.guards)if(g.k===WARDENS[wk].g)g.l=Math.min(5,g.l+1);
-  const ban=R.guards.find(g=>g.k==='banner');if(ban){R.hpMax+=10*ban.l;R.hp=R.hpMax}
-  if(wk==='runesmith')R.stones.push(2);if(rank('promo'))R.lvl=3;if(rank('potion'))R.potions.push(rnd(POTKEYS));for(let i=0;i<rank('item');i++)R.items.push(rnd(COMPS));
+    stats:{kills:0,dmg:0,leaks:0,maxMaze:0,elites:0,pots:0},potions:[],room:null,queue:null,spoils:null,calm:0,endless:false,speed:SET.speedPref||1,b:null,seed:(Math.random()*1e9)|0,asc:A,daily:o.daily||null,rs:0,node:'battle',map:null,deity:null,t0:Date.now(),secs:0,cnt:{},tree:[],tp:0,pact:[],pacts:null,ch:!o.daily&&CHALL[o.ch]?o.ch:null};modsDirty();
+  R.guards=o.daily?[{k:'archers',l:1,t:1}]:[];if(!o.daily&&stage()>=2)for(let i=0;i<gSlots();i++)giftGuard(1);
+
+  if(rank('promo'))R.lvl=3;if(rank('potion'))R.potions.push(rnd(POTKEYS));for(let i=0;i<rank('item');i++)R.items.push(rnd(COMPS));
   if(R.daily){let h=7;for(const ch of R.daily)h=Math.imul(h^ch.charCodeAt(0),2654435761);R.rs=h|0;R.seed=h>>>0}
   for(const k of HKEYS)R.pool[k]=unlocked(k)||R.daily?POOL[HEROES[k].c]:0;
   // each act rolls its usual biome or the alternate one (first runs keep the usual ones)
   R.bio=[0,1,2].map(a=>stage()>=1&&rng()<.5?BIOALT[a]:null);
   genField();genMap();autoNode();rollShop(true);
   // a free starter so the first wave is never empty
-  const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);if(wk==='beastlord')addHero('wolf',1,true);if(rank('vet')&&allHeroes()[0])allHeroes()[0].vet=1;
+  const starters=HKEYS.filter(k=>HEROES[k].c===1&&R.pool[k]>0);addHero(rndS(starters),1,true);if(rank('vet')&&allHeroes()[0])allHeroes()[0].vet=1;
   if(rank('relic')&&!R.daily){const r=randomRelic(1);if(r){R.relics.push(r);applyRelic(r)}}
   if(R.daily){const r2=RELICS.filter(r=>r.t===2&&!['egg','recruit'].includes(r.id));const id=rndS(r2).id;R.relics.push(id);applyRelic(id);R.dailyRelic=id}
   if(R.ch&&CHALL[R.ch].start)CHALL[R.ch].start();
   R.freeRoll=rank('reroll')+mods().free;R.nextQ=nodeQ(waveList(1));
   // the oracle offers three plain gifts and one with a price
-  if(o.oracle){const safe=Object.keys(ORACLE).filter(k=>!ORACLE[k].risk),pick=[];while(pick.length<3){const k=rndS(safe);if(!pick.includes(k))pick.push(k)}pick.push(rndS(['risk','risk2']));R.room={t:'oracle',opts:pick};R.phase='room'}
+  if(o.oracle){const safe=Object.keys(ORACLE).filter(k=>!ORACLE[k].risk),pick=[];while(pick.length<3){const k=rndS(safe);if(!pick.includes(k))pick.push(k)}pick.push(rndS(['risk','risk2']));
+    // first a deity: three are offered, one blesses the run
+    const dk=[];while(dk.length<3){const k=rndS(DKEYS);if(!dk.includes(k))dk.push(k)}R.room={t:'deity',opts:dk,next:pick};R.phase='room'}
 }
 // obstacles, terrain, gates, runes and portals are re-dealt every act
 // gates are where monsters come from: the west gate is always there; edge gates (north/south) and breaches in the field open as the run goes on
@@ -199,7 +203,8 @@ let SYN={};
 function calcTraits(){const seen={},cnt={};for(const h of R.board){if(seen[h.k])continue;seen[h.k]=1;for(const t of HEROES[h.k].tr)cnt[t]=(cnt[t]||0)+1;const rc=reachOf(h.k);if(rc)cnt[rc]=(cnt[rc]||0)+1}
   for(const r of R.relics){const em=RELIC[r].em;if(em)cnt[em]=(cnt[em]||0)+1}
   for(const g of R.guards||[])for(const t of GUARDS[g.k].tr)cnt[t]=(cnt[t]||0)+1;
-  if(R.warden==='beastlord'&&cnt.beast)cnt.beast++;
+  // a deity's blessed traits count one more, once at least one of them is fielded
+  {const d=DY();if(d)for(const t of d.bless)if(cnt[t])cnt[t]++}
   
   // frontline auras: a melee hero buffs the heroes on the hexes touching it
   for(const h of R.board)h.au={as:0,dmg:0,dr:0,hp:0,heal:0};
@@ -217,7 +222,10 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   if(tr.includes('sorcerer')&&tier('sorcerer')>=0)s.spell=1+[.3,.7,1.4,2.6,5][tier('sorcerer')];
   if(tr.includes('wildwood')&&tier('wildwood')>=2)s.dmg*=tier('wildwood')>=3?2.2:1.4;
   if(tr.includes('beast')&&tier('beast')>=0){const t=tier('beast');s.dmg*=1+[.1,.2,.35,.7][t]+[.15,.3,.45,.8][t]*(h.pack||0)}
-  if(tr.includes('beast')&&R.warden==='beastlord')s.dmg*=1.15;
+  {const d=DY();if(d){
+    if(d===DEITIES.aurion&&tr.includes('marksman'))s.rng+=.5;if(d===DEITIES.hessa){if(tr.includes('beast'))s.as*=1.2;if(tr.includes('marksman'))s.crit=1-(1-s.crit)*.85}
+    if(d===DEITIES.grakka&&(tr.includes('assassin')||tr.includes('bruiser')))s.as*=1.25;
+    if(R.b&&R.b.huntT>0&&(tr.includes('marksman')||tr.includes('beast')))s.as*=2;if(R.b&&R.b.lustT>0)s.dmg*=1.5}}
   if(tr.includes('beast')&&R.b&&R.b.moon)s.as*=1+.04*R.b.moon;
   if(h.k==='orcraider'&&R.b&&h.c>=0){const p=heroPos(h);let n=0;for(const m of R.b.mons)if(m.hp>0&&!m.fly&&Math.hypot(m.x-p.x,m.y-p.y)<T*1.5)n++;s.as*=1+Math.min(.48,.06*n)}
   if(h.c>=0&&R.field&&R.field.ter&&R.field.ter[h.r*COLS+h.c]===1){if(isFront(h.k))s.dmg*=has('surveyor')?1.4:1.2;else s.rng+=has('surveyor')?2:1}
@@ -241,4 +249,5 @@ function heroStats(h){const D=HEROES[h.k],m=STARM[h.star],tr=D.tr,s={dmg:D.dmg*m
   const M=mods();s.dmg*=M.dmg;s.as*=M.as;s.spell*=M.spell;if(M.crit)s.crit=1-(1-s.crit)*(1-M.crit);if(M.rng&&!isFront(h.k))s.rng+=M.rng;
   return s}
 // hero health: bigger heroes, stars and Guardians are tougher; it refills every wave
-function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*STARH[h.star]*(D.tr.includes('guardian')?1.5:1)*(D.tr.includes('bruiser')&&tier('bruiser')>=0?[1.25,1.5,1.8,2.6][tier('bruiser')]:1)*(isFront(h.k)?1.35:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0))*(1+(h.au?h.au.hp:0))*mods().hp)}
+function heroMaxHp(h){const D=HEROES[h.k];return Math.round((380+120*D.c)*STARH[h.star]*(D.tr.includes('guardian')?1.5:1)*(D.tr.includes('bruiser')&&tier('bruiser')>=0?[1.25,1.5,1.8,2.6][tier('bruiser')]:1)*(isFront(h.k)?1.35:1)*(1+itemStats(h).hp)*(1+.25*(h.vet||0))*(1+(h.au?h.au.hp:0))*mods().hp*deityHp(h))}
+function deityHp(h){const d=DY();if(!d)return 1;const tr=HEROES[h.k].tr;let m=tr.some(t=>d.bless.includes(t))?1.1:1;if(d===DEITIES.solenne)m*=1.2;if(d===DEITIES.korrun&&(tr.includes('guardian')||tr.includes('bruiser')))m*=1.25;return m}

@@ -3,7 +3,7 @@
 // steep through act I, a little gentler after, so hero power (stars, items, runes) can keep up; endless gets brutal again
 // (the Rift keeps the gentler curve for its floors; only endless turns brutal)
 const hpBase=w=>{const rf=R&&R.rift;return 24*Math.pow(1.19,Math.min(w,10)-1)*Math.pow(HPG,Math.max(0,Math.min(w,rf?40:30)-10))*(w>30&&!rf?Math.pow(1.19,w-30)*Math.pow(1.07,Math.pow(w-30,1.25)):1)};
-let HPG=1.235;
+let HPG=1.27;
 // what a monster hit does to a hero: grows slower than monster health, so stars and items keep up
 const mDmgBase=w=>14*Math.pow(1.105,w-1)*(w>30?Math.pow(1.04,w-30):1);
 const actOf=w=>R&&R.rift?3:Math.min(2,Math.floor((w-1)/10));
@@ -25,7 +25,7 @@ function startWave(){
   mapEnter();
   R.phase='wave';R.b={mons:[],projs:[],fx:[],traps:[],zones:[],q:(R.nextQ&&R.nextQ.length?R.nextQ:waveList(R.wave)).map(e=>Object.assign({},e)),gs:null,qT:.3,t:0,leaked:0,kills:0,big:0,ko:0,drops:0};
   pactOffer();pactStart(R.b.q);R.b.gs=R.b.q.map(e=>({g:e.g||0}));
-  for(const h of R.board){const I=itemStats(h);h.mana=(I.mana||0)+mods().mana0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0;h.stk=0;h.ac=0;h.ko=0;h.chillT=0;h.tauntT=0;h.hurtT=0;h.seizT=0;h.hpMax=heroMaxHp(h);h.hp=h.hpMax;if(h.star>=4)h.mana=HEROES[h.k].mana;if(R.hymn)h.mana=HEROES[h.k].mana}R.hymn=0;
+  for(const h of R.board){const I=itemStats(h);h.mana=(I.mana||0)+mods().mana0;h.cd=Math.random()*.4;h.hits=0;h.buffT=0;h.wd=0;h.stk=0;h.ac=0;h.ko=0;h.chillT=0;h.tauntT=0;h.hurtT=0;h.seizT=0;h.hpMax=heroMaxHp(h);h.hp=h.hpMax;if(h.star>=4)h.mana=HEROES[h.k].mana;else if(isD('aurion')&&HEROES[h.k].tr.includes('sorcerer'))h.mana=Math.max(h.mana,HEROES[h.k].mana*.5);if(R.hymn)h.mana=HEROES[h.k].mana}R.hymn=0;
   if(R.board.filter(h=>h.ed).length>=3)award('marked3');
   calcTraits();guardWave();if(R.final||bossWave(R.wave))sfx('elite',.8);else sfx('ready',.5);
   return true}
@@ -106,7 +106,7 @@ function monAttack(m,dt){const A=MON[m.k].atk;if(!A||m.x<0||m.x>FW)return;m.atkT
   else if(A.k==='bolt'){hurtHero(best,dmg,m);if(A.chill)best.chillT=2.5;fx({k:'mbolt',x:m.x,y:m.y,x1:p.x,y1:p.y,dur:.3,col:A.chill?'#8ad8ff':m.k==='ghost'?'#b8ffd8':'#c07aff'});sfx('sp_arcane',.12,1.3)}
   else if(A.k==='slam'){for(const h of R.board){if(!heroUp(h))continue;const q=heroPos(h);if(Math.hypot(q.x-m.x,q.y-m.y)<=rr)hurtHero(h,dmg,m)}fx({k:'ring',x:m.x,y:m.y,r:rr,col:'#d8a060',dur:.4});shake(m.boss?6:3);sfx('m_slam',.35,.8+Math.random()*.2)}
   else if(A.k==='breath'){const a=Math.atan2(p.y-m.y,p.x-m.x);for(const h of R.board){if(!heroUp(h))continue;const q=heroPos(h),dx=q.x-m.x,dy=q.y-m.y;if(Math.hypot(dx,dy)>rr)continue;let da=Math.atan2(dy,dx)-a;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)<.6)hurtHero(h,dmg,m)}fx({k:'cone',x:m.x,y:m.y,a,r:rr,dur:.6,col:'#ff7a2a'});shake(5);sfx('sp_breath',.4,.8)}}
-function hurtHero(h,d,m){if(!heroUp(h))return;let dr=h.au?h.au.dr:0;if(tier('vanguard')>=0&&reachOf(h.k)==='vanguard')dr+=[.05,.12,.2][tier('vanguard')];if(tier('guardian')>=2&&HEROES[h.k].tr.includes('guardian'))dr+=.35;if(HEROES[h.k].fl&&HEROES[h.k].fl.k==='taunt')dr+=.3;if(R.b&&R.b.fl&&R.b.fl.some(f=>f.sanct&&Math.hypot(f.x-hx(h.c,h.r),f.y-hy(h.r))<T*2.1))dr+=.25;
+function hurtHero(h,d,m){if(!heroUp(h))return;if(R.b&&R.b.ironT>0)return;let dr=h.au?h.au.dr:0;if(tier('vanguard')>=0&&reachOf(h.k)==='vanguard')dr+=[.05,.12,.2][tier('vanguard')];if(tier('guardian')>=2&&HEROES[h.k].tr.includes('guardian'))dr+=.35;if(HEROES[h.k].fl&&HEROES[h.k].fl.k==='taunt')dr+=.3;if(R.b&&R.b.fl&&R.b.fl.some(f=>f.sanct&&Math.hypot(f.x-hx(h.c,h.r),f.y-hy(h.r))<T*2.1))dr+=.25;
   d*=1-Math.min(.75,dr);h.hp-=d;h.hurtT=.18;
   if(m&&hasIt(h,'bramble')&&m.hp>0)dealRaw(m,heroStats(h).dmg*2,h,1);
   if(h.hp<=0&&priestessSave(h))return;
@@ -122,11 +122,13 @@ function siege(m,dt){const K=keepPos(),L=mods().leak;m.x=FW-T*.15;m.y+=(K.y-m.y)
   m.siegeT-=dt*(frenzy()?1.6:1);if(m.siegeT<=0){m.siegeT=2.5;const d=Math.max(2,Math.ceil(m.w*.2*L));R.hp-=d;if(++m.blows>=5){m.hp=0;m.dead=1;floatText(FW+T*.2,K.y-T,'Broke through','#ff8a7a',1.1)}m.lunge=.3;m.atkA=.36;shake(8);sfx('boomBig',.4,.7);fx({k:'ring',x:K.x-T*.3,y:K.y,r:T*.9,col:'#ff5a5a',dur:.5});floatText(FW+T*.2,K.y-T*.6,'-'+d,'#ff5a5a',1.1)}}
 function leak(m){R.lastLeak=m.k;if(MON[m.k].final){R.devHp=m.hp/m.max;}m.hp=0;m.dead=1;R.hp-=m.w*mods().leak;R.b.leaked+=m.w;R.stats.leaks+=m.w;R.leakAct+=m.w;shake(m.boss?14:5);sfx('lost',.5);floatText(FW+T*.2,m.y,'-'+m.w,'#ff5a5a',1)}
 // ---------- poison: stacks that eat a share of the hero's damage every second ----------
-const psnMul=()=>tier('plague')>=3?4:tier('plague')>=1?2:1;
+const psnMul=()=>(tier('plague')>=3?4:tier('plague')>=1?2:1)*(R.board.some(h=>h.k==='rotking'&&!h.ko)?2:1);
 function poison(m,src,n,s){if(m.hp<=0||!(n>0))return;const per=(s||heroStats(src)).dmg*.12,p=m.psn||(m.psn={n:0,dps:0,t:0,src});p.n=Math.min(tier('plague')>=3?30:12,p.n+n);p.dps=Math.max(p.dps,per);p.t=4;p.src=src;if(p.n>=10)award('plague10')}
 // ---------- damage ----------
 function hit(m,amt,src,opt){
   if(m.hp<=0||m.phased)return 0;opt=opt||{};const D=src?HEROES[src.k]:null,tr=D?D.tr:[];amt*=propMul(m,src,opt);propReveal(m,src,opt);
+  if(isD('vexis')&&opt.spell&&m.psn&&m.psn.n>0&&m.psn.t>0)amt*=1.3;
+  if(isD('morrow')&&opt.crit&&D&&(tr.includes('shadow')||tr.includes('assassin'))&&!m.boss&&m.hp-amt<m.max*.2)amt=Math.max(amt,m.hp+1);
   if(src&&!opt.spell&&D.fl){const F=D.fl.k,uc=MON[m.k].final?.2:m.boss?.4:1;if(F==='hamstring'){m.slowT=Math.max(m.slowT,2);m.slowP=Math.min(m.slowP,.65)}if(F==='bulwark')m.stunT=Math.max(m.stunT,.5*uc);if(F==='sleep'&&src.ac%4===0&&!(m.sleepT>0)){m.sleepT=2.5*uc;m.sleepHp=m.hp;fx({k:'zz',x:m.x,y:m.y,dur:1})}}
   if(src&&tr.includes('shadow')&&tier('shadow')>=0&&m.hp<m.max/2){amt*=1+[.25,.6,1.1,2][tier('shadow')];if(tier('shadow')>=3&&!m.boss&&m.hp-amt<m.max*.15){amt=m.hp+1;if(Math.random()<.3)floatText(m.x,m.y-T*.8,'EXECUTED','#b48cff',.8)}}
   if(src&&tr.includes('wildwood')&&tier('wildwood')>=0){m.slowT=1.5;m.slowP=Math.min(m.slowP,1-[.15,.25,.35,.5][tier('wildwood')]);if(tier('wildwood')>=3&&!opt.spell&&(src.wwh=(src.wwh||0)+1)%5===0&&!frenzy())m.rootT=Math.max(m.rootT,m.boss?.3:1)}
@@ -150,7 +152,7 @@ function dealRaw(m,amt,src,dot,opt){
   if(m.hp<=0&&!m.dead)kill(m,src,opt);return d}
 function kill(m,src,opt){
   m.dead=1;R.stats.kills++;R.b.kills++;if(m.elite||m.boss)R.cnt.big=(R.cnt.big||0)+1;comboKill(m);META.kills=(META.kills||0)+1;if(m.elite)META.elk=(META.elk||0)+1;if(m.aff2)award('twins');if(m.k==='herald')award('herald');
-  if((m.elite||m.boss)&&R.warden==='gravewarden'&&R.hp<R.hpMax){R.hp=Math.min(R.hpMax,R.hp+3);floatText(FW+T*.2,FH/2-T,'+3','#c9a8ff',1)}
+  if(isD('grakka')&&src&&HEROES[src.k]&&(HEROES[src.k].tr.includes('assassin')||HEROES[src.k].tr.includes('bruiser')))healHero(src,src.hpMax*.05);
   if(affd(m,'molten')){for(const h of R.board){if(!heroUp(h))continue;const q=heroPos(h);if(Math.hypot(q.x-m.x,q.y-m.y)<=T*2.1)hurtHero(h,mDmg(m)*1.2,null)}fx({k:'fire',x:m.x,y:m.y,r:T*2,dur:.6,col:'#ff7a2a'});shake(4)}
   if(affd(m,'split')&&!m.child)for(let i=0;i<2;i++){const c=spawnMon(m.k,0,m.x+(i?10:-10),m.y+(i?6:-6));c.max=m.max*.3;c.hp=c.max;c.child=1;c.portals=-1;c.bounty=0;c.c=m.c;c.r=m.r;c.sz=(MON[m.k].sz||1)*.75}if(m.boss){const ba={sporemother:'b_bog',colossus:'b_frost',skyking:'b_dunes'}[m.k];if(ba)award(ba);META.bk=META.bk||{};const bk=BOSSEQ[m.k]||m.k;META.bk[bk]=(META.bk[bk]||0)+1}
   if(src&&HEROES[src.k]&&HEROES[src.k].tr.includes('beast')&&R.board.some(h=>h.k==='fenrir'&&heroUp(h))){R.b.moon=Math.min(25,(R.b.moon||0)+1);if(R.b.moon===25)award('moon')}
@@ -170,6 +172,7 @@ function kill(m,src,opt){
 function heroPos(h){return{x:hx(h.c,h.r),y:hy(h.r)}}
 function heroTick(h,dt){
   if(h.hurtT>0)h.hurtT-=dt;if(h.ko)return;if(h.seizT>0){h.seizT-=dt;return}
+  if(isD('sylvara')&&(HEROES[h.k].tr.includes('wildwood')||HEROES[h.k].tr.includes('beast'))&&h.hp<h.hpMax)h.hp=Math.min(h.hpMax,h.hp+h.hpMax*.02*dt);
   const D=HEROES[h.k],s=heroStats(h),p=heroPos(h),B=R.b,I=itemStats(h);
   if(h.atk>0)h.atk-=dt;if(h.buffT>0)h.buffT-=dt;if(h.chillT>0)h.chillT-=dt;if(h.tauntT>0)h.tauntT-=dt;h.cd-=dt;
   if(hasIt(h,'warmog')&&h.hp<h.hpMax)h.hp=Math.min(h.hpMax,h.hp+h.hpMax*.05*dt);if(h.au&&h.au.heal&&h.hp<h.hpMax)h.hp=Math.min(h.hpMax,h.hp+h.hpMax*h.au.heal*dt);
@@ -250,17 +253,21 @@ function cast(h,s,tg){
   else if(A.k==='pest'){const r=A.r*T;for(const m of inR(tg.x,tg.y,r)){if(m.psn){hit(m,m.psn.n*m.psn.dps*2*s.spell*psnMul(),h,{spell:1,dt:'m',big:1})}if(m.hp>0)poison(m,h,A.psn,s)}fx({k:'poison',x:tg.x,y:tg.y,r,dur:.7,col:'#a6e04a'});fx({k:'hex',x:tg.x,y:tg.y,r:r*.7,dur:.5,col:'#a6e04a'});shake(3)}
 }
 // ---------- the warden's power: once per fight ----------
-function usePower(){const B=R.b,k=R.warden||'castellan';if(R.phase!=='wave'||!B||B.pw)return false;B.pw=1;const P=WARDENS[k].pw;
-  if(k==='castellan'){B.rallyT=6;for(const h of R.board)if(heroUp(h)){const p=heroPos(h);fx({k:'cast',x:p.x,y:p.y,dur:.5,col:'#6fb6ff'})}}
-  if(k==='runesmith'){B.surgeT=10;for(const ru of R.field.runes)ru.flash=1}
-  if(k==='beastlord'){for(const m of B.mons){if(m.hp<=0||m.fly||MON[m.k].final)continue;knock(m,2);if(!affd(m,'jugg')&&!frenzy())m.stunT=Math.max(m.stunT,m.boss?.6:2)}fx({k:'ring',x:FW*.6,y:FH/2,r:FW*.6,col:'#d99a4a',dur:.6});shake(8)}
-  if(k==='gravewarden'){for(const h of R.board){if(h.ko){h.ko=0;h.hp=h.hpMax*.5;const p=heroPos(h);fx({k:'pillar',x:p.x,y:p.y,dur:.6,col:'#c9a8ff'})}else healHero(h,h.hpMax*.2)}}
-  banner(P.n.toUpperCase(),WARDENS[k].col);sfx('level',.7,.8);if(DOM)uiPower();return true}
+function usePower(){const B=R.b,d=DY();if(R.phase!=='wave'||!B||B.pw||!d)return false;B.pw=1;const P=d.pw,k=P.k;
+  if(k==='rally'){B.rallyT=6;for(const h of R.board)if(heroUp(h)){const p=heroPos(h);fx({k:'cast',x:p.x,y:p.y,dur:.5,col:d.col})}}
+  if(k==='stampede'){for(const m of B.mons){if(m.hp<=0||m.fly||MON[m.k].final)continue;knock(m,2);if(!affd(m,'jugg')&&!frenzy())m.stunT=Math.max(m.stunT,m.boss?.6:2)}fx({k:'ring',x:FW*.6,y:FH/2,r:FW*.6,col:d.col,dur:.6});shake(8)}
+  if(k==='rise'){for(const h of R.board){if(h.ko){h.ko=0;h.hp=h.hpMax*.5;const p=heroPos(h);fx({k:'pillar',x:p.x,y:p.y,dur:.6,col:d.col})}else healHero(h,h.hpMax*.2)}}
+  if(k==='plague'){const src=R.board.filter(heroUp).sort((a,b)=>heroStats(b).dmg-heroStats(a).dmg)[0];if(src){const s=heroStats(src);for(const m of B.mons)if(m.hp>0)poison(m,src,6,s)}fx({k:'ring',x:FW*.5,y:FH/2,r:FW*.6,col:d.col,dur:.7})}
+  if(k==='starfall'){for(const h of R.board)if(heroUp(h)){h.mana=HEROES[h.k].mana;const p=heroPos(h);fx({k:'pillar',x:p.x,y:p.y,dur:.5,col:d.col})}}
+  if(k==='iron'){B.ironT=4;for(const h of R.board)if(heroUp(h)){const p=heroPos(h);fx({k:'ring',x:p.x,y:p.y,r:T*.6,col:d.col,dur:.5})}}
+  if(k==='hunt'){B.huntT=5;for(const h of R.board)if(heroUp(h)&&(HEROES[h.k].tr.includes('marksman')||HEROES[h.k].tr.includes('beast'))){const p=heroPos(h);fx({k:'cast',x:p.x,y:p.y,dur:.5,col:d.col})}}
+  if(k==='lust'){B.lustT=6;for(const h of R.board)if(heroUp(h)){healHero(h,h.hpMax*.3);const p=heroPos(h);fx({k:'cast',x:p.x,y:p.y,dur:.5,col:d.col})}}
+  banner(P.n.toUpperCase(),d.col);sfx('level',.7,.8);if(DOM)uiPower();return true}
 // echoes run on the game clock so they respect pause and speed
 const LATER=[];function setTimeoutSafe(f,ms){LATER.push({f,t:ms/1000})}
 function battleTick(dt){
   const B=R.b;B.t+=dt;
-  if(B.comboT>0)B.comboT-=dt;B.wards=B.mons.filter(m=>m.hp>0&&affd(m,'ward'));if(B.rallyT>0)B.rallyT-=dt;if(B.surgeT>0)B.surgeT-=dt;
+  if(B.comboT>0)B.comboT-=dt;B.wards=B.mons.filter(m=>m.hp>0&&affd(m,'ward'));if(B.rallyT>0)B.rallyT-=dt;if(B.surgeT>0)B.surgeT-=dt;if(B.ironT>0)B.ironT-=dt;if(B.huntT>0)B.huntT-=dt;if(B.lustT>0)B.lustT-=dt;
   B.fl=[];for(const h of R.board){if(!heroUp(h))continue;const D=HEROES[h.k];if(D.fl||h.k==='templar')B.fl.push({h,x:hx(h.c,h.r),y:hy(h.r),k:D.fl?D.fl.k:'',sanct:h.k==='templar'})}
   keepTick(dt);
   if(B.ts>0){B.ts-=dt;for(const h of R.board)heroTick(h,dt);for(const q of B.projs)projTick(q,dt);B.projs=B.projs.filter(q=>!q.done);B.mons=B.mons.filter(m=>m.hp>0);if(!B.q.length&&!B.mons.length)endWave();return}
@@ -286,7 +293,7 @@ function charmTick(m,dt){m.charmT-=dt;const B=R.b;let tx=m.x-T,ty=m.y;
 // a wave that drags on past two minutes (three for the Devourer) turns into a frenzy: monsters shrug off knockback, sleep, charm, stuns, roots and slows, stop brawling and run faster, so no stalemate lasts
 const frenzy=()=>!!R.b&&R.b.t>(R.final?400:120);
 // knockback: shove a walker back up the road (towards higher distance from the keep), in hexes
-function knock(m,hexes){if(m.hp<=0||m.fly||MON[m.k].final||m.c<0||frenzy()||affd(m,'jugg'))return;R.stats.kb=(R.stats.kb||0)+1;if(R.stats.kb>=200)award('kb200');if(has('ram'))m.stunT=Math.max(m.stunT,m.boss?.15:.4);m.kb=Math.min(T*2.2,(m.kb||0)+hexes*T*(m.boss?.33:m.big?.6:1))}
+function knock(m,hexes){if(m.hp<=0||m.fly||MON[m.k].final||m.c<0||frenzy()||affd(m,'jugg'))return;R.stats.kb=(R.stats.kb||0)+1;if(R.stats.kb>=200)award('kb200');if(has('ram'))m.stunT=Math.max(m.stunT,m.boss?.15:.4);else if(isD('korrun'))m.stunT=Math.max(m.stunT,m.boss?.1:.3);m.kb=Math.min(T*2.2,(m.kb||0)+hexes*T*(m.boss?.33:m.big?.6:1))}
 function kbTick(m,dt){const d=R.field.dist;if(!d||m.c<0){m.kb=0;return}const cur=d[m.r*COLS+m.c];let best=null,bd=cur;
   for(const [c,r] of nbrs(m.c,m.r)){const v=d[r*COLS+c];if(v>bd){bd=v;best=[c,r]}}if(!best){m.kb=0;return}
   const tx=hx(best[0],best[1]),ty=hy(best[1]),dx=tx-m.x,dy=ty-m.y,dd=Math.hypot(dx,dy)||1,st=Math.min(m.kb,T*7*dt,dd);m.x+=dx/dd*st;m.y+=dy/dd*st;m.kb-=st;

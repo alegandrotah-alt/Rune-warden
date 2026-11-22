@@ -11,19 +11,22 @@ const RUNS = +arg('runs', 6);
 
 const frag = buildFragment();
 let src = frag.slice(frag.indexOf('<script>') + 8, frag.lastIndexOf('</script>'));
-src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={pathPick,expandAt,isleEdge,expandCost,starTake,starOpen,pactOffer,pactToggle,PACT,mods,usePower,WARDENS,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
+src = src.replace(/\}\)\(\);\s*$/, `globalThis.G={pathPick,expandAt,isleEdge,expandCost,starTake,starOpen,pactOffer,pactToggle,PACT,mods,usePower,DEITIES,DKEYS,chooseDeity,RELICS,applyRelic,gainPotion,POTKEYS,TRAITS,TRAIT_ORDER,isFront,newRun,get R(){return R},startWave,battleTick,buy,buyXP,reroll,placeHero,canPlace,heroStats,calcTraits,takeRelic,placeStone,sellHero,boardMax,allHeroes,heroAt,HEROES,COLS,ROWS,T,get SYN(){return SYN},XPNEED,flow,rebuildBlk,needMap,mapOptions,chooseNode,roomView,roomAct,takeRecruit,usePotion,POTIONS,equipFrom,canTake,ITEMS,FINISHED,SPAWN_ROWS,terAt,runeAt,portalAt,nbrs,hx,hy};})();`);
 const script = new vm.Script(src, { filename: 'game.js' });
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 function runOnce(seed, opt) {
   const rand = mulberry(seed), math = Object.create(Math); math.random = rand;
   const store = { 'runewarden-settings': JSON.stringify({ allSys: opt && opt.stage0 ? false : true }) };
-  if (opt && (opt.warden || opt.ch)) store['runewarden-meta'] = JSON.stringify({ ach: { act1: 1, act2: 1, win: 1 } });
+  if (opt && opt.ch) store['runewarden-meta'] = JSON.stringify({ ach: { act1: 1, act2: 1, win: 1 } });
   const ctx = { Math: math, console, JSON, Object, Array, Number, String, Date, Map, Set, Promise, Uint8Array, Int16Array, Float32Array, isFinite, parseInt, parseFloat, Error,
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     setTimeout: () => 0, clearTimeout: () => 0, performance: { now: () => 0 } };
   ctx.globalThis = ctx; vm.createContext(ctx); script.runInContext(ctx);
-  WALL = null; RAND = rand; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true, warden: opt && opt.warden, ch: opt && opt.ch }); const R = () => G.R;
+  WALL = null; RAND = rand; const G = ctx.G; G.newRun({ asc: opt && opt.asc || 0, oracle: true, ch: opt && opt.ch }); const R = () => G.R;
+  // --deity puts that god first among the three offered (the bot takes the first)
+  if (opt && opt.deity === 'none' && G.R.room && G.R.room.t === 'deity') G.R.room = G.R.room.next ? { t: 'oracle', opts: G.R.room.next } : null;
+  else if (opt && opt.deity && G.R.room && G.R.room.t === 'deity') G.R.room.opts = [opt.deity, ...G.R.room.opts.filter((k) => k !== opt.deity)].slice(0, 3);
   const nodes = {}, rooms = {}; let kos = 0;
   // fuzzing: start holding a random pile of relics, boss relics included, plus potions
   if (opt && opt.fuzz) { const R0 = G.R, pool = G.RELICS.map((r) => r.id); for (let i = 0; i < 12; i++) { const id = pool[(rand() * pool.length) | 0]; if (!R0.relics.includes(id)) { R0.relics.push(id); G.applyRelic(id); } } for (const p of G.POTKEYS) G.gainPotion(p); }
@@ -54,6 +57,8 @@ function runOnce(seed, opt) {
 // ---------- the bot ----------
 // traits the bot builds towards: the two it already has the most different heroes in
 function focus(G) { const cnt = {}; const seen = new Set(); for (const h of G.allHeroes()) { if (seen.has(h.k)) continue; seen.add(h.k); for (const t of G.HEROES[h.k].tr) cnt[t] = (cnt[t] || 0) + 1 + G.HEROES[h.k].c * .2; }
+  // a god's blessed traits count one hero more, so they are worth building toward
+  const D = G.DEITIES[G.R.deity]; if (D) for (const t of D.bless) cnt[t] = (cnt[t] || 0) + 1.5;
   return Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 2); }
 function heroScore(G, h, F) { const H = G.HEROES, D = H[h.k]; return D.c * Math.pow(3, h.star - 1) * (1 + .25 * (h.vet || 0)) * (1 + .35 * D.tr.filter((t) => F.includes(t)).length) * (1 + .3 * (h.it || []).length); }
 function plan(G, rand, opt) {
@@ -160,9 +165,9 @@ function botRecruit(G) { const R = G.R, S = R.spoils, H = G.HEROES; const own = 
 const STAR_PATH = ['might1', 'might2', 'mightN', 'swift1', 'swift2', 'swiftN', 'fortune1', 'fortune2', 'fortuneN', 'runes1', 'runes2', 'runesN', 'x0', 'bulwark1', 'bulwark2'];
 function botCouncil(G, opt) { const R = G.R; if (opt && opt.nostars) return; let guard = 0; while (R.tp > 0 && guard++ < 20) { const id = STAR_PATH.find((s) => G.starOpen(s)); if (!id || !G.starTake(id)) break; }
   if (opt && opt.nopacts) return; const off = G.pactOffer(); if (R.phase === 'plan' && off.length && !R.pact.length && R.hp > R.hpMax * 0.7) { const mild = off.find((id) => ['rush', 'hush', 'swarm', 'weary'].includes(id)); if (mild && Math.random() < 0.5) G.pactToggle(mild); } }
-// the warden's power, once per fight: when the field is busy, the keep is threatened or heroes are down
-function botPower(G) { const R = G.R, B = R.b; if (!B || B.pw || B.t < 3) return; const k = R.warden, n = B.mons.filter((m) => m.hp > 0).length, leak = B.mons.some((m) => m.hp > 0 && m.x > (G.COLS - 4) * G.T);
-  if (k === 'gravewarden' ? B.ko >= 2 || (B.ko >= 1 && B.t > 45) : k === 'beastlord' ? leak || n >= 12 : n >= 8 || leak || B.t > 30) G.usePower(); }
+// the deity's power, once per fight: when the field is busy, the keep is threatened or heroes are down
+function botPower(G) { const R = G.R, B = R.b; if (!B || B.pw || B.t < 3 || !G.DEITIES[R.deity]) return; const k = G.DEITIES[R.deity].pw.k, n = B.mons.filter((m) => m.hp > 0).length, leak = B.mons.some((m) => m.hp > 0 && m.x > (G.COLS - 4) * G.T);
+  if (k === 'rise' ? B.ko >= 2 || (B.ko >= 1 && B.t > 45) : k === 'stampede' || k === 'iron' ? leak || n >= 12 : n >= 8 || leak || B.t > 30) G.usePower(); }
 function botPotion(G, t) { const R = G.R; botPower(G); if (!R.potions.length || !R.b) return; const leak = R.b.mons.some((m) => m.x > (G.COLS - 2) * G.T); const ko = R.b.ko;
   R.potions.forEach((id, i) => { const P = G.POTIONS[id]; if (P.plan) return; if (id === 'heal' && R.hp < R.hpMax * .6) G.usePotion(i); else if (id === 'phoenix' && ko >= 2) G.usePotion(i); else if (P.wave && id !== 'phoenix' && (leak || R.b.mons.length > 25)) G.usePotion(i); }); }
 function botItems(G) { const R = G.R, H = G.HEROES, val = (h) => H[h.k].c * Math.pow(3, h.star - 1);
@@ -172,8 +177,8 @@ const results = []; const t0 = Date.now();
 const ASCN = +arg('asc', 0);
 const BOT = arg('bot', 'strong'); BOTKIND = BOT;
 const FUZZ = process.argv.includes('--fuzz'), GOD4 = process.argv.includes('--god4'), GOD = GOD4 || process.argv.includes('--god');
-const WARDEN = arg('warden', ''), CH = arg('challenge', ''), NOSTARS = process.argv.includes('--nostars'), NOPACTS = process.argv.includes('--nopacts');
-for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN, bot: BOT, fuzz: FUZZ, warden: WARDEN, ch: CH, nostars: NOSTARS, nopacts: NOPACTS }));
+const DEITY = arg('deity', ''), CH = arg('challenge', ''), NOSTARS = process.argv.includes('--nostars'), NOPACTS = process.argv.includes('--nopacts');
+for (let i = 0; i < RUNS; i++) results.push(runOnce(1000 + i * 7919, { asc: ASCN, bot: BOT, fuzz: FUZZ, deity: DEITY, ch: CH, nostars: NOSTARS, nopacts: NOPACTS }));
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
 const errs = results.filter((r) => r.err), ws = results.map((r) => r.waves).sort((a, b) => a - b);
 const avg = ws.reduce((a, b) => a + b, 0) / ws.length, past5 = results.filter((r) => r.waves >= 5).length / results.length;

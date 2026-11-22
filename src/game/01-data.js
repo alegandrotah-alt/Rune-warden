@@ -60,6 +60,14 @@ const HEROES={
   storm:{n:'Storm Shaman',c:4,tr:['sorcerer','bruiser'],dmg:34,as:.8,rng:3,mana:80,dt:'m',proj:'orb',ab:{snd:'sp_boom',k:'nova',n:'Thunderclap',r:1.6,m:3,stun:.8,kb:1.2},d:'Calls a thunderclap on the thickest group: it stuns them for 0.8s and throws them back down the road.'},
   hunt:{n:'Huntmaster',c:4,fl:{k:'horn',n:'Hunting Horn',d:'Neighbouring heroes attack 15% faster; Beasts among them also hit 15% harder.'},tr:['beast','marksman'],dmg:36,as:.95,rng:3.25,mana:70,dt:'p',proj:'arrow',ab:{snd:'sp_volley',k:'fan',n:'Hunter\'s Mark',shots:7,m:1.4,mark:1},d:'Looses 7 arrows; every monster struck is marked and takes 25% more damage from everyone for 4s.'},
   archmage:{n:'Archmage',c:5,lg:{n:'Arcane Echo',d:'While the Archmage stands on the field, every Sorcerer spell has a 35% chance to cast a second time.'},tr:['sorcerer','marksman'],dmg:48,as:.75,rng:3.5,mana:80,dt:'m',proj:'orb',ab:{snd:'sp_boom',k:'nova',n:'Starfall',r:2,m:4,burn:1,stun:.5},d:'Brings a rain of stars down on a wide circle: huge damage, a short stun, and the ground burns.'},
+  shieldmaiden:{n:'Shieldmaiden',c:1,fl:{k:'shieldwall',n:'Shield Wall',d:'Neighbouring heroes take 15% less damage.'},tr:['kingdom','bruiser'],dmg:11,as:.85,rng:1.3,mana:70,dt:'p',proj:'melee',ab:{snd:'m_slam',k:'nova',n:'Shield Rush',r:1.1,m:1.6,kb:1,stun:.4,self:1},d:'Rushes with her shield: everything around her is stunned and shoved back a hex.'},
+  gravebrute:{n:'Grave Brute',c:2,tr:['shadow','bruiser'],dmg:21,as:.8,rng:1.3,mana:70,dt:'p',proj:'melee',ab:{snd:'sp_slash',k:'execute',n:'Grave Cleave',m:3,kb:1},d:'Cleaves the weakest monster in reach for triple damage and hurls it back down the road.'},
+  oakheart:{n:'Oakheart',c:3,fl:{k:'antler',n:'Heartwood',d:'Neighbouring heroes have 20% more health.'},tr:['wildwood','bruiser'],dmg:28,as:.75,rng:1.3,mana:80,dt:'p',proj:'melee',ab:{snd:'sp_root',k:'nova',n:'Roots Rise',r:1.4,m:2,root:1.2,kb:.8,self:1},d:'Roots burst from the ground around him: monsters are rooted for 1.2s, then thrown back.'},
+  blightarcher:{n:'Blight Archer',c:1,tr:['plague','marksman'],dmg:10,as:.95,rng:3,mana:60,dt:'p',proj:'arrow',ab:{snd:'sp_volley',k:'pierce',n:'Blight Arrow',m:1.6},d:'Looses a rotten arrow through a whole line of monsters.'},
+  spy:{n:'Royal Spy',c:3,fl:{k:'hamstring',n:'Hamstring',d:'Attacks slow monsters by 35% for 2s.'},tr:['kingdom','assassin'],dmg:27,as:1.1,rng:1.3,mana:60,dt:'p',proj:'melee',ab:{snd:'sp_slash',k:'execute',n:'Assassinate',m:3.5,gold:1},d:'Stabs the weakest monster in reach for 3.5× damage. A kill pays a gold coin.'},
+  hound:{n:'Blight Hound',c:2,tr:['beast','plague'],dmg:17,as:1.1,rng:1.2,mana:60,dt:'p',proj:'claw',ab:{snd:'sp_poison',k:'execute',n:'Rabid Bite',m:2.5,psn:4},d:'Savages the weakest monster in reach for 2.5× damage and leaves 4 poison stacks.'},
+  physician:{n:'Royal Apothecary',c:4,tr:['kingdom','plague'],dmg:30,as:.8,rng:3,mana:80,dt:'m',proj:'flask',ab:{snd:'sp_poison',k:'miasma',n:'Purging Cloud',r:1.7,psn:3,t:5,heal:.3},d:'Lobs a great cloud of purging smoke on the road for 5s: it poisons monsters every second and heals heroes nearby 30%.'},
+  rotking:{n:'The Rot Titan',c:5,lg:{n:'Rot Tide',d:'While he stands on the field, every poison stack does double damage.'},tr:['plague','bruiser'],dmg:58,as:.7,rng:1.4,mana:90,dt:'p',proj:'melee',ab:{snd:'m_slam',k:'nova',n:'Rot Quake',r:1.8,m:3,psn:6,kb:1,self:1},d:'Brings his axe down in a quake of rot: heavy damage around him, 6 poison stacks and a hurl back down the road.'},
 };
 const HKEYS=Object.keys(HEROES);
 // shop odds per level (tiers 1-5) and copies in the pool
@@ -241,7 +249,7 @@ const RES=[
   {id:'merchant',cat:'Economy',n:'Trade Routes',max:2,cost:[60,120],d:l=>`The merchant is ${15*l}% cheaper.`},
   {id:'gems',cat:'Economy',n:'Gem Cutters',max:3,cost:[100,200,350],d:l=>`+${10*l}% gems from runs.`},
   {id:'keep',cat:'Keep',n:'Stone Walls',max:5,cost:[30,60,120,180,260],d:l=>`The keep has +${10*l} health.`},
-  {id:'keep2',cat:'Keep',n:'Second Banner',max:1,cost:[220],d:()=>'Station a second keep guardian.'},
+  {id:'keep2',cat:'Keep',n:'Second Banner',max:1,cost:[220],d:()=>'A second keep guardian is gifted at the start of every run.'},
   {id:'drill',cat:'Keep',n:'Guardian Drills',max:3,cost:[90,180,300],d:l=>`Keep guardians act ${10*l}% more often.`},
   {id:'hearth',cat:'Keep',n:'Warm Hearth',max:1,cost:[70],d:()=>'Campfires repair 45% of the keep instead of 30%.'},
   {id:'xp',cat:'Heroes',n:'Drill Sergeant',max:2,cost:[50,120],d:l=>`+${l} XP after every wave.`},
@@ -399,14 +407,23 @@ const pickAff=(k,not)=>rnd(AFFKEYS.filter(a=>a!==not&&!((a==='vamp'||a==='hex')&
 const affd=(m,a)=>m.aff===a||m.aff2===a;
 // ---------- wardens: who you play. Each has a perk, a power to use once per fight and a keep guardian that fights a level higher for them ----------
 // (a free extra guardian was tried and was far too strong: the Keep Dragon alone took the bot from 10% wins to 67%)
-const WARDENS={
-  castellan:{n:'The Castellan',fig:'paladin',col:'#6fb6ff',say:'A soldier of the old guard. Steady walls, steady hands.',perk:'The keep has 10 more health.',pw:{n:'Rally',ic:'flag',d:'Heroes attack 40% faster for 6 seconds.'},g:'banner'},
-  runesmith:{n:'The Runesmith',fig:'tinker',col:'#9cc4ff',say:'Reads the old runes like others read weather.',perk:'Start with a ×2 rune stone and get another at every new act.',pw:{n:'Overcharge',ic:'rune',d:'Every rune multiplies by 1 more for 10 seconds.'},g:'oracle',un:{ach:'act1',d:'Defeat an Act I boss'}},
-  beastlord:{n:'The Beastlord',fig:'druid',col:'#d99a4a',say:'Raised by the pack, and still runs with it.',perk:'Start with a Dire Wolf. Your Beasts count as one more for the Beast trait and hit 15% harder.',pw:{n:'Stampede',ic:'paw',d:'Walking monsters are thrown back 2 hexes and stunned for 2 seconds.'},g:'dragon',un:{ach:'act2',d:'Defeat an Act II boss'}},
-  gravewarden:{n:'The Gravewarden',fig:'necromancer',col:'#c9a8ff',say:'Keeps a ledger of the dead, and collects.',perk:'Every elite or boss slain repairs 3 keep health. The keep has 10 less health.',pw:{n:'Rise Again',ic:'skull',d:'Knocked-out heroes get back up at half health; the others heal 20%.'},g:'reaper',un:{ach:'win',d:'Win a run'}},
+// ---------- deities: each run is blessed by one of three offered gods ----------
+// A deity bans two traits (heroes with either never come up in the shop), blesses two (they count one more once you
+// field one, and those heroes deal 15% more and have 15% more health), adds a synergy, and grants a once-per-fight power.
+const DEITIES={
+  solenne:{n:'Solenne',t:'the Dawn Queen',ic:'crown',col:'#ffd76a',say:'Light of the first morning, keeper of walls and crowns.',bless:['kingdom','guardian'],ban:['shadow','plague'],syn:{n:'Dawn Oath',d:'Every hero has 20% more health.'},pw:{k:'rally',n:'Rally',ic:'flag',d:'Heroes attack 40% faster for 6 seconds.'}},
+  morrow:{n:'Morrow',t:'the Veiled',ic:'moon',col:'#b48cff',say:'She walks where the lamps go out, and counts the throats.',bless:['shadow','assassin'],ban:['kingdom','guardian'],syn:{n:'Night\'s Edge',d:'Crits by Shadow and Assassin heroes finish off monsters below 20% health (not bosses).'},pw:{k:'rise',n:'Rise Again',ic:'skull',d:'Knocked-out heroes get back up at half health; the others heal 20%.'}},
+  sylvara:{n:'Sylvara',t:'the Green Mother',ic:'leaf',col:'#7ddc6a',say:'Root and fang and the long patience of trees.',bless:['wildwood','beast'],ban:['sorcerer','plague'],syn:{n:'Wild Growth',d:'Wildwood and Beast heroes regrow 2% of their health every second.'},pw:{k:'stampede',n:'Stampede',ic:'paw',d:'Walking monsters are thrown back 2 hexes and stunned for 2 seconds.'}},
+  vexis:{n:'Vexis',t:'the Rot King',ic:'bio',col:'#a6e04a',say:'Everything that lives is only waiting for him.',bless:['plague','sorcerer'],ban:['kingdom','beast'],syn:{n:'Rot Arcana',d:'Poisoned monsters take 30% more damage from spells.'},pw:{k:'plague',n:'Pestilence',ic:'bio',d:'Every monster on the field takes 6 poison stacks.'}},
+  aurion:{n:'Aurion',t:'the Starweaver',ic:'star',col:'#5fe1ff',say:'He wrote the runes into the sky before there were eyes to read them.',bless:['sorcerer','marksman'],ban:['bruiser','wildwood'],syn:{n:'Star Chart',d:'Sorcerers start every fight with half their mana, and Marksmen gain 0.5 range.'},pw:{k:'starfall',n:'Starfall',ic:'star',d:'Every hero\'s mana fills at once.'}},
+  korrun:{n:'Korrun',t:'the Iron Titan',ic:'shield',col:'#c0c8d4',say:'The mountain that learned to stand guard.',bless:['bruiser','guardian'],ban:['sorcerer','marksman'],syn:{n:'Iron Line',d:'Knockbacks also stun for 0.3s, and Guardians and Bruisers have 25% more health.'},pw:{k:'iron',n:'Iron Hide',ic:'shield',d:'Heroes take no damage for 4 seconds.'}},
+  hessa:{n:'Hessa',t:'the Huntress',ic:'bow',col:'#ff9a5a',say:'She never misses twice, because she never needs to.',bless:['marksman','beast'],ban:['assassin','plague'],syn:{n:'Pack Hunt',d:'Beasts attack 20% faster, and Marksmen crit 15% more often.'},pw:{k:'hunt',n:'The Hunt',ic:'paw',d:'Marksmen and Beasts attack twice as fast for 5 seconds.'}},
+  grakka:{n:'Grakka',t:'the Warmonger',ic:'swords',col:'#ff6a5a',say:'A god of drums and broken shields, and he is always hungry.',bless:['assassin','bruiser'],ban:['marksman','wildwood'],syn:{n:'Warpath',d:'Assassins and Bruisers attack 25% faster, and heal 5% of their health with every kill.'},pw:{k:'lust',n:'Bloodlust',ic:'fist',d:'Heroes heal 30% and deal 50% more damage for 6 seconds.'}},
 };
-const WKEYS=Object.keys(WARDENS);
-const wardenOpen=k=>!WARDENS[k].un||!!(META.ach&&META.ach[WARDENS[k].un.ach]);
+const DKEYS=Object.keys(DEITIES);
+const DY=()=>R&&DEITIES[R.deity]||null,isD=k=>!!R&&R.deity===k;
+const blessed=t=>{const d=DY();return !!d&&d.bless.includes(t)};
+const banned=k=>{const d=DY();return !!d&&HEROES[k].tr.some(t=>d.ban.includes(t))};
 // the oracle at the gate offers a blessing at the start of a run
 const ORACLE={
   gold:{n:'A purse of gold',d:'+15 gold.'},

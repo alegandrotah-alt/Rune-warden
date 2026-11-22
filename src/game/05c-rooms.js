@@ -26,6 +26,8 @@ function finishFloor(){const inc={base:5,int:0,st:0,ex:has('tithe')?2:0};R.gold+
   floatText(FW/2,FH*.45,`+${inc.base+inc.ex} gold (no interest without a fight)`,'#ffcf2e',1.1);autoNode();enterPlan()}
 function enterPlan(){R.phase='plan';R.queue=null;saveRun();uiRefresh();if(DOM){if(needMap())showMap();else $('ovMap').hidden=true}}
 function roomView(){const o=R.room;if(!o)return null;const done=()=>leaveRoom(),V={ic:'?',t:'',d:'',opts:[]};
+  if(o.t==='deity'){const tn=a=>a.map(t=>TRAITS[t].n).join(' and ');Object.assign(V,{ic:icon('star'),t:'Choose a deity to bless your run',d:'Each god favours two traits and forbids two others: forbidden heroes never come up in your shop this run.'});
+    V.opts=o.opts.map(k=>{const D=DEITIES[k];return{deity:k,n:`${D.n}, ${D.t}`,d:`Blesses ${tn(D.bless)}. Forbids ${tn(D.ban)}. ${D.syn.n}: ${D.syn.d} Power: ${D.pw.n}, ${D.pw.d.charAt(0).toLowerCase()+D.pw.d.slice(1)}`,act:()=>{chooseDeity(k);R.room=o.next?{t:'oracle',opts:o.next}:null;if(!R.room)enterPlan()}}})}
   if(o.t==='oracle'){Object.assign(V,{ic:icon('eye'),t:'The Oracle at the Gate',d:'"Every warden walks the road alone. Take a gift for the journey."'});
     V.opts=o.opts.map(k=>({n:ORACLE[k].n,d:ORACLE[k].d,risk:ORACLE[k].risk,act:()=>{oracleGift(k);done()}}))}
   else if(o.t==='rest'){Object.assign(V,{ic:NODES.rest.ic,t:'Campfire',d:'The fire crackles. The night is short: choose one.'});
@@ -136,7 +138,7 @@ function advance(){const q=R.queue||[];const s=q.shift();if(!s){enterPlan();retu
   advance()}
 // ---------- act IV ----------
 // down into the Rift: a new field, a short map, void-born monsters; the Herald on the last floor
-function startRift(){R.rift=1;R.act=3;R.leakAct=0;R.calm=0;award('gate');const fix=Math.ceil((R.hpMax-R.hp)*.5);R.hp+=fix;genField();if(guardLv('oracle')>=3)R.stones.push(2);if(R.warden==='runesmith')R.stones.push(2);
+function startRift(){R.rift=1;R.act=3;R.leakAct=0;R.calm=0;award('gate');const fix=Math.ceil((R.hpMax-R.hp)*.5);R.hp+=fix;genField();if(guardLv('oracle')>=3)R.stones.push(2);if(!R.daily&&stage()>=2)giftGuard();
   genMap();R.nextQ=waveList(R.wave);autoNode();bgDirty=1;banner('ACT IV: THE RIFT','#d6a8ff');if(fix>0)floatText(FW+T*.2,FH/2-T*1.2,'+'+fix,'#7dff9a',1.3);enterPlan()}
 // the Devourer itself, with an escort from the Rift
 function enterFinal(){R.final=1;R.node='final';R.map=null;R.nextQ=tagGates([{k:'devourer'}].concat(Array.from({length:16},(_,i)=>({k:rndS(actD(R.act).roster),elite:i%4===3?1:0}))),30);enterPlan()}
@@ -203,10 +205,11 @@ function usePotion(i){const id=R.potions[i],P=POTIONS[id];if(!P)return false;
   if(id==='gold')R.gold+=12;if(id==='ink')R.ink=1;if(id==='insight')gainXP(6);
   toast(P.n+': '+P.d);uiRefresh();if(R.phase==='plan')saveRun();return true}
 // ---------- room, spoils and potion screens ----------
+const dIcon=k=>icon(DEITIES[k].ic);
 function showRoom(){if(!DOM)return;const V=roomView();if(!V){$('ovRoom').hidden=true;return}$('roomI').innerHTML=V.ic;$('roomT').textContent=V.t;$('roomD').textContent=V.d;const box=$('roomList');box.innerHTML='';box.className=V.shop?'shopgrid':'picks';
-  V.opts.forEach((q,i)=>{const b=document.createElement('button');b.type='button';b.className=V.shop&&!q.leave?'ware':'relic';b.style.setProperty('--c',q.risk?'#ff7a5a':q.relic?['','#cfd8e0','#ffcf6a','#e6a8ff','#ff8a6a'][RELIC[q.relic].t]:q.pot?POTIONS[q.pot].col:q.item?'#ffd76a':'#d6a8ff');
+  V.opts.forEach((q,i)=>{const b=document.createElement('button');b.type='button';b.className=V.shop&&!q.leave?'ware':'relic';b.style.setProperty('--c',q.deity?DEITIES[q.deity].col:q.risk?'#ff7a5a':q.relic?['','#cfd8e0','#ffcf6a','#e6a8ff','#ff8a6a'][RELIC[q.relic].t]:q.pot?POTIONS[q.pot].col:q.item?'#ffd76a':'#d6a8ff');
     const off=q.dis||q.sold||q.cost>R.gold||q.ok&&!q.ok();b.disabled=!!off;
-    const icon=q.item?`<span class="gem it">${ITEMS[q.item].ic}</span>`:q.pot?`<span class="gem pot" style="--p:${POTIONS[q.pot].col}">${POTIONS[q.pot].ic}</span>`:q.relic?`<span class="gem">${RELIC[q.relic].em?TRAITS[RELIC[q.relic].em].ic:RIC[q.relic]||RELIC[q.relic].n[0]}</span>`:'';
+    const icon=q.deity?`<span class="gem dei" style="color:${DEITIES[q.deity].col}">${dIcon(q.deity)}</span>`:q.item?`<span class="gem it">${ITEMS[q.item].ic}</span>`:q.pot?`<span class="gem pot" style="--p:${POTIONS[q.pot].col}">${POTIONS[q.pot].ic}</span>`:q.relic?`<span class="gem">${RELIC[q.relic].em?TRAITS[RELIC[q.relic].em].ic:RIC[q.relic]||RELIC[q.relic].n[0]}</span>`:'';
     b.innerHTML=`${icon}<b>${q.n}</b>${q.d?`<span>${q.d}</span>`:''}${q.cost?`<em class="price">${q.sold?'Sold':q.cost+' gold'}</em>`:''}`;
     if(q.hero){const p=smallPortrait('h_',q.hero,22);if(p)b.prepend(p)}
     b.addEventListener('click',()=>{if(box.dataset.busy)return;box.dataset.busy=1;roomAct(i);delete box.dataset.busy});box.appendChild(b)});

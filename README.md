@@ -14,12 +14,12 @@ A fantasy roguelite tower defense for phones held either way: sideways, monsters
 - Items: six components; two on one hero forge one of 21 finished items. They wait in the ITEMS rack beside the bench.
 - A Slay the Spire style layer: branching act maps with battles, elites (with affixes), campfires (rest or train veterans), a merchant, treasure chests and 13 events; a free recruit after every fight; potions; boss relics with drawbacks; an oracle's blessing at the start.
 - Frontline (⚔) and backline (➶) roles: frontliners tank, slow, taunt, sleep and buff neighbours; backliners deal damage. Range lights up on the hexes while you drag. 5-cost Legends each have a unique power.
-- Monsters that hunt heroes, rush the keep or phase out; nine keep guardians unlocked through deeds or gems and trained to level 5; an expanded research tree.
+- Monsters that hunt heroes, rush the keep or phase out; nine keep guardians unlocked through deeds or gems and trained to level 5, gifted at random during a run (start, every act, Guardian altars), with duplicates levelling up; an expanded research tree.
 - The Constellation: a web of stars bought with points from levels and bosses, with six keystones that trade a great power for a price (in the spirit of Path of Exile's passive tree).
 - Pacts: before any fight, sign up to two curses for the coming fight, each with a reward.
 - Attuned rune stones (Ember, Frost, Twin, Midas, Keen, Void, Wellspring) that change every shot crossing them; marked shop heroes (Gilded, Savage, Fleet, Arcane, Hollow); relics that grow over the run; a kill combo.
 - Six challenge runs with their own rules, unlocked by the first win.
-- Four wardens to play (the Castellan, Runesmith, Beastlord and Gravewarden), each with a perk, a favoured keep guardian and a power used once per fight.
+- Eight deities (Solenne, Morrow, Sylvara, Vexis, Aurion, Korrun, Hessa, Grakka): each run three offer a blessing; the chosen god bans two traits from the shop, blesses two, adds a synergy and gives a power used once per fight, so every run steers you toward a different build. 51 heroes across ten traits keep the pool deep even with two traits banned.
 - Elite champions carry one of ten twists (two in the Rift and in endless); room screens are illustrated with scenes built from the game's sprites, and some events run over several steps.
 - Monsters have attack and death animations; big blows freeze the fight for a blink, and bosses telegraph their signature move.
 - A run history with a copyable plain-text summary of every run (Records tab and end screen), and an optional frame-rate display.
@@ -34,7 +34,7 @@ node tools/build.js            # assemble www/index.html from src/
 node tools/sim.js --runs 6     # headless balance bot (traits, interest, mazing, rune stones, map rooms, items, potions)
                                # --asc N ascension, --bot simple|pacifist, --fuzz random relic piles,
                                # --god gives the bot a ★3 board with items for the Devourer fight, --god4 a ★4 one
-                               # --warden runesmith|beastlord|gravewarden plays that warden
+                               # --deity solenne|morrow|sylvara|vexis|aurion|korrun|hessa|grakka offers that god first
                                # --challenge glass|zealot|council|pactbound|night|pauper plays a challenge run
                                # --nostars / --nopacts turn the bot's use of the Constellation or pacts off
 node tools/browser-check.js    # headless Chromium: errors and frame times (needs playwright)

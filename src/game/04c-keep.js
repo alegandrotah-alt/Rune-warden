@@ -1,11 +1,20 @@
 // ---------- keep guardians: the keep fights too ----------
-// META.gl[k] = level (0 = locked), META.geq = equipped keys. Deeds unlock some guardians for free; others cost gems.
+// META.gl[k] = level (0 = locked); guardians are gifted at random in runs (giftGuard). Deeds unlock some guardians for free; others cost gems.
 const gSlots=()=>1+rank('keep2');
 function gDeed(k){const U=GUARDS[k].un;if(!U)return true;if(U.gems)return false;if(U.ach)return !!META.ach[U.ach];if(U.kills)return(META.kills||0)>=U.kills;if(U.elites)return(META.elk||0)>=U.elites;if(U.boss)return((META.bk||{})[U.boss[0]]||0)>=U.boss[1];return true}
 function gProgress(k){const U=GUARDS[k].un;if(U.kills)return`${Math.min(U.kills,META.kills||0)}/${U.kills}`;if(U.elites)return`${Math.min(U.elites,META.elk||0)}/${U.elites}`;if(U.boss)return`${Math.min(U.boss[1],(META.bk||{})[U.boss[0]]||0)}/${U.boss[1]}`;return''}
 // a guardian whose deed is done becomes level 1 for free
 function gLevel(k){META.gl=META.gl||{};if(!META.gl[k]&&(k==='archers'||gDeed(k))){META.gl[k]=1;saveMeta()}return META.gl[k]||0}
 function guardLoadout(){META.geq=(META.geq||['archers']).filter(k=>GUARDS[k]&&gLevel(k)>0).slice(0,gSlots());if(!META.geq.length)META.geq=['archers'];return META.geq.map(k=>({k,l:gLevel(k),t:1.5}))}
+// guardians are gifted, not chosen: one (two with Second Banner) at the start of a run, another after every act boss
+// and from sky altars. Each comes at the level you trained it to, so every guardian is worth training. A gift of one
+// you already have raises it a level for this run instead (5 at most).
+function giftGuard(quiet){if(!R.guards)R.guards=[];const own=new Set(R.guards.map(g=>g.k)),open=GKEYS.filter(k=>gLevel(k)>0);if(!open.length)return null;
+  const fresh=open.filter(k=>!own.has(k));let g;
+  if(fresh.length){const k=rndS(fresh);g={k,l:gLevel(k),t:1.5};R.guards.push(g);if(k==='banner'){R.hpMax+=10*g.l;R.hp+=10*g.l}}
+  else{g=rndS(R.guards);if(g.l>=5)return null;g.l++;if(g.k==='banner'){R.hpMax+=10;R.hp+=10}}
+  if(!quiet&&typeof banner==='function'){banner((fresh.length?'A GUARDIAN JOINS: ':'GUARDIAN RISES: ')+GUARDS[g.k].n.toUpperCase(),GUARDS[g.k].col);sfx('level',.6)}
+  if(typeof calcTraits==='function')calcTraits();return g}
 const hasGuard=k=>!!(R&&R.guards&&R.guards.some(g=>g.k===k));
 const guardLv=k=>{const g=R&&R.guards&&R.guards.find(q=>q.k===k);return g?g.l:0};
 // guardians hit harder as the run goes on, a little slower than monsters grow
