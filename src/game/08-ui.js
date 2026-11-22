@@ -11,7 +11,8 @@ function portDraw(c,k,size,i){const g=c.getContext('2d');if(!g||!g.drawImage)ret
 function bumpT(id,txt,v){const e=$(id);if(!e)return;if(e.textContent!==String(txt)){const o=e._v;e.textContent=txt;e._v=v;if(o!==undefined&&o!==v){const el=e.parentElement||e;el.classList.remove('bumpU','bumpD');void el.offsetWidth;el.classList.add(v>o?'bumpU':'bumpD')}}}
 function portrait(k,size){const c=mk(size*4,size*4);if(!c)return c;c._k=k;c._s=size;c._ph=Math.random()*12;portDraw(c,k,size,0);PORTS.add(c);return c}
 function portTick(dt){if(!DOM||!PORTS.size)return;portT+=dt;portAcc+=dt;if(portAcc<.1)return;portAcc=0;
-  for(const c of PORTS){if(!c.isConnected){PORTS.delete(c);continue}if(!c.offsetParent)continue;const n=heroCells(c._k)[0]||1,i=Math.floor(portT*9+c._ph)%n;if(i!==c._f)portDraw(c,c._k,c._s,i)}}
+  // a new frame has to be scaled once before it is cached: spend at most ~3ms a tick, so a fresh shop never hitches
+  const t0=performance.now();for(const c of PORTS){if(!c.isConnected){PORTS.delete(c);continue}if(!c.offsetParent)continue;const n=heroCells(c._k)[0]||1,i=Math.floor(portT*9+c._ph)%n;if(i!==c._f)portDraw(c,c._k,c._s,i);if(performance.now()-t0>3)break}}
 function onSheet(name){if(DOM&&name.startsWith('h_')){renderShop();if(!$('ovStart').hidden){clearTimeout(onSheet.t);onSheet.t=setTimeout(()=>{renderCol();renderWardens()},200)}}if(/^props|^keep/.test(name))bgDirty=1}
 // Expand: raise land at the island's edge between fights
 function uiExpand(){const b=$('exB');if(!b||!R.field||!R.field.land)return;const can=R.phase==='plan'&&!R.final,cost=expandCost();b.hidden=!can;if(!can){UI.expand=false;return}

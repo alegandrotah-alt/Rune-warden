@@ -7,6 +7,8 @@
 const EMB={px:3,sp:[],t:0,acc:0,c:null,x:null,w:0,h:0,img:null,buf:null,tint:new WeakMap(),fire:new WeakMap(),pal:{},on:true,vis:0};
 const FRAMP=[[70,16,10],[150,38,16],[224,84,26],[255,150,46],[255,214,100],[255,248,210]];
 function embInit(){if(!DOM||EMB.c)return;const c=document.createElement('canvas');c.id='emberC';c.setAttribute('aria-hidden','true');document.body.appendChild(c);EMB.c=c;EMB.x=c.getContext('2d');
+  // the page scrolls on its own thread, a frame ahead of this canvas: while it moves, the fires on the choices go out
+  EMB.scr=0;document.addEventListener('scroll',()=>{EMB.scr=performance.now()},{capture:true,passive:true});
   try{if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)EMB.on=false}catch(e){}}
 function embSize(){const w=Math.ceil(innerWidth/EMB.px),h=Math.ceil(innerHeight/EMB.px);if(w!==EMB.w||h!==EMB.h){EMB.w=EMB.c.width=w;EMB.h=EMB.c.height=h;EMB.img=EMB.x.createImageData(w,h);EMB.buf=new Uint32Array(EMB.img.data.buffer)}}
 function embHex(s){s=(s||'').trim();const m=/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(s);if(!m)return null;let v=m[1];if(v.length===3)v=v.split('').map(q=>q+q).join('');return[parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)]}
@@ -30,17 +32,22 @@ function embFrame(r,pal,al){const P=EMB.px,X=EMB.x,x0=Math.round(r.left/P),y0=Ma
   const c=pal[17];X.globalAlpha=al*(.7+.3*Math.sin(EMB.t*9+x0)*Math.sin(EMB.t*5.3+y0));X.fillStyle=`rgb(${c&255},${c>>8&255},${c>>16&255})`;
   X.fillRect(x0+2,y0,x1-x0-3,1);X.fillRect(x0+2,y1,x1-x0-3,1);X.fillRect(x0,y0+2,1,y1-y0-3);X.fillRect(x1,y0+2,1,y1-y0-3);X.fillRect(x0+1,y0+1,1,1);X.fillRect(x1-1,y0+1,1,1);X.fillRect(x0+1,y1-1,1,1);X.fillRect(x1-1,y1-1,1,1);X.globalAlpha=1}
 // what burns on the open screen
-function embTargets(){const ov=[...document.querySelectorAll('.overlay:not([hidden])')].filter(o=>!o.classList.contains('tipov')).pop();if(!ov)return embHud();
+function embTargets(still){const ov=[...document.querySelectorAll('.overlay:not([hidden])')].filter(o=>!o.classList.contains('tipov')).pop();if(!ov)return embHud();
   const card=ov.querySelector('.card');if(!card)return null;const T={el:card,card:card.getBoundingClientRect(),opts:[],rings:[]};
-  for(const el of ov.querySelectorAll('#roomList>button:not(:disabled),#pickList>button:not(:disabled),#rwHeroes>*,.dcard.on'))T.opts.push({el,r:el.getBoundingClientRect(),t:embTint(el),on:el.classList.contains('on')||document.activeElement===el||el.matches(':hover')});
-  for(const el of ov.querySelectorAll('.mn.can,.mn.boss'))T.rings.push({el,r:el.getBoundingClientRect(),t:el.classList.contains('boss')?[190,80,255]:embTint(el),boss:el.classList.contains('boss')});
+  if(still)for(const el of ov.querySelectorAll('#roomList>button:not(:disabled),#pickList>button:not(:disabled),#rwHeroes>*,.dcard.on'))T.opts.push({el,r:el.getBoundingClientRect(),t:embTint(el),on:el.classList.contains('on')||document.activeElement===el||el.matches(':hover')});
+  if(still)for(const el of ov.querySelectorAll('.mn.can,.mn.boss'))T.rings.push({el,r:el.getBoundingClientRect(),t:el.classList.contains('boss')?[190,80,255]:embTint(el),boss:el.classList.contains('boss')});
   return T}
 // no screen open: between fights the FIGHT button burns, so the next step is always lit
 function embHud(){if(!R||R.phase!=='plan'||TUT)return null;const b=$('fightB');if(!b||!b.offsetParent||b.disabled||b.classList.contains('speed'))return null;const r=b.getBoundingClientRect();if(!r.width)return null;
   return{hud:1,el:b,card:r,opts:[],rings:[]}}
-function emberTick(dt){if(!DOM)return;if(!EMB.c)embInit();if(!EMB.c)return;const T=EMB.on?embTargets():null;
-  if(!T&&!EMB.sp.length){if(EMB.vis){EMB.c.style.display='none';EMB.vis=0}return}
-  if(!EMB.vis){EMB.c.style.display='';EMB.vis=1}embSize();EMB.t+=dt;EMB.acc+=dt;const P=EMB.px,X=EMB.x,step=EMB.acc>=1/30;if(step)EMB.acc%=1/30;
+function emberTick(dt0){if(!DOM)return;if(!EMB.c)embInit();if(!EMB.c)return;
+  // pixel fire is drawn 30 times a second: it looks the same and costs half
+  EMB.ft=(EMB.ft||0)+dt0;if(EMB.ft<1/31)return;const dt=Math.min(.1,EMB.ft);EMB.ft=0;
+  const still=performance.now()-(EMB.scr||0)>160,T=EMB.on?embTargets(still):null;
+  // nothing to burn: drop the leftover embers too, so the full-screen layer switches off at once (it costs a
+  // compositing pass every frame while it is shown)
+  if(!T){EMB.sp.length=0;if(EMB.vis){EMB.c.style.display='none';EMB.vis=0}return}
+  if(!EMB.vis){EMB.c.style.display='';EMB.vis=1}embSize();EMB.t+=dt;const P=EMB.px,X=EMB.x,step=true;
   EMB.buf.fill(0);const draws=[];
   if(T){const C=T.card,cy0=Math.floor(C.top/P),cy1=Math.ceil(C.bottom/P),burn=(el,r,H,heat,cool,t,clip)=>{const w=Math.max(4,Math.round((r.right-r.left)/P)-4);const f=embStrip(el,w,H);if(step)embBurn(f,heat,cool);
       embPaint(f,Math.round(r.left/P)+2,Math.round(r.top/P),embPal(t),clip?cy0:-1e9,clip?cy1:1e9)};

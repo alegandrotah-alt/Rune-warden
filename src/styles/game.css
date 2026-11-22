@@ -334,3 +334,24 @@ body.port .exb span{display:none}@media (max-height:430px){.exb span{display:non
 @keyframes freshin{0%{opacity:0;transform:scale(.85) rotateY(90deg)}60%{opacity:1;transform:scale(1.04) rotateY(0)}100%{transform:none}}
 #roomList>button.fresh{animation:freshin .55s cubic-bezier(.2,.8,.3,1) both;box-shadow:0 0 22px color-mix(in srgb,var(--c) 60%,transparent)}
 @media (prefers-reduced-motion:reduce){#roomList>button.swapme,#roomList>button.fresh{animation:none}}
+/* performance: endless animations only move or scale things (the compositor does that without repainting);
+   glows stay, but they no longer pulse through box-shadow or text-shadow every frame */
+@keyframes glowp{from{opacity:.25}to{opacity:1}}
+/* the pulsing glow is a layer behind the element whose opacity breathes: no repaint, and the element itself never
+   moves, so taps (and the browser tests) land on it */
+.mn.can,.tbtn.on,.hc.pair,.pwb.ready,#fightB:not(.speed):not(:disabled){animation:none}
+.mn.can::after,.tbtn.on::after,.hc.pair::after,.pwb.ready::after,#fightB:not(.speed):not(:disabled)::after{content:'';position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;animation:glowp 1s ease-in-out infinite alternate}
+.mn.can::after{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 70%,#fff),0 0 18px var(--c)}
+.tbtn.on::after,.hc.pair::after{box-shadow:0 0 0 2px #fff3c0,0 0 18px rgba(255,215,106,.85)}
+.pwb.ready::after{box-shadow:0 0 16px 1px var(--c)}
+#fightB:not(.speed):not(:disabled)::after{box-shadow:0 0 0 1px rgba(255,220,140,.8),0 0 24px rgba(255,120,40,.7);animation-duration:1.6s}
+.tbtn,.pwb,#fightB{position:relative}
+.overlay:not([hidden]) .card h1,.overlay:not([hidden]) .card h2{animation:none;text-shadow:0 0 12px rgba(255,130,45,.45),0 2px 0 #000}
+.overlay:not([hidden]) .card>h2:first-child,.overlay:not([hidden]) #rwT{animation:titledrop .5s cubic-bezier(.2,.8,.3,1) both}
+/* the legend shine slides a highlight across instead of repainting the card background */
+.hc:has(.leg){background-image:radial-gradient(120% 90% at 85% 0%,color-mix(in srgb,var(--c,#888) 38%,transparent),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.28));background-size:auto;animation:none;overflow:hidden}
+.hc:has(.leg)::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 35%,rgba(255,240,170,.2) 50%,transparent 65%);translate:-100% 0;animation:legsweep 3.2s linear infinite}
+@keyframes legsweep{to{translate:100% 0}}
+@media (prefers-reduced-motion:reduce){.mn.can::after,.tbtn.on::after,.hc.pair::after,.pwb.ready::after,#fightB::after,.hc:has(.leg)::before{animation:none}}
+#fpsT{position:fixed;left:0;top:42%;z-index:60;pointer-events:none;font:700 12px "Barlow Condensed",sans-serif;padding:2px 7px;border-radius:0 6px 6px 0;background:rgba(0,0,0,.7);color:#bfffc8}
+#fpsT.meh{color:#ffd76a}#fpsT.bad{color:#ff7a6a}

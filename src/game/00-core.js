@@ -17,7 +17,7 @@ function cellOf(x,y){let best=null,bd=1e9;const r0=Math.round((y-T/2)/RS);for(le
 // hex outline in screen space with an optional lift (always straight up on screen); upright mode
 function hexPathS(g,c,r,k,lift){const x=hx(c,r),y=hy(r),R_=HR*(k||1);g.beginPath();for(let i=0;i<6;i++){const a=(-90+60*i)*Math.PI/180,p=scr(x+Math.cos(a)*R_,y+Math.sin(a)*R_);i?g.lineTo(p[0],p[1]-(lift||0)):g.moveTo(p[0],p[1]-(lift||0))}g.closePath()}
 function hexPath(g,c,r,k,lift){const x=hx(c,r),y=hy(r),R_=HR*(k||1);g.beginPath();for(let i=0;i<6;i++){const a=(-90+60*i)*Math.PI/180,px=sx(x+Math.cos(a)*R_),py=sy(y+Math.sin(a)*R_)-(lift||0);i?g.lineTo(px,py):g.moveTo(px,py)}g.closePath()}
-const cv=$('cv'),ctx=cv&&cv.getContext?cv.getContext('2d'):null;
+const cv=$('cv'),ctx=cv&&cv.getContext?cv.getContext('2d',{alpha:false}):null; // opaque: the board always covers it, so the browser need not blend it with the page
 let W=0,H=0,DPR=1,VIEW={s:1,ox:0,oy:0,px:0,py:0},VB={s:1,ox:0,oy:0,px:0,py:0},ZM={z:0,x:0,y:0},ROT=0,FB={l:0,r:0,b:0};
 let SET={music:.6,sfx:.7,shake:1,nums:1,quality:'auto',speedPref:1,fps:false};
 try{const m=JSON.parse(localStorage.getItem('runewarden-settings')||'null');if(m)Object.assign(SET,m)}catch(e){}
