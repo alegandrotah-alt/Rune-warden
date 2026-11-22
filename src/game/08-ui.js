@@ -3,17 +3,25 @@ const DOM=typeof document!=='undefined'&&!!document.body&&!!$('app');
 let toastT=0;
 function toast(t){if(!DOM)return;const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{el.hidden=true},2200)}
 // portraits are drawn at four times their CSS size so they stay sharp on dense phone screens
-function portrait(k,size){const c=mk(size*4,size*4);if(!c)return c;const g=c.getContext('2d');const f=frame('h_'+k,160,0,size*4);if(f&&g&&g.drawImage){g.imageSmoothingQuality='high';g.drawImage(f,-size*.3,-size*.2,size*4.6,size*4.6)}return c}
+// portraits breathe: every one made here joins PORTS and portTick() plays its hero's idle loop (about 10 frames a
+// second, only while it is on the page and visible), so shop cards, recruits and panels are never still pictures
+const PORTS=new Set();let portT=0,portAcc=0;
+function portDraw(c,k,size,i){const g=c.getContext('2d');if(!g||!g.drawImage)return;const f=frame('h_'+k,160,i,size*4);if(!f)return;g.clearRect(0,0,c.width,c.height);g.imageSmoothingQuality='high';g.drawImage(f,-size*.3,-size*.2,size*4.6,size*4.6);c._f=i}
+// a top-bar number that changes gives a little jump: up in gold, down in red
+function bumpT(id,txt,v){const e=$(id);if(!e)return;if(e.textContent!==String(txt)){const o=e._v;e.textContent=txt;e._v=v;if(o!==undefined&&o!==v){const el=e.parentElement||e;el.classList.remove('bumpU','bumpD');void el.offsetWidth;el.classList.add(v>o?'bumpU':'bumpD')}}}
+function portrait(k,size){const c=mk(size*4,size*4);if(!c)return c;c._k=k;c._s=size;c._ph=Math.random()*12;portDraw(c,k,size,0);PORTS.add(c);return c}
+function portTick(dt){if(!DOM||!PORTS.size)return;portT+=dt;portAcc+=dt;if(portAcc<.1)return;portAcc=0;
+  for(const c of PORTS){if(!c.isConnected){PORTS.delete(c);continue}if(!c.offsetParent)continue;const n=heroCells(c._k)[0]||1,i=Math.floor(portT*9+c._ph)%n;if(i!==c._f)portDraw(c,c._k,c._s,i)}}
 function onSheet(name){if(DOM&&name.startsWith('h_')){renderShop();if(!$('ovStart').hidden){clearTimeout(onSheet.t);onSheet.t=setTimeout(()=>{renderCol();renderWardens()},200)}}if(/^props|^keep/.test(name))bgDirty=1}
 // Expand: raise land at the island's edge between fights
 function uiExpand(){const b=$('exB');if(!b||!R.field||!R.field.land)return;const can=R.phase==='plan'&&!R.final,cost=expandCost();b.hidden=!can;if(!can){UI.expand=false;return}
   b.innerHTML=`${icon('raise')}<span>${UI.expand?'Pick a hex':'Expand'}</span><small>${cost}g</small>`;b.classList.toggle('on',!!UI.expand);b.classList.toggle('poor',R.gold<cost)}
 function uiRefresh(){if(!DOM||!R)return;calcTraits();
   $('waveT').textContent=R.final?'The Rune Devourer':R.rift?`Rift ${R.wave-30} / ${RIFTN}`:R.endless?`Wave ${R.wave} · Endless`:`Floor ${R.wave} / 30`;uiPots();uiPower();uiCouncil();$('actT').textContent=`Act ${['I','II','III','IV'][R.act]} · ${actD(R.act).n}`;
-  $('goldT').textContent=R.gold;$('lvlT').textContent='Lv '+R.lvl;const need=XPNEED[R.lvl]||0;$('xpF').style.width=(R.lvl>=10?100:100*R.xp/need)+'%';$('xpT').textContent=R.lvl>=10?'max':`${R.xp}/${need}`;
+  bumpT('goldT',R.gold,R.gold);bumpT('lvlT','Lv '+R.lvl,R.lvl);const need=XPNEED[R.lvl]||0;$('xpF').style.width=(R.lvl>=10?100:100*R.xp/need)+'%';$('xpT').textContent=R.lvl>=10?'max':`${R.xp}/${need}`;
   uiExpand();
   $('fieldT').textContent=`${fieldN()}/${boardMax()} heroes`;$('fieldT').style.color=fieldN()<boardMax()&&R.bench.some(Boolean)?'#ffd76a':'';
-  $('hpT').textContent='♥ '+Math.ceil(R.hp);
+  bumpT('hpT','♥ '+Math.ceil(R.hp),Math.ceil(R.hp));
   const st=$('streakT');st.hidden=Math.abs(R.streak)<2;st.textContent=R.streak>0?`🔥 ${R.streak} win streak`:`❄ ${-R.streak} loss streak`;
   $('xpB').disabled=R.gold<4||R.lvl>=10;$('rollB').disabled=R.gold<rerollCost();$('rollC').textContent=rerollCost()?rerollCost()+' gold':'free';
   const fb=$('fightB');if(R.phase==='wave'){fb.classList.add('speed');fb.innerHTML=`<b>×${R.speed}</b><small>speed</small>`}else{fb.classList.remove('speed');fb.innerHTML=needMap()?`<b>MAP</b><small>choose a room</small>`:`<b>FIGHT!</b><small>${R.final?'The Devourer':bossWave(R.wave)?'Boss':R.node&&NODES[R.node]&&R.node!=='battle'?NODES[R.node].n:'Space'}</small>`}

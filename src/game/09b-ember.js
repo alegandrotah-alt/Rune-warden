@@ -30,21 +30,24 @@ function embFrame(r,pal,al){const P=EMB.px,X=EMB.x,x0=Math.round(r.left/P),y0=Ma
   const c=pal[17];X.globalAlpha=al*(.7+.3*Math.sin(EMB.t*9+x0)*Math.sin(EMB.t*5.3+y0));X.fillStyle=`rgb(${c&255},${c>>8&255},${c>>16&255})`;
   X.fillRect(x0+2,y0,x1-x0-3,1);X.fillRect(x0+2,y1,x1-x0-3,1);X.fillRect(x0,y0+2,1,y1-y0-3);X.fillRect(x1,y0+2,1,y1-y0-3);X.fillRect(x0+1,y0+1,1,1);X.fillRect(x1-1,y0+1,1,1);X.fillRect(x0+1,y1-1,1,1);X.fillRect(x1-1,y1-1,1,1);X.globalAlpha=1}
 // what burns on the open screen
-function embTargets(){const ov=[...document.querySelectorAll('.overlay:not([hidden])')].filter(o=>!o.classList.contains('tipov')).pop();if(!ov)return null;
+function embTargets(){const ov=[...document.querySelectorAll('.overlay:not([hidden])')].filter(o=>!o.classList.contains('tipov')).pop();if(!ov)return embHud();
   const card=ov.querySelector('.card');if(!card)return null;const T={el:card,card:card.getBoundingClientRect(),opts:[],rings:[]};
   for(const el of ov.querySelectorAll('#roomList>button:not(:disabled),#pickList>button:not(:disabled),#rwHeroes>*,.dcard.on'))T.opts.push({el,r:el.getBoundingClientRect(),t:embTint(el),on:el.classList.contains('on')||document.activeElement===el||el.matches(':hover')});
   for(const el of ov.querySelectorAll('.mn.can,.mn.boss'))T.rings.push({el,r:el.getBoundingClientRect(),t:el.classList.contains('boss')?[190,80,255]:embTint(el),boss:el.classList.contains('boss')});
   return T}
+// no screen open: between fights the FIGHT button burns, so the next step is always lit
+function embHud(){if(!R||R.phase!=='plan'||TUT)return null;const b=$('fightB');if(!b||!b.offsetParent||b.disabled||b.classList.contains('speed'))return null;const r=b.getBoundingClientRect();if(!r.width)return null;
+  return{hud:1,el:b,card:r,opts:[],rings:[]}}
 function emberTick(dt){if(!DOM)return;if(!EMB.c)embInit();if(!EMB.c)return;const T=EMB.on?embTargets():null;
   if(!T&&!EMB.sp.length){if(EMB.vis){EMB.c.style.display='none';EMB.vis=0}return}
   if(!EMB.vis){EMB.c.style.display='';EMB.vis=1}embSize();EMB.t+=dt;EMB.acc+=dt;const P=EMB.px,X=EMB.x,step=EMB.acc>=1/30;if(step)EMB.acc%=1/30;
   EMB.buf.fill(0);const draws=[];
   if(T){const C=T.card,cy0=Math.floor(C.top/P),cy1=Math.ceil(C.bottom/P),burn=(el,r,H,heat,cool,t,clip)=>{const w=Math.max(4,Math.round((r.right-r.left)/P)-4);const f=embStrip(el,w,H);if(step)embBurn(f,heat,cool);
       embPaint(f,Math.round(r.left/P)+2,Math.round(r.top/P),embPal(t),clip?cy0:-1e9,clip?cy1:1e9)};
-    burn(T.el,C,11,1.05,.15,null,0);draws.push([C,embPal(null),.6]);
+    if(T.hud)burn(T.el,C,8,.9,.24,null,0);else{burn(T.el,C,11,1.05,.15,null,0);draws.push([C,embPal(null),.6])}
     for(const o of T.opts){if(o.r.bottom<C.top||o.r.top>C.bottom)continue;burn(o.el,o.r,o.on?7:5,o.on?.95:.7,o.on?.3:.34,o.t,1);if(o.r.top>=C.top-2&&o.r.bottom<=C.bottom+2)draws.push([o.r,embPal(o.t),o.on?.95:.55])}
     for(const g of T.rings){if(g.r.bottom<C.top||g.r.top>C.bottom)continue;const r={left:g.r.left+(g.r.right-g.r.left)*.12,right:g.r.right-(g.r.right-g.r.left)*.12,top:g.r.top+(g.r.bottom-g.r.top)*.18};burn(g.el,r,g.boss?10:7,g.boss?1:.8,g.boss?.22:.27,g.t,1)}
-    if(EMB.sp.length<(PERF.low?18:40)&&Math.random()<dt*14)EMB.sp.push({x:Math.random()*EMB.w,y:EMB.h+2,vy:-(6+Math.random()*10),ph:Math.random()*6,l:0,L:4+Math.random()*5})}
+    if(!T.hud&&EMB.sp.length<(PERF.low?18:40)&&Math.random()<dt*14)EMB.sp.push({x:Math.random()*EMB.w,y:EMB.h+2,vy:-(6+Math.random()*10),ph:Math.random()*6,l:0,L:4+Math.random()*5})}
   X.putImageData(EMB.img,0,0);for(const d of draws)embFrame(d[0],d[1],d[2]);
   for(let i=EMB.sp.length-1;i>=0;i--){const s=EMB.sp[i];s.l+=dt;s.y+=s.vy*dt;s.x+=Math.sin(EMB.t*1.7+s.ph)*dt*5;if(s.l>s.L||s.y<-2){EMB.sp.splice(i,1);continue}
     const a=s.l/s.L;X.globalAlpha=Math.min(1,a*4)*(1-a)*(.55+.45*Math.sin(EMB.t*11+s.ph));X.fillStyle=a<.5?'#ffcf6a':'#ff7a30';X.fillRect(s.x|0,s.y|0,1,1)}

@@ -234,6 +234,13 @@ function drawPortals(){
     ctx.save();ctx.translate(x,y);ctx.scale(1,VY);for(let i=0;i<3;i++){ctx.rotate(TIME*(1.4+i*.4));ctx.strokeStyle=`rgba(${190-i*30},${110+i*20},255,${.75-i*.15})`;ctx.lineWidth=Math.max(1.5,ss(3-i*.6));ctx.beginPath();ctx.arc(0,0,s*(.38-i*.08),0,4.4);ctx.stroke()}
     ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.6+f*.4;const gl=glow('170,90,255');if(gl)ctx.drawImage(gl,-s*.5,-s*.5,s,s);ctx.restore();
     ctx.save();upr();const [X,Y]=scr(hx(q.c,q.r),hy(q.r));ctx.font=`900 ${Math.max(11,ss(16))}px Cinzel,serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=3;ctx.strokeStyle='#1a0830';ctx.strokeText('×'+portalMul(q),X,Y-s*.42);ctx.fillStyle='#e6c8ff';ctx.fillText('×'+portalMul(q),X,Y-s*.42);ctx.restore()}}
+// a brazier beside the keep gate: an iron bowl on a post and a fire that never sits still
+function brazier(x,y,s,ph){ctx.save();ctx.fillStyle='#1c1410';ctx.fillRect(x-s*.07,y-s*.9,s*.14,s*.9);ctx.beginPath();ctx.moveTo(x-s*.38,y-s*.98);ctx.lineTo(x+s*.38,y-s*.98);ctx.lineTo(x+s*.22,y-s*.78);ctx.lineTo(x-s*.22,y-s*.78);ctx.closePath();ctx.fill();
+  ctx.globalCompositeOperation='lighter';const gl=glow('255,130,40');const fl=.8+.2*Math.sin(TIME*11+ph)*Math.sin(TIME*7.3+ph*2);if(gl){ctx.globalAlpha=.55*fl;ctx.drawImage(gl,x-s*1.4,y-s*2.3,s*2.8,s*2.4)}
+  // three tongues of flame, each a teardrop that leans and stretches with its own rhythm
+  for(const [c,w,hh,o] of [['#c8401a',.36,1.25,0],['#ff8a2a',.27,1.0,1.3],['#ffe08a',.15,.62,2.6]]){const t=TIME*9+ph+o,lean=Math.sin(t*.7)*s*.08,h=s*hh*(.85+.15*Math.sin(t)),b=y-s*.95;
+    ctx.globalAlpha=.9;ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-s*w,b);ctx.quadraticCurveTo(x-s*w*.9,b-h*.55,x+lean,b-h);ctx.quadraticCurveTo(x+s*w*.9,b-h*.55,x+s*w,b);ctx.closePath();ctx.fill()}
+  ctx.restore()}
 function drawSpawnAndKeep(){
   const [x,y]=scr(-T*.55,(hy(SPAWN_ROWS[0])+hy(SPAWN_ROWS[SPAWN_ROWS.length-1]))/2),s=ss(T),won=activeGates().has(0);ctx.save();ctx.translate(x,y);if(ROT){ctx.rotate(Math.PI/2);ctx.scale(.75,1)}if(!won)ctx.globalAlpha=.35;
   const gr=ctx.createRadialGradient(0,0,0,0,0,s*.9);gr.addColorStop(0,'rgba(10,0,20,.95)');gr.addColorStop(.6,'rgba(80,20,120,.75)');gr.addColorStop(1,'rgba(120,40,200,0)');ctx.fillStyle=gr;ctx.beginPath();ctx.ellipse(0,0,s*.55,s*1.05,0,0,6.283);ctx.fill();
@@ -242,6 +249,7 @@ function drawSpawnAndKeep(){
   const sk=SKINS.find(q=>q.id===SET.skin)||SKINS[0],k=sheet(sk.sh)||sheet('keep');const [kx,ky0]=scr(FW+T*.62,(hy(KEEP_ROWS[0])+hy(KEEP_ROWS[KEEP_ROWS.length-1]))/2),ky=ky0+ss(T*(ROT?.75:.5)),ks=ss(T*3.1);
   ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(kx,ky,ks*.3,ks*.09,0,0,6.283);ctx.fill();
   if(k)ctx.drawImage(k,kx-ks/2,ky-ks*.86,ks,ks);else{ctx.fillStyle='#8a90a0';ctx.fillRect(kx-ks*.2,ky-ks*.6,ks*.4,ks*.6)}
+  if(!LQ()){brazier(kx-ks*.27,ky-ks*.02,ks*.13,0);brazier(kx+ks*.27,ky-ks*.02,ks*.13,1.7)}
   drawGuards(kx,ky,ks);
   // keep health under the castle
   const bw=ss(T*1.5),bx=kx-bw/2,by=ky+ss(8),p=clamp(R.hp/R.hpMax,0,1);ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(bx-1,by-1,bw+2,ss(9)+2);ctx.fillStyle=p>.5?'#6ad06a':p>.25?'#ffc04a':'#ff4a4a';ctx.fillRect(bx,by,bw*p,ss(9));
