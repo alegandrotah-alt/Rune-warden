@@ -5,7 +5,7 @@ function endWave(){
   if(R.final){R.b=null;award('devourer');R.trueWin=1;META.trueWins=(META.trueWins||0)+1;saveMeta();runOver(true);return}
   R.lastDmg={wave:w,rows:R.board.map(h=>({k:h.k,star:h.star,d:h.wd||0,uid:h.uid})).sort((a,b)=>b.d-a.d)};
   R.streak=won?(R.streak>=0?R.streak+1:1):(R.streak<=0?R.streak-1:-1);if(won&&B.gs&&new Set(B.gs.map(e=>e.g)).size>=4)award('gates4');if(R.seal>0)R.seal--;
-  const inc=income(won);gainXP(2+(has('scholar')?3:0)+rank('xp'));if(R.hp>0)pactPay(won);else{R.pact=[];R.pacts=null;modsDirty()}
+  const inc=income(won);gainXP(2+(has('scholar')?2:0)+rank('xp'));if(R.hp>0)pactPay(won);else{R.pact=[];R.pacts=null;modsDirty()}
   for(const h of R.board){h.ko=0;h.chillT=0;h.tauntT=0}R.ink=0;R.hoard=0;R.calm=R.calm||0;
   if(R.egg>0){R.egg--;if(R.egg===0){R.gold+=35;banner('THE GOLDEN EGG HATCHES  +35g','#ffcf2e');R.egg=-1}}
   if(STONE_AT[w])R.stones.push(2);if(has('flawless'))R.cnt.fl=won?(R.cnt.fl||0)+1:((R.cnt.fl||0)/2)|0;
@@ -37,14 +37,14 @@ function takeRelic(id){
   calcTraits();uiRefresh();advance()}
 function applyRelic(id){
   if(id==='armory'){dropItem(rndS(COMPS));dropItem(rndS(COMPS))}if(id==='smith'){dropItem(randomFinished());dropItem(randomFinished())}
-  if(id==='stones')R.stones.push(2,2);if(id==='prism')R.stones.push(kindStone(2),kindStone(2));if(id==='heart')R.stones.push(3);if(id==='treasury')R.gold+=45;if(id==='kingmaker')R.gold+=20;if(id==='egg')R.egg=6;
+  if(id==='stones')R.stones.push(2,2);if(id==='prism')R.stones.push(kindStone(2),kindStone(2));if(id==='heart')R.stones.push(3);if(id==='treasury')R.gold+=30;if(id==='kingmaker')R.gold+=20;if(id==='egg')R.egg=6;
   if(id==='masons'){R.hpMax+=20;R.hp=R.hpMax}
   if(id==='ascend'){for(const s of [2,1]){const c=R.board.filter(h=>h.star===s).sort((a,b)=>HEROES[b.k].c-HEROES[a.k].c)[0];if(c){c.star++;fxStar(c)}}}
   if(id==='belt')gainPotion();
   if(id==='whetstone')for(const h of R.board.filter(h=>(h.vet||0)<2).sort((a,b)=>HEROES[b.k].c*b.star-HEROES[a.k].c*a.star).slice(0,2))train(h);
   if(id==='astrolabe'){const o=allHeroes().filter(h=>h.star===1);for(let i=0;i<3&&o.length;i++){const h=o.splice((rng()*o.length)|0,1)[0];h.star=2;fxStar(h)}}
   if(id==='pandora')for(const h of allHeroes().filter(h=>h.star===1&&HEROES[h.k].c<5))transmute(h);
-  if(id==='calling'){for(let i=0;i<3;i++){const r=randomRelic(1);if(r){R.relics.push(r);applyRelic(r)}}R.hpMax-=15;R.hp=Math.min(R.hp,R.hpMax)}
+  if(id==='calling'){for(let i=0;i<2;i++){const r=randomRelic(1);if(r){R.relics.push(r);applyRelic(r)}}R.hpMax-=15;R.hp=Math.min(R.hp,R.hpMax)}
   if(id==='tinyhouse'){dropItem(rndS(COMPS));gainPotion();R.gold+=15;R.hpMax+=10;R.hp+=10;gainXP(5)}}
 function placeStone(i,c,r){const F=R.field;if(c<0||r<0||c>=COLS||r>=ROWS||F.blk[r*COLS+c]||runeAt(c,r)||portalAt(c,r))return false;if(F.runes.length>=24)return false;
   const st=R.stones[i];F.runes.push({c,r,v:stV(st),k:stK(st)||undefined,ph:0,flash:.6,mine:1});R.stones.splice(i,1);sfx('level',.5);if(new Set(F.runes.filter(q=>q.k).map(q=>q.k)).size>=3)award('attune3');return true}

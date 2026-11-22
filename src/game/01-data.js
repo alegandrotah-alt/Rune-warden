@@ -160,8 +160,8 @@ const RELICS=[
   {id:'wardstone',t:2,n:'Wardstone',d:'Monsters that came through an edge gate or a breach take 12% more damage.'},
   {id:'sealstone',t:3,n:'Sealstone',d:'One fewer gate opens every wave (there is always at least one).'},
   {id:'stones',t:1,n:'Rune Pouch',d:'Gain two ×2 Rune Stones. Drop them on empty tiles: anything fired through a rune is multiplied.'},
-  {id:'tithe',t:1,n:'Tithe',d:'+2 gold after every wave.'},
-  {id:'scholar',t:1,n:'Scholar',d:'+3 XP after every wave.'},
+  {id:'tithe',t:1,n:'Tithe',d:'+1 gold after every wave.'},
+  {id:'scholar',t:1,n:'Scholar',d:'+2 XP after every wave.'},
   {id:'haste',t:1,n:'Quicksilver',d:'Heroes with a shot, beam, chain or piercing bolt attack 20% faster.'},
   {id:'masons',t:1,n:'Master Masons',d:'+20 keep health, and repair the keep to full.'},
   {id:'mire',t:1,n:'Mire',d:'Poisoned and burning monsters move 20% slower.'},
@@ -180,7 +180,7 @@ const RELICS=[
   {id:'reaper',t:2,n:'Reaper',d:'Swipes and auras finish off monsters below 12% health (not bosses).'},
   {id:'heart',t:3,n:'Rune Heart',d:'Every rune multiplies by 2 more, and gain a ×3 Rune Stone.'},
   {id:'kingmaker',t:3,n:'Kingmaker',d:'+1 hero on the field, and gain 20 gold.'},
-  {id:'treasury',t:3,n:'Royal Treasury',d:'Gain 45 gold now.'},
+  {id:'treasury',t:3,n:'Royal Treasury',d:'Gain 30 gold now.'},
   {id:'ascend',t:3,n:'Ascension',d:'Your strongest ★1 hero on the field becomes ★2, and your strongest ★2 becomes ★3.'},
   {id:'riftlord',t:3,n:'Rift Lord',d:'Portals multiply by 1 more and monsters from them are worth triple gold.'},
   {id:'echo',t:3,n:'Echoing Spells',d:'Spells have a 35% chance to cast twice.'},
@@ -200,7 +200,7 @@ const RELICS=[
   {id:'fusion',t:4,n:'Fusion Hammer',d:'+1 hero on the field. You can no longer train at campfires.'},
   {id:'astrolabe',t:4,n:'Astrolabe',d:'Three random ★1 heroes you own become ★2.'},
   {id:'pandora',t:4,n:'Pandora\'s Box',d:'Every ★1 hero you own turns into a random hero that costs 1 more.'},
-  {id:'calling',t:4,n:'Calling Bell',d:'Gain three random silver relics. The keep loses 15 maximum health.'},
+  {id:'calling',t:4,n:'Calling Bell',d:'Gain two random silver relics. The keep loses 15 maximum health.'},
   {id:'tinyhouse',t:4,n:'Tiny House',d:'An item component, a potion, 15 gold, 10 maximum keep health and 5 XP.'},
 ];
 // relics that grow: what they count is shown next to them in the relic list (cnt)

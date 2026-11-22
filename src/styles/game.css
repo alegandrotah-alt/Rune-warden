@@ -328,3 +328,9 @@ body.port .exb span{display:none}@media (max-height:430px){.exb span{display:non
 @keyframes bumpU{0%{transform:scale(1)}35%{transform:scale(1.18);filter:brightness(1.6) drop-shadow(0 0 6px #ffd76a)}100%{transform:none}}
 @keyframes bumpD{0%{transform:scale(1)}35%{transform:scale(.9);filter:brightness(1.3) drop-shadow(0 0 6px #ff5a4a)}100%{transform:none}}
 .bumpU{animation:bumpU .42s ease-out}.bumpD{animation:bumpD .42s ease-out}
+/* rerolling one god: the three wobble with a dashed edge until one is tapped; the newcomer arrives burning */
+@keyframes swapwob{0%,100%{transform:rotate(-.6deg)}50%{transform:rotate(.6deg)}}
+#roomList>button.swapme{border-style:dashed;animation:swapwob .5s ease-in-out infinite}
+@keyframes freshin{0%{opacity:0;transform:scale(.85) rotateY(90deg)}60%{opacity:1;transform:scale(1.04) rotateY(0)}100%{transform:none}}
+#roomList>button.fresh{animation:freshin .55s cubic-bezier(.2,.8,.3,1) both;box-shadow:0 0 22px color-mix(in srgb,var(--c) 60%,transparent)}
+@media (prefers-reduced-motion:reduce){#roomList>button.swapme,#roomList>button.fresh{animation:none}}

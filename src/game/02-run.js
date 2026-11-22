@@ -39,7 +39,7 @@ function newRun(o){o=o||{};const A=o.daily?2:CHALL[o.ch]?0:clamp(o.asc||0,0,10),
   // the oracle offers three plain gifts and one with a price
   if(o.oracle){const safe=Object.keys(ORACLE).filter(k=>!ORACLE[k].risk),pick=[];while(pick.length<3){const k=rndS(safe);if(!pick.includes(k))pick.push(k)}pick.push(rndS(['risk','risk2']));
     // first a deity: three are offered, one blesses the run
-    const dk=[];while(dk.length<3){const k=rndS(DKEYS);if(!dk.includes(k))dk.push(k)}R.room={t:'deity',opts:dk,next:pick,rr:2};R.phase='room'}
+    const dk=[];while(dk.length<3){const k=rndS(DKEYS);if(!dk.includes(k))dk.push(k)}R.room={t:'deity',opts:dk,next:pick,rr:1};R.phase='room'}
 }
 // obstacles, terrain, gates, runes and portals are re-dealt every act
 // gates are where monsters come from: the west gate is always there; edge gates (north/south) and breaches in the field open as the run goes on
@@ -169,7 +169,7 @@ const boardMax=()=>Math.min(mods().cap||99,boardMax0());
 const SLOTREL=['recruit','kingmaker','crown','ecto','sozu','coffee','fusion'];
 const relicSlots=()=>Math.min(1,SLOTREL.filter(has).length);
 const boardMax0=()=>R.lvl+relicSlots();
-const RELDMG_CAP=.6;
+const RELDMG_CAP=.45;
 function relicDmg(){let b=0;if(has('collector'))b+=Math.min(.45,.03*R.relics.length);if(has('tally'))b+=Math.min(.3,((R.stats.kills/40)|0)*.01);if(has('idol'))b+=Math.min(.25,((R.gold/4)|0)*.01);
   if(has('ledger'))b+=Math.min(.5,(R.cnt.big||0)*.03);if(has('sands')&&R.b)b+=Math.min(.6,R.b.t*.015);if(has('flawless'))b+=Math.min(.45,(R.cnt.fl||0)*.03);if(has('philo'))b+=.3;return Math.min(RELDMG_CAP,b)}
 function heroAt(c,r){return R.board.find(h=>h.c===c&&h.r===r)}

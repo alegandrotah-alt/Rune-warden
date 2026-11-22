@@ -21,15 +21,19 @@ function enterRoom(t){
 function leaveRoom(){const t=R.room&&R.room.t;R.room=null;if(DOM)$('ovRoom').hidden=true;if(t==='oracle'){enterPlan();return}
   R.calm=(R.calm||0)+1;if(R.calm>=4)award('nofight');finishFloor()}
 // a floor with no monsters still counts as a round: income, XP and a fresh shop
-function finishFloor(){const inc={base:4,int:0,st:0,ex:has('tithe')?2:0};R.gold+=inc.base+inc.ex;gainXP(2+(has('scholar')?3:0)+rank('xp'));if(R.egg>0){R.egg--;if(R.egg===0){R.gold+=35;R.egg=-1;toast('The golden egg hatches: +35 gold')}}
+function finishFloor(){const inc={base:4,int:0,st:0,ex:has('tithe')?1:0};R.gold+=inc.base+inc.ex;gainXP(2+(has('scholar')?2:0)+rank('xp'));if(R.egg>0){R.egg--;if(R.egg===0){R.gold+=35;R.egg=-1;toast('The golden egg hatches: +35 gold')}}
   if(STONE_AT[R.wave])R.stones.push(2);R.wave++;rollShop(true);R.freeRoll=rank('reroll')+mods().free;R.node=null;R.nextQ=waveList(R.wave);
   floatText(FW/2,FH*.45,`+${inc.base+inc.ex} gold (no interest without a fight)`,'#ffcf2e',1.1);autoNode();enterPlan()}
 function enterPlan(){R.phase='plan';R.queue=null;saveRun();uiRefresh();if(DOM){if(needMap())showMap();else $('ovMap').hidden=true}}
 function roomView(){const o=R.room;if(!o)return null;const done=()=>leaveRoom(),V={ic:'?',t:'',d:'',opts:[]};
-  if(o.t==='deity'){const tn=a=>a.map(t=>TRAITS[t].n).join(' and ');Object.assign(V,{ic:icon('star'),t:'Choose a deity to bless your run',d:'Each god favours two traits and forbids two others: forbidden heroes never come up in your shop this run.'});
-    V.opts=o.opts.map(k=>{const D=DEITIES[k];return{deity:k,n:`${D.n}, ${D.t}`,d:`Blesses ${tn(D.bless)}. Forbids ${tn(D.ban)}. ${D.syn.n}: ${D.syn.d} Power: ${D.pw.n}, ${D.pw.d.charAt(0).toLowerCase()+D.pw.d.slice(1)}`,act:()=>{chooseDeity(k);R.room=o.next?{t:'oracle',opts:o.next}:null;if(!R.room)enterPlan()}}});
-    // not taken with any of them: up to two rerolls bring three gods not on offer now
-    if(o.rr>0)V.opts.push({n:'Reroll the gods',d:`Three other gods step forward. ${o.rr} reroll${o.rr>1?'s':''} left this run.`,reroll:1,act:()=>{const dk=[];while(dk.length<3){const k=rndS(DKEYS);if(!o.opts.includes(k)&&!dk.includes(k))dk.push(k)}o.opts=dk;o.rr--;sfx('coin',.5,.8)}})}
+  if(o.t==='deity'){const tn=a=>a.map(t=>TRAITS[t].n).join(' and ');
+    Object.assign(V,o.swap?{ic:icon('dice'),t:'Which god should step aside?',d:'Tap the god to replace. The other two stay on offer.'}:{ic:icon('star'),t:'Choose a deity to bless your run',d:'Each god favours two traits and forbids two others: forbidden heroes never come up in your shop this run.'});
+    // in swap mode tapping a god replaces just that one with a god not on offer; otherwise it chooses
+    V.opts=o.opts.map((k,i)=>{const D=DEITIES[k];return{deity:k,n:`${D.n}, ${D.t}`,d:`Blesses ${tn(D.bless)}. Forbids ${tn(D.ban)}. ${D.syn.n}: ${D.syn.d} Power: ${D.pw.n}, ${D.pw.d.charAt(0).toLowerCase()+D.pw.d.slice(1)}`,
+      act:()=>{if(o.swap){const left=DKEYS.filter(q=>!o.opts.includes(q)&&!(o.seen||[]).includes(q));const nk=rndS(left.length?left:DKEYS.filter(q=>!o.opts.includes(q)));(o.seen=o.seen||[]).push(k);o.opts[i]=nk;o.swap=0;o.rr--;o.fresh=i;sfx('coin',.5,.8);return}
+        chooseDeity(k);R.room=o.next?{t:'oracle',opts:o.next}:null;if(!R.room)enterPlan()}}});
+    if(o.swap)V.opts.push({n:'Keep all three',d:'Changed your mind: keep the reroll for now.',reroll:1,act:()=>{o.swap=0}});
+    else if(o.rr>0)V.opts.push({n:'Reroll one god',d:'Pick one of the three to replace with another god; the other two stay. Once per run.',reroll:1,act:()=>{o.swap=1}})}
   if(o.t==='oracle'){Object.assign(V,{ic:icon('eye'),t:'The Oracle at the Gate',d:'"Every warden walks the road alone. Take a gift for the journey."'});
     V.opts=o.opts.map(k=>({n:ORACLE[k].n,d:ORACLE[k].d,risk:ORACLE[k].risk,act:()=>{oracleGift(k);done()}}))}
   else if(o.t==='rest'){Object.assign(V,{ic:NODES.rest.ic,t:'Campfire',d:'The fire crackles. The night is short: choose one.'});
@@ -214,7 +218,10 @@ function showRoom(){if(!DOM)return;const V=roomView();if(!V){$('ovRoom').hidden=
     const icon=q.deity?`<span class="gem dei" style="color:${DEITIES[q.deity].col}">${dIcon(q.deity)}</span>`:q.reroll?`<span class="gem dei" style="color:#d6a8ff">${dIcon2('dice')}</span>`:q.item?`<span class="gem it">${ITEMS[q.item].ic}</span>`:q.pot?`<span class="gem pot" style="--p:${POTIONS[q.pot].col}">${POTIONS[q.pot].ic}</span>`:q.relic?`<span class="gem">${RELIC[q.relic].em?TRAITS[RELIC[q.relic].em].ic:RIC[q.relic]||RELIC[q.relic].n[0]}</span>`:'';
     b.innerHTML=`${icon}<b>${q.n}</b>${q.d?`<span>${q.d}</span>`:''}${q.cost?`<em class="price">${q.sold?'Sold':q.cost+' gold'}</em>`:''}`;
     if(q.hero){const p=smallPortrait('h_',q.hero,22);if(p)b.prepend(p)}
+    const ro=R.room;if(ro&&ro.t==='deity'&&q.deity){if(ro.swap)b.classList.add('swapme');if(ro.fresh===i)b.classList.add('on','fresh')}
     b.addEventListener('click',()=>{if(box.dataset.busy)return;box.dataset.busy=1;roomAct(i);delete box.dataset.busy});box.appendChild(b)});
+  // entering or leaving the god swap: back to the top, so its instruction is in view
+  {const ro=R.room,card=box.closest&&box.closest('.card');if(card&&ro&&ro.t==='deity'){const sw=ro.swap?'1':ro.fresh!==undefined?'2':'0';if(card.dataset.sw&&card.dataset.sw!==sw&&card.scrollTo)card.scrollTo({top:0,behavior:'smooth'});card.dataset.sw=sw}}
   $('ovRoom').hidden=false;drawRoomArt()}
 function showSpoils(){if(!DOM||!R.spoils)return;const S=R.spoils,N=NODES[S.node]||NODES.battle;$('rwT').textContent=S.node==='boss'?'The boss falls!':S.node==='elite'?'Elite defeated':'Victory';
   $('rwL').innerHTML=S.lines.map(([k,t])=>`<li class="${k}">${t}</li>`).join('')||'';
