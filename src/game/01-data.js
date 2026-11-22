@@ -169,7 +169,7 @@ const RELICS=[
   {id:'arcana',t:2,n:'Arcane Flow',d:'Heroes gain mana 50% faster.'},
   {id:'runesmith',t:2,n:'Runesmith',d:'Every rune multiplies by 1 more.'},
   {id:'baron',t:2,n:'Portal Baron',d:'Monsters that came through a portal are worth twice the gold.'},
-  {id:'richer',t:2,n:'Usury',d:'Interest can go up to 8 gold per wave.'},
+  {id:'richer',t:2,n:'Usury',d:'Interest can go up to 7 gold per wave.'},
   {id:'recruit',t:2,n:'Recruiter',d:'+1 hero on the field.'},
   {id:'cheap',t:2,n:'Haggler',d:'Rerolling the shop costs 1 gold.'},
   {id:'crit',t:2,n:'Keen Edges',d:'Heroes that strike, swipe or shove crit 25% of the time for double damage.'},
@@ -244,7 +244,7 @@ const stV=s=>typeof s==='number'?s:s.v,stK=s=>typeof s==='number'?null:s.k,kindS
 // research between runs, paid with gems
 const RES=[
   {id:'gold',cat:'Economy',n:'War Chest',max:3,cost:[30,60,120],d:l=>`Start runs with +${2*l} gold.`},
-  {id:'interest',cat:'Economy',n:'Banker',max:1,cost:[140],d:()=>'Interest can go up to 6 gold per wave.'},
+  {id:'interest',cat:'Economy',n:'Banker',max:1,cost:[140],d:()=>'Interest can go up to 5 gold per wave.'},
   {id:'reroll',cat:'Economy',n:'Market Day',max:1,cost:[80],d:()=>'Your first reroll every wave is free.'},
   {id:'merchant',cat:'Economy',n:'Trade Routes',max:2,cost:[60,120],d:l=>`The merchant is ${15*l}% cheaper.`},
   {id:'gems',cat:'Economy',n:'Gem Cutters',max:3,cost:[100,200,350],d:l=>`+${10*l}% gems from runs.`},
@@ -365,7 +365,7 @@ const RECIPE={};for(const k in ITEMS){const I=ITEMS[k];if(I.c){RECIPE[I.c.slice(
 const FINISHED=Object.keys(ITEMS).filter(k=>ITEMS[k].c);
 // ---------- the act map: branching roads of rooms, like a dungeon crawl ----------
 const NODES={
-  battle:{n:'Battle',ic:'⚔',col:'#d8c8a8',fight:1,d:'A wave of monsters. Win for 3 bonus gold and a free recruit.'},
+  battle:{n:'Battle',ic:'⚔',col:'#d8c8a8',fight:1,d:'A wave of monsters. Win for 2 bonus gold and a free recruit.'},
   elite:{n:'Elite',ic:'☠',col:'#ff7a5a',fight:1,d:'A wave with two elite champions. Win for an item, 6 gold, a recruit and a relic.'},
   event:{n:'Unknown',ic:'?',col:'#d6a8ff',d:'Something waits on the road. No monsters, and no interest this floor.'},
   rest:{n:'Campfire',ic:'♨',col:'#ffa64a',d:'Rest to repair the keep, or train a hero into a veteran. No monsters, and no interest this floor.'},
@@ -437,7 +437,7 @@ const ORACLE={
   risk2:{n:'A heavy purse',d:'The keep starts with 20 less health. +30 gold.',risk:1},
 };
 // ---------- ascension: each level adds its rule to all the ones below it ----------
-const ASC=['Monsters have 15% more health.','An extra elite monster every wave from wave 4.','Start runs with 3 less gold.','Monsters move 8% faster.','The keep has 20 less health.','Monsters hit your heroes 30% harder.','Bosses have 35% more health.','Interest is capped at 4 gold.','Monsters have another 15% more health.','Relic picks offer one fewer choice.'];
+const ASC=['Monsters have 15% more health.','An extra elite monster every wave from wave 4.','Start runs with 3 less gold.','Monsters move 8% faster.','The keep has 20 less health.','Monsters hit your heroes 30% harder.','Bosses have 35% more health.','Interest is capped at 3 gold.','Monsters have another 15% more health.','Relic picks offer one fewer choice.'];
 // heroes you unlock with gems; the others are in the shop from the start
 const UNLOCK={duelist:60,frostmage:90,plague:90,warlord:140,necromancer:140};
 // keep skins unlocked by achievements

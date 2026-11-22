@@ -14,7 +14,7 @@ function reroll(){const c=rerollCost();if(R.gold<c)return false;R.gold-=c;if(R.f
 function buy(i){const k=R.shop[i];if(!k)return false;const c=HEROES[k].c;if(R.gold<c)return false;R.pool[k]++;if(!addHero(k,1,false,R.shopEd&&R.shopEd[i]))return false;R.gold-=c;R.shop[i]=null;if(R.shopEd)R.shopEd[i]=null;sfx('pick',.55);return true}
 function buyXP(){if(R.gold<4||R.lvl>=10)return false;R.gold-=4;gainXP(4);sfx('click',.5);return true}
 function gainXP(n){R.xp+=n;while(R.lvl<10&&R.xp>=XPNEED[R.lvl]){R.xp-=XPNEED[R.lvl];R.lvl++;R.tp=(R.tp||0)+1;sfx('level',.6);floatText(FW/2,FH/2,'LEVEL '+R.lvl,'#ffd76a',1.4);if(R.lvl>=9)award('lvl9')}if(R.lvl>=10)R.xp=0}
-const interestCap=()=>(asc(8)?4:has('richer')?8:rank('interest')?6:5)+mods().intCap;
+const interestCap=()=>(asc(8)?3:has('richer')?7:rank('interest')?5:4)+mods().intCap;
 function income(won){
-  const M=mods(),base=5+M.gold+Math.min(5,R.board.filter(h=>h.ed==='gilded').length),int=has('ecto')||M.noInt?0:Math.min(interestCap(),Math.floor(R.gold/10))*M.intMul,st=Math.abs(R.streak)>=5?3:Math.abs(R.streak)>=4?2:Math.abs(R.streak)>=2?1:0,ex=(has('tithe')?2:0)+(R.field&&R.field.anchor&&won?6:0);
+  const M=mods(),base=4+M.gold+Math.min(5,R.board.filter(h=>h.ed==='gilded').length),int=has('ecto')||M.noInt?0:Math.min(interestCap(),Math.floor(R.gold/10))*M.intMul,st=Math.abs(R.streak)>=5?3:Math.abs(R.streak)>=4?2:Math.abs(R.streak)>=2?1:0,ex=(has('tithe')?2:0)+(R.field&&R.field.anchor&&won?6:0);
   R.gold+=base+int+st+ex;return{base,int,st,ex}}

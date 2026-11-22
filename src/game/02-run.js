@@ -39,7 +39,7 @@ function newRun(o){o=o||{};const A=o.daily?2:CHALL[o.ch]?0:clamp(o.asc||0,0,10),
   // the oracle offers three plain gifts and one with a price
   if(o.oracle){const safe=Object.keys(ORACLE).filter(k=>!ORACLE[k].risk),pick=[];while(pick.length<3){const k=rndS(safe);if(!pick.includes(k))pick.push(k)}pick.push(rndS(['risk','risk2']));
     // first a deity: three are offered, one blesses the run
-    const dk=[];while(dk.length<3){const k=rndS(DKEYS);if(!dk.includes(k))dk.push(k)}R.room={t:'deity',opts:dk,next:pick};R.phase='room'}
+    const dk=[];while(dk.length<3){const k=rndS(DKEYS);if(!dk.includes(k))dk.push(k)}R.room={t:'deity',opts:dk,next:pick,rr:2};R.phase='room'}
 }
 // obstacles, terrain, gates, runes and portals are re-dealt every act
 // gates are where monsters come from: the west gate is always there; edge gates (north/south) and breaches in the field open as the run goes on

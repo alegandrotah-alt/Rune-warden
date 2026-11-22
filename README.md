@@ -19,7 +19,7 @@ A fantasy roguelite tower defense for phones held either way: sideways, monsters
 - Pacts: before any fight, sign up to two curses for the coming fight, each with a reward.
 - Attuned rune stones (Ember, Frost, Twin, Midas, Keen, Void, Wellspring) that change every shot crossing them; marked shop heroes (Gilded, Savage, Fleet, Arcane, Hollow); relics that grow over the run; a kill combo.
 - Six challenge runs with their own rules, unlocked by the first win.
-- Eight deities (Solenne, Morrow, Sylvara, Vexis, Aurion, Korrun, Hessa, Grakka): each run three offer a blessing; the chosen god bans two traits from the shop, blesses two, adds a synergy and gives a power used once per fight, so every run steers you toward a different build. 51 heroes across ten traits keep the pool deep even with two traits banned.
+- Eight deities (Solenne, Morrow, Sylvara, Vexis, Aurion, Korrun, Hessa, Grakka): each run three offer a blessing (reroll the offer up to twice); the chosen god bans two traits from the shop, blesses two, adds a synergy and gives a power used once per fight, so every run steers you toward a different build. 51 heroes across ten traits keep the pool deep even with two traits banned.
 - Elite champions carry one of ten twists (two in the Rift and in endless); room screens are illustrated with scenes built from the game's sprites, and some events run over several steps.
 - A dark theme with animated pixel fire: every menu, room, reward and map screen burns along its edges in the colour of each choice, with drifting embers.
 - Monsters have attack and death animations; big blows freeze the fight for a blink, and bosses telegraph their signature move.

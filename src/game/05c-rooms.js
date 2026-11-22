@@ -21,13 +21,15 @@ function enterRoom(t){
 function leaveRoom(){const t=R.room&&R.room.t;R.room=null;if(DOM)$('ovRoom').hidden=true;if(t==='oracle'){enterPlan();return}
   R.calm=(R.calm||0)+1;if(R.calm>=4)award('nofight');finishFloor()}
 // a floor with no monsters still counts as a round: income, XP and a fresh shop
-function finishFloor(){const inc={base:5,int:0,st:0,ex:has('tithe')?2:0};R.gold+=inc.base+inc.ex;gainXP(2+(has('scholar')?3:0)+rank('xp'));if(R.egg>0){R.egg--;if(R.egg===0){R.gold+=35;R.egg=-1;toast('The golden egg hatches: +35 gold')}}
+function finishFloor(){const inc={base:4,int:0,st:0,ex:has('tithe')?2:0};R.gold+=inc.base+inc.ex;gainXP(2+(has('scholar')?3:0)+rank('xp'));if(R.egg>0){R.egg--;if(R.egg===0){R.gold+=35;R.egg=-1;toast('The golden egg hatches: +35 gold')}}
   if(STONE_AT[R.wave])R.stones.push(2);R.wave++;rollShop(true);R.freeRoll=rank('reroll')+mods().free;R.node=null;R.nextQ=waveList(R.wave);
   floatText(FW/2,FH*.45,`+${inc.base+inc.ex} gold (no interest without a fight)`,'#ffcf2e',1.1);autoNode();enterPlan()}
 function enterPlan(){R.phase='plan';R.queue=null;saveRun();uiRefresh();if(DOM){if(needMap())showMap();else $('ovMap').hidden=true}}
 function roomView(){const o=R.room;if(!o)return null;const done=()=>leaveRoom(),V={ic:'?',t:'',d:'',opts:[]};
   if(o.t==='deity'){const tn=a=>a.map(t=>TRAITS[t].n).join(' and ');Object.assign(V,{ic:icon('star'),t:'Choose a deity to bless your run',d:'Each god favours two traits and forbids two others: forbidden heroes never come up in your shop this run.'});
-    V.opts=o.opts.map(k=>{const D=DEITIES[k];return{deity:k,n:`${D.n}, ${D.t}`,d:`Blesses ${tn(D.bless)}. Forbids ${tn(D.ban)}. ${D.syn.n}: ${D.syn.d} Power: ${D.pw.n}, ${D.pw.d.charAt(0).toLowerCase()+D.pw.d.slice(1)}`,act:()=>{chooseDeity(k);R.room=o.next?{t:'oracle',opts:o.next}:null;if(!R.room)enterPlan()}}})}
+    V.opts=o.opts.map(k=>{const D=DEITIES[k];return{deity:k,n:`${D.n}, ${D.t}`,d:`Blesses ${tn(D.bless)}. Forbids ${tn(D.ban)}. ${D.syn.n}: ${D.syn.d} Power: ${D.pw.n}, ${D.pw.d.charAt(0).toLowerCase()+D.pw.d.slice(1)}`,act:()=>{chooseDeity(k);R.room=o.next?{t:'oracle',opts:o.next}:null;if(!R.room)enterPlan()}}});
+    // not taken with any of them: up to two rerolls bring three gods not on offer now
+    if(o.rr>0)V.opts.push({n:'Reroll the gods',d:`Three other gods step forward. ${o.rr} reroll${o.rr>1?'s':''} left this run.`,reroll:1,act:()=>{const dk=[];while(dk.length<3){const k=rndS(DKEYS);if(!o.opts.includes(k)&&!dk.includes(k))dk.push(k)}o.opts=dk;o.rr--;sfx('coin',.5,.8)}})}
   if(o.t==='oracle'){Object.assign(V,{ic:icon('eye'),t:'The Oracle at the Gate',d:'"Every warden walks the road alone. Take a gift for the journey."'});
     V.opts=o.opts.map(k=>({n:ORACLE[k].n,d:ORACLE[k].d,risk:ORACLE[k].risk,act:()=>{oracleGift(k);done()}}))}
   else if(o.t==='rest'){Object.assign(V,{ic:NODES.rest.ic,t:'Campfire',d:'The fire crackles. The night is short: choose one.'});
@@ -120,8 +122,8 @@ function rollRecruits(n,bonus){const out=[];for(let i=0;i<n;i++){const lv=Math.m
 function makeSpoils(node,won,gold){const S={node,won,lines:gold?[['gold',`+${gold} gold`]]:[],heroes:[]};
   const elite=node==='elite',boss=node==='boss';
   S.heroes=rollRecruits(3+(rank('recruit')?1:0)+(has('prayer')&&node==='battle'?1:0),elite||boss||has('prayer')&&rng()<.35?1:0);
-  if(node==='battle'){R.gold+=3;S.lines.push(['gold','+3 spoils'])}
-  if(elite){const c=rndS(COMPS);dropItem(c);R.gold+=6;S.lines.push(['item',`${ITEMS[c].n} and 6 gold from the elite`]);R.stats.elites=(R.stats.elites||0)+1;if(R.stats.elites>=5)award('elite5')}
+  if(node==='battle'){R.gold+=2;S.lines.push(['gold','+2 spoils'])}
+  if(elite){const c=rndS(COMPS);dropItem(c);R.gold+=4;S.lines.push(['item',`${ITEMS[c].n} and 4 gold from the elite`]);R.stats.elites=(R.stats.elites||0)+1;if(R.stats.elites>=5)award('elite5')}
   if((elite||boss)&&has('toolbox')){const c=rndS(COMPS);dropItem(c);S.lines.push(['item',`${ITEMS[c].n} from the Toolbox`])}
   if(!has('sozu')&&stage()>=1&&rng()<(elite?.6:boss?0:.4)&&R.potions.length<potionCap()){const p=rndS(POTKEYS);gainPotion(p);S.lines.push(['potion',`${POTIONS[p].n} found`])}
   if(has('bloodvial')){R.hp=Math.min(R.hpMax,R.hp+2)}
@@ -205,11 +207,11 @@ function usePotion(i){const id=R.potions[i],P=POTIONS[id];if(!P)return false;
   if(id==='gold')R.gold+=12;if(id==='ink')R.ink=1;if(id==='insight')gainXP(6);
   toast(P.n+': '+P.d);uiRefresh();if(R.phase==='plan')saveRun();return true}
 // ---------- room, spoils and potion screens ----------
-const dIcon=k=>icon(DEITIES[k].ic);
+const dIcon=k=>icon(DEITIES[k].ic),dIcon2=n=>icon(n);
 function showRoom(){if(!DOM)return;const V=roomView();if(!V){$('ovRoom').hidden=true;return}$('roomI').innerHTML=V.ic;$('roomT').textContent=V.t;$('roomD').textContent=V.d;const box=$('roomList');box.innerHTML='';box.className=V.shop?'shopgrid':'picks';
   V.opts.forEach((q,i)=>{const b=document.createElement('button');b.type='button';b.className=V.shop&&!q.leave?'ware':'relic';b.style.setProperty('--c',q.deity?DEITIES[q.deity].col:q.risk?'#ff7a5a':q.relic?['','#cfd8e0','#ffcf6a','#e6a8ff','#ff8a6a'][RELIC[q.relic].t]:q.pot?POTIONS[q.pot].col:q.item?'#ffd76a':'#d6a8ff');
     const off=q.dis||q.sold||q.cost>R.gold||q.ok&&!q.ok();b.disabled=!!off;
-    const icon=q.deity?`<span class="gem dei" style="color:${DEITIES[q.deity].col}">${dIcon(q.deity)}</span>`:q.item?`<span class="gem it">${ITEMS[q.item].ic}</span>`:q.pot?`<span class="gem pot" style="--p:${POTIONS[q.pot].col}">${POTIONS[q.pot].ic}</span>`:q.relic?`<span class="gem">${RELIC[q.relic].em?TRAITS[RELIC[q.relic].em].ic:RIC[q.relic]||RELIC[q.relic].n[0]}</span>`:'';
+    const icon=q.deity?`<span class="gem dei" style="color:${DEITIES[q.deity].col}">${dIcon(q.deity)}</span>`:q.reroll?`<span class="gem dei" style="color:#d6a8ff">${dIcon2('dice')}</span>`:q.item?`<span class="gem it">${ITEMS[q.item].ic}</span>`:q.pot?`<span class="gem pot" style="--p:${POTIONS[q.pot].col}">${POTIONS[q.pot].ic}</span>`:q.relic?`<span class="gem">${RELIC[q.relic].em?TRAITS[RELIC[q.relic].em].ic:RIC[q.relic]||RELIC[q.relic].n[0]}</span>`:'';
     b.innerHTML=`${icon}<b>${q.n}</b>${q.d?`<span>${q.d}</span>`:''}${q.cost?`<em class="price">${q.sold?'Sold':q.cost+' gold'}</em>`:''}`;
     if(q.hero){const p=smallPortrait('h_',q.hero,22);if(p)b.prepend(p)}
     b.addEventListener('click',()=>{if(box.dataset.busy)return;box.dataset.busy=1;roomAct(i);delete box.dataset.busy});box.appendChild(b)});
