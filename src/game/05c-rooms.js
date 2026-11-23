@@ -218,7 +218,7 @@ function showRoom(){if(!DOM)return;const V=roomView();if(!V){$('ovRoom').hidden=
     const icon=q.deity?`<span class="gem dei" style="color:${DEITIES[q.deity].col}">${dIcon(q.deity)}</span>`:q.reroll?`<span class="gem dei" style="color:#d6a8ff">${dIcon2('dice')}</span>`:q.item?`<span class="gem it">${ITEMS[q.item].ic}</span>`:q.pot?`<span class="gem pot" style="--p:${POTIONS[q.pot].col}">${POTIONS[q.pot].ic}</span>`:q.relic?`<span class="gem">${RELIC[q.relic].em?TRAITS[RELIC[q.relic].em].ic:RIC[q.relic]||RELIC[q.relic].n[0]}</span>`:'';
     b.innerHTML=`${icon}<b>${q.n}</b>${q.d?`<span>${q.d}</span>`:''}${q.cost?`<em class="price">${q.sold?'Sold':q.cost+' gold'}</em>`:''}`;
     if(q.hero){const p=smallPortrait('h_',q.hero,22);if(p)b.prepend(p)}
-    const ro=R.room;if(ro&&ro.t==='deity'&&q.deity){if(ro.swap)b.classList.add('swapme');if(ro.fresh===i)b.classList.add('on','fresh')}
+    const ro=R.room;if(ro&&ro.t==='deity'&&q.deity){b.dataset.dy=q.deity;if(ro.swap)b.classList.add('swapme');if(ro.fresh===i)b.classList.add('on','fresh')}
     b.addEventListener('click',()=>{if(box.dataset.busy)return;box.dataset.busy=1;roomAct(i);delete box.dataset.busy});box.appendChild(b)});
   // entering or leaving the god swap: back to the top, so its instruction is in view
   {const ro=R.room,card=box.closest&&box.closest('.card');if(card&&ro&&ro.t==='deity'){const sw=ro.swap?'1':ro.fresh!==undefined?'2':'0';if(card.dataset.sw&&card.dataset.sw!==sw&&card.scrollTo)card.scrollTo({top:0,behavior:'smooth'});card.dataset.sw=sw}}
