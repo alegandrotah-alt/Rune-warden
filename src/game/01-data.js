@@ -321,7 +321,7 @@ const ACH=[
   {id:'attune3',n:'Rune Scribe',d:'Have three different attuned runes on the field',g:40},
   {id:'moon',n:'Blood Moon',d:'Bring Fenrir\'s Blood Moon to its full strength',g:60},
   {id:'herald',n:'Silence the Herald',d:'Defeat the Rift Herald',g:80},
-  {id:'wardens',n:'Many Hands',d:'Win a run with three different wardens',g:100},
+  {id:'wardens',n:'Many Hands',d:'Win a run with three different gods',g:100},
   {id:'twins',n:'Double Trouble',d:'Slay an elite that carries two twists',g:40},
   {id:'h_lone',n:'One Warden',hidden:'One is all it takes.',d:'Clear a wave after wave 5 with a single hero on the field',g:60},
   {id:'h_three',n:'Trinity',hidden:'Three legends at once.',d:'Have three ★3 heroes on the field at once',g:120},

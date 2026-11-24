@@ -148,7 +148,7 @@ function emberTick(dt0){if(!DOM)return;if(!EMB.c)embInit();if(!EMB.c)return;
   const burn=(el,r,H,heat,cool,t,clip)=>{const w=Math.max(4,Math.round((r.right-r.left)/P)-4);const f=embStrip(el,w,H);embBurn(f,heat,cool);embPaint(f,Math.round(r.left/P)+2,Math.round(r.top/P),embPal(t),clip?cy0:-1e9,clip?cy1:1e9)};
   // the panel
   if(T.hud)burn(T.el,C,8,.9,.24,null,0);
-  else{if(S.fire||T.k==='fire')burn(T.el,C,11,1.05,.15,S.fire||null,0);else embEmit(T.k,C,null,1,dt);draws.push([C,S.c,.6])}
+  else{if(S.fire||T.k==='fire')burn(T.el,C,11,1.05,.15,S.fire||null,0);else{const per=((C.right-C.left)+(C.bottom-C.top))*2/P;embEmit(T.k,C,null,Math.min(1,260/Math.max(1,per)),dt)}draws.push([C,S.c,.6])}
   // the choices, each in its own effect
   for(const o of T.opts){if(o.r.bottom<C.top||o.r.top>C.bottom)continue;const s=ESTY[o.k]||S,col=s.fire?null:o.t?mixc(s.c,o.t,.55):s.c;
     if(s.fire||o.k==='fire')burn(o.el,o.r,o.on?7:5,o.on?.95:.7,o.on?.3:.34,s.fire||o.t,1);else embEmit(o.k,o.r,col,o.on?1.6:.95,dt,C);

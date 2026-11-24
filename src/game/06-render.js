@@ -9,7 +9,26 @@ let HSTOP=0,FLASH=0;function hitStop(t){if(DOM&&(SET.shake??1)>0)HSTOP=Math.max(
 // monster sheets: the walk cycle, then (on newer sheets) attack and death frames in the last two quarters, framed wider
 function monCells(k){const n=cells('m_'+k)||6;return n>=20?[n>>1,n>>2,n>>2]:[n,0,0]}
 const MAF=1.3,MDF=1.7;
-function fxStar(h){const p=h.c>=0?{x:hx(h.c,h.r),y:hy(h.r)}:null;if(p){fx({k:'star',x:p.x,y:p.y,dur:.9,col:'#ffd76a'});floatText(p.x,p.y-T,'★'.repeat(h.star),'#ffd76a',1.4)}sfx('level',.7)}
+// a merge: three orbs fly from the copies into the hero that stays, then a ring of light and its new stars pop
+// over it (drawn icons, never a text glyph). Works on the field and on the bench; drawn in screen space by drawMerge
+const MFX=[];
+function heroScr(h){if(!h)return null;if(h.c>=0&&R.board.includes(h)){const p=scr(hx(h.c,h.r),hy(h.r));return{x:p[0],y:p[1]-ss(T)*.45}}const i=R.bench.indexOf(h);if(i>=0){const s=benchSlot(i);return{x:s.x,y:s.y-s.w*.3}}return null}
+function fxStar(h,src){if(DOM){if(MFX.length>8)MFX.shift();MFX.push({h,src:(src||[]).filter(Boolean),t:0,star:h.star})}sfx('level',.7)}
+const STARCOL=['','#e8eef5','#e8eef5','#ffd76a','#ff9ad8'];
+function drawMerge(dt){if(!MFX.length)return;const k=ss(T),gl=glow('255,215,110');ctx.save();
+  for(let i=MFX.length-1;i>=0;i--){const m=MFX[i];m.t+=dt;if(m.t>1.35){MFX.splice(i,1);continue}const tg=heroScr(m.h)||m.last;if(!tg)continue;m.last=tg;const col=STARCOL[m.star]||'#ffd76a';
+    // the copies fly in on a little arc, trailing light
+    if(m.t<.42)for(const s of m.src){for(let j=0;j<4;j++){const u0=Math.max(0,m.t/.42-j*.06),u=u0*u0*(3-2*u0),x=s.x+(tg.x-s.x)*u,y=s.y+(tg.y-s.y)*u-Math.sin(u*Math.PI)*k*.7,r=k*(.16-j*.03);
+      ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.9-j*.2;if(gl)ctx.drawImage(gl,x-r*3,y-r*3,r*6,r*6);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1-j*.25;ctx.fillStyle='#fff7da';ctx.beginPath();ctx.arc(x,y,r*.45,0,7);ctx.fill()}}
+    if(m.t<.34)continue;const v=Math.min(1,(m.t-.34)/1);
+    // the flash, the ring and its rays
+    ctx.globalCompositeOperation='lighter';ctx.globalAlpha=(1-v)*.85;if(gl)ctx.drawImage(gl,tg.x-k*1.3,tg.y-k*1.3,k*2.6,k*2.6);ctx.globalCompositeOperation='source-over';
+    ctx.globalAlpha=(1-v)*.9;ctx.strokeStyle=col;ctx.lineWidth=Math.max(1,k*.08*(1-v));ctx.beginPath();ctx.arc(tg.x,tg.y,k*(.25+v*1.05),0,7);ctx.stroke();
+    ctx.lineWidth=Math.max(1,k*.05*(1-v));for(let a=0;a<8;a++){const an=a/8*6.283+.2,r0=k*(.3+v*.9),r1=r0+k*.25*(1-v);ctx.beginPath();ctx.moveTo(tg.x+Math.cos(an)*r0,tg.y+Math.sin(an)*r0);ctx.lineTo(tg.x+Math.cos(an)*r1,tg.y+Math.sin(an)*r1);ctx.stroke()}
+    // the new stars pop up in a row and rise
+    const pop=v<.14?v/.14*1.3:v<.26?1.3-(v-.14)/.12*.3:1,sz=k*.42*pop,n=m.star,y=tg.y-k*.55-v*k*.45;ctx.globalAlpha=v>.72?(1-v)/.28:1;
+    for(let j=0;j<n;j++){const x=tg.x+(j-(n-1)/2)*sz*.95;ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.arc(x,y+sz*.04,sz*.52,0,7);ctx.fill();drawIcon('star',x,y,sz,col)}}
+  ctx.restore();ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over'}
 const TIERCOL=['','#b8c2cc','#5fd17a','#4aa8ff','#c77dff','#ffcf2e'];
 function benchSlot(i){const B=bottomLayout(),n=R.bench.length;return{x:B.cx+(i-(n-1)/2)*B.w,y:B.y,w:B.w}}
 let BGN=0;
@@ -388,7 +407,7 @@ function render(dt){
     else drawMon(it.m)}
   drawSpawnAndKeep();
   if(R.b)for(const q of R.b.projs)drawProj(q);
-  drawFx(dt);drawAmbient(dt);drawBench();
+  drawFx(dt);drawAmbient(dt);drawBench();drawMerge(dt);
   // floating text
   ctx.textAlign='center';ctx.textBaseline='middle';for(const t of TXT){t.life-=dt;const a=clamp(t.life*2,0,1),age=1.1-t.life,fs=Math.max(11,ss(15))*t.s*(age<.12?.6+age/.12*.75:age<.22?1.35-(age-.12)/.1*.35:1);ctx.globalAlpha=a;ctx.font=`800 ${fs}px "Barlow Condensed",sans-serif`;ctx.lineWidth=Math.max(3,fs*.22);ctx.lineJoin='round';ctx.strokeStyle='rgba(0,0,0,.9)';const [tx0,ty0]=scr(t.x,t.y),y=ty0-ss(T*.4)-(1.1-t.life)*ss(26);ctx.strokeText(t.t,tx0,y);ctx.fillStyle=t.col;ctx.fillText(t.t,tx0,y)}ctx.globalAlpha=1;for(let i=TXT.length-1;i>=0;i--)if(TXT[i].life<=0)TXT.splice(i,1);
   // kill combo, top of the field: it swells with every kill and fades when the streak runs out

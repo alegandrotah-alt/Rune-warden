@@ -186,10 +186,11 @@ function allHeroes(){return R.board.concat(R.bench.filter(Boolean))}
 function merge(h){
   const same=allHeroes().filter(x=>x.k===h.k&&x.star===h.star);if(h.tmp&&!same.includes(h))same.push(h);
   const need=3;if(same.length<need||h.star>=4){if(h.tmp)delete h.tmp;return}
-  const keep=same.find(x=>R.board.includes(x))||same.find(x=>!x.tmp)||same[0];
+  const keep=same.find(x=>R.board.includes(x))||same.find(x=>!x.tmp)||same[0],src=typeof heroScr==='function'&&DOM?same.slice(0,need).filter(x=>x!==keep).map(heroScr):[];
   for(const x of same.slice(0,need)){if(x===keep)continue;if(keep.path==null&&x.path!=null)keep.path=x.path;removeHero(x);keep.vet=Math.max(keep.vet||0,x.vet||0);if(!keep.ed&&x.ed)keep.ed=x.ed;for(const it of x.it||[])giveItem(keep,it)}
-  delete keep.tmp;keep.star++;keep.mana=0;fxStar(keep);if(keep.star===3){award('star3');if(keep.k==='wyrm')award('h_dragon');if(R.board.filter(x=>x.star===3).length>=3)award('h_three')}if(keep.star===4){award('star4');banner(HEROES[keep.k].n.toUpperCase()+' ASCENDS','#ff9ad8')}
-  if(keep.star===2&&keep.path==null&&typeof pathPrompt==='function')pathPrompt(keep);
+  delete keep.tmp;keep.star++;keep.mana=0;fxStar(keep,src);if(keep.star===3){award('star3');if(keep.k==='wyrm')award('h_dragon');if(R.board.filter(x=>x.star===3).length>=3)award('h_three')}if(keep.star===4){award('star4');banner(HEROES[keep.k].n.toUpperCase()+' ASCENDS','#ff9ad8')}
+  // the path choice opens once the merge burst has played, so it does not cover the moment
+  if(keep.star===2&&keep.path==null&&typeof pathPrompt==='function'){if(DOM&&typeof setTimeout==='function')setTimeout(()=>{if(keep.path==null&&allHeroes().includes(keep))pathPrompt(keep)},1050);else pathPrompt(keep)}
   merge(keep)}
 function removeHero(h){const i=R.board.indexOf(h);if(i>=0){R.board.splice(i,1);rebuildBlk()}const j=R.bench.indexOf(h);if(j>=0)R.bench[j]=null}
 function toBench(h){const j=R.bench.indexOf(null);if(j<0)return false;const i=R.board.indexOf(h);if(i>=0)R.board.splice(i,1);R.bench[j]=h;h.c=h.r=-1;rebuildBlk();return true}
